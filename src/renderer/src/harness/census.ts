@@ -2076,6 +2076,45 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     focus(G)
     return { ids: { G } }
   },
+  /*
+   * Step 6's two-sided templates over the census video, selected (docs/CLIPS.md
+   * §9): the dock's graphic panel with one field per side's label and value
+   * ("Before label" … "Right value", components/GraphicPanel.tsx
+   * FIELD_LABELS) and the Depth choice (their `threeD` is true). Added through
+   * the store, not the panel.
+   */
+  'graphic-before-after': async (env) => {
+    await videoClip(env)
+    const G = await made(
+      editor().addGraphicClip(topVideoTrack(), 0, {
+        data: { template: 'before-after', before: { label: 'census then', value: '10' }, after: { label: 'census now', value: '20' } },
+        seconds: 4,
+        beats: [0.5, 1.2],
+        place: { auto: true, third: 'middle' },
+        seed: 1,
+        version: 1
+      }),
+      'addGraphicClip'
+    )
+    focus(G)
+    return { ids: { G } }
+  },
+  'graphic-versus': async (env) => {
+    await videoClip(env)
+    const G = await made(
+      editor().addGraphicClip(topVideoTrack(), 0, {
+        data: { template: 'versus', left: { label: 'census this', value: '10' }, right: { label: 'census that', value: '20' } },
+        seconds: 4,
+        beats: [0.5, 1.2],
+        place: { auto: true, third: 'middle' },
+        seed: 1,
+        version: 1
+      }),
+      'addGraphicClip'
+    )
+    focus(G)
+    return { ids: { G } }
+  },
   'ring-clip': async (env) => {
     await media(env)
     const R = await made(editor().addCarouselClip(topVideoTrack(), 0), 'addCarouselClip')

@@ -62,7 +62,17 @@ export const LAYOUT_SIZES = Object.freeze({
   /** words 0.055, marks 0.09, speaker 0.035; the speaker right-aligned beneath, 0.5 × its px below. */
   quote: Object.freeze({ words: 0.055, marks: 0.09, speaker: 0.035, speakerGap: 0.5 }),
   /** label 0.045, with a panel as the counter's (padded 0.6 × the label's px). */
-  callout: Object.freeze({ label: 0.045, pad: 0.6 })
+  callout: Object.freeze({ label: 0.045, pad: 0.6 }),
+  /*
+   * Step 6's three (docs/CLIPS.md §9), not in §6.2's table: this piece's
+   * proposals, set beside the neighbours they borrow from, for the look rating.
+   */
+  /** when and label 0.045 (steps' label); a rail column 0.05 wide holding a dot 0.35 × the label's px across; the when column at most 0.35 of the content width, 0.4 × the label's px before the label; rows 0.6 × the label's px apart (steps'). */
+  timeline: Object.freeze({ when: 0.045, label: 0.045, rail: 0.05, dot: 0.35, whenMax: 0.35, gap: 0.4, rowGap: 0.6 }),
+  /** labels 0.04 (bars'), values 0.07 (the ring's); a side's label 0.2 × its px above its value; each half padded 0.5 × the label's px. */
+  'before-after': Object.freeze({ label: 0.04, value: 0.07, gap: 0.2, pad: 0.5 }),
+  /** as `before-after`'s, the two halves 1 × the label's px apart, the divider in that gap. */
+  versus: Object.freeze({ label: 0.04, value: 0.07, gap: 0.2, pad: 0.5, middle: 1 })
 })
 
 /**

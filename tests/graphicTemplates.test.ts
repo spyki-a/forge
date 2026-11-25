@@ -16,7 +16,11 @@ const DRAWN: GraphicTemplateId[] = [
   'ring',
   'keyword',
   'lower-third',
-  'screen-card'
+  'screen-card',
+  // step 6 (docs/CLIPS.md §9), piece 1
+  'timeline',
+  'before-after',
+  'versus'
 ]
 
 function row(id: GraphicTemplateId): TemplateDef {
@@ -30,10 +34,8 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
     for (const id of DRAWN) expect(row(id).id).toBe(id)
   })
 
-  it('has no row for a later step’s id (timeline, before-after, versus, source write their own)', () => {
-    for (const id of ['timeline', 'before-after', 'versus', 'source'] as const) {
-      expect(GRAPHIC_TEMPLATES[id]).toBeUndefined()
-    }
+  it('has no row for the source card (after the beta, §16.75: step 5’s fetcher and step 6’s cards write it)', () => {
+    expect(GRAPHIC_TEMPLATES.source).toBeUndefined()
   })
 
   it('takes each template’s seconds from the nine shapes’ table', () => {
@@ -46,7 +48,11 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
       ['ring', 2, 3, 4],
       ['keyword', 1.5, 2.5, 3.5],
       ['lower-third', 2.5, 3.5, 5],
-      ['screen-card', 1, 10, 600]
+      ['screen-card', 1, 10, 600],
+      // step 6 (§9): this piece's proposals beside §6.2's rows (template.ts says why)
+      ['timeline', 3, 6, 8],
+      ['before-after', 2.5, 4, 6],
+      ['versus', 2.5, 4, 6]
     ]
     for (const [id, min, def, max] of table) expect(row(id).seconds).toEqual({ min, default: def, max })
   })
@@ -68,7 +74,18 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
       ['keyword', 'words', 'verbatim'],
       ['keyword', 'lit', 'index'],
       ['lower-third', 'name', 'speaker'],
-      ['lower-third', 'role', 'user']
+      ['lower-third', 'role', 'user'],
+      // step 6 (§9): every drawn string grounded, no title (the app writes no headline)
+      ['timeline', 'items.when', 'grounded'],
+      ['timeline', 'items.label', 'grounded'],
+      ['before-after', 'before.label', 'grounded'],
+      ['before-after', 'before.value', 'grounded'],
+      ['before-after', 'after.label', 'grounded'],
+      ['before-after', 'after.value', 'grounded'],
+      ['versus', 'left.label', 'grounded'],
+      ['versus', 'left.value', 'grounded'],
+      ['versus', 'right.label', 'grounded'],
+      ['versus', 'right.value', 'grounded']
     ]
     for (const [id, field, mode] of modes) expect(row(id).fields[field], `${id}.${field}`).toBe(mode)
     // the table gives each row's fields exactly: no stray mode-bearing field (T2's validator checks each)
@@ -97,6 +114,20 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
     expect(row('steps').maxItems).toBe(6)
     expect(row('bars').minItems).toBe(2)
     expect(row('steps').minItems).toBe(2)
+    // step 6 (§6.7 rule 6: "later before-after, versus, timeline"): each pair a label with its value; a timeline item's when is its value
+    expect(row('timeline').pairs).toContainEqual(['items.label', 'items.when'])
+    expect(row('before-after').pairs).toContainEqual(['before.label', 'before.value'])
+    expect(row('before-after').pairs).toContainEqual(['after.label', 'after.value'])
+    expect(row('versus').pairs).toContainEqual(['left.label', 'left.value'])
+    expect(row('versus').pairs).toContainEqual(['right.label', 'right.value'])
+    expect(row('timeline').maxItems).toBe(5)
+    expect(row('timeline').minItems).toBe(2)
+    // no title of any kind, and so no fixed title: the app never writes a headline (§9)
+    for (const id of ['timeline', 'before-after', 'versus'] as const) {
+      expect(row(id).fixedTitles, id).toBeUndefined()
+      expect(row(id).fields.title, id).toBeUndefined()
+      expect(row(id).appFields, id).toBeUndefined()
+    }
   })
 
   it('names every app-set field §6.1 lists, and gives steps’ parent and connector no mode', () => {
@@ -114,10 +145,11 @@ describe('GRAPHIC_TEMPLATES (§6.2)', () => {
     expect(row('callout').fields.shape).toBeUndefined()
   })
 
-  it('asks for a subject only for the callout, and allows depth only for the counter, the ring and the screen card', () => {
+  it('asks for a subject only for the callout, and allows depth only for the counter, the ring, the screen card and step 6’s three', () => {
+    const DEPTH = new Set<GraphicTemplateId>(['counter', 'ring', 'screen-card', 'timeline', 'before-after', 'versus'])
     for (const id of DRAWN) {
       expect(row(id).needsSubject === true, id).toBe(id === 'callout')
-      expect(row(id).threeD, id).toBe(id === 'counter' || id === 'ring' || id === 'screen-card')
+      expect(row(id).threeD, id).toBe(DEPTH.has(id))
     }
   })
 

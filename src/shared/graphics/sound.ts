@@ -148,8 +148,9 @@ export function fastestFrame(move: Move, fps: number, frames: number): number | 
  * styles (every preset but `energetic`): `counter`, `ring` a tick on the
  * arrival beat; `bars`, `steps` a tick on the first item's beat; `keyword` a
  * tick on its beat; `callout` a whoosh on its stroke's fastest frame;
- * `quote`, `lower-third`, `screen-card` and every template not yet drawn,
- * none. `energetic` adds a tick on every beat and a whoosh on the fastest
+ * `quote`, `lower-third`, `screen-card`, step 6's `timeline`,
+ * `before-after` and `versus` (§9 gives them no row of §6.14's table; the
+ * owner's to decide) and every template not yet drawn, none. `energetic` adds a tick on every beat and a whoosh on the fastest
  * frame of each stroke and each entrance, the moves as the drawers in
  * templates/ run them:
  * - `counter`, `ring`: the group's entrance from t = 0 (counter.ts:80, ring.ts:95),
@@ -164,8 +165,8 @@ export function fastestFrame(move: Move, fps: number, frames: number): number | 
  *   entrances are inside the card's and are not counted separately;
  * - `callout`: the stroke ending on its beat and the label's from the beat
  *   (callout.ts:162, :171).
- * Under `energetic` the quote, the lower third and the screen card are
- * still silent: the table's "none" is read as the template's, not the
+ * Under `energetic` the quote, the lower third, the screen card and step
+ * 6's three are still silent: the table's "none" is read as the template's, not the
  * style's. Two cues of one key on one frame are one. In frame order, ticks
  * before whooshes on a tie.
  */

@@ -93,7 +93,27 @@ const SAMPLES: Readonly<Partial<Record<GraphicTemplateId, { name: string; data: 
   quote: { name: 'Quote', data: { template: 'quote', kind: 'said', text: 'Your quote here', speaker: '' } },
   ring: { name: 'Ring', data: { template: 'ring', value: '75%', label: 'Your label here' } },
   keyword: { name: 'Keyword', data: { template: 'keyword', words: 'Your words here', lit: 1 } },
-  'lower-third': { name: 'Lower third', data: { template: 'lower-third', name: SPEAKER_PLACEHOLDER, role: 'Their role' } }
+  'lower-third': { name: 'Lower third', data: { template: 'lower-third', name: SPEAKER_PLACEHOLDER, role: 'Their role' } },
+  // Step 6's three (docs/CLIPS.md §9): placeholder words, and numbers and years that read as placeholders, as the counter's 100.
+  timeline: {
+    name: 'Timeline',
+    data: {
+      template: 'timeline',
+      items: [
+        { when: '2020', label: 'First moment' },
+        { when: '2022', label: 'Second moment' },
+        { when: '2024', label: 'Third moment' }
+      ]
+    }
+  },
+  'before-after': {
+    name: 'Before and after',
+    data: { template: 'before-after', before: { label: 'Before', value: '10' }, after: { label: 'After', value: '100' } }
+  },
+  versus: {
+    name: 'Versus',
+    data: { template: 'versus', left: { label: 'This one', value: '40' }, right: { label: 'That one', value: '60' } }
+  }
 })
 
 /** Every template id the engine knows a row or a drawer for, the drawn ones first in the drawers' order. */
@@ -127,9 +147,10 @@ export function libraryDragPayload(entry: LibraryGraphic): DragPayload {
 }
 
 /**
- * How many elements arrive in turn: a row per item for bars and steps, a
- * word per word for a said quote (its beats light words, one each, as the
- * drawer reads them, `litWordAt`), one for every other template.
+ * How many elements arrive in turn: a row per item for bars, steps and a
+ * timeline, one per side for a before-after and a versus, a word per word
+ * for a said quote (its beats light words, one each, as the drawer reads
+ * them, `litWordAt`), one for every other template.
  */
 export function libraryElements(data: GraphicData): number {
   switch (data.template) {
@@ -138,6 +159,12 @@ export function libraryElements(data: GraphicData): number {
       return Math.max(1, data.items.length)
     case 'quote':
       return Math.max(1, data.text.trim().split(/\s+/u).filter(Boolean).length)
+    case 'timeline':
+      return Math.max(1, data.items.length)
+    // Two sides, said one after the other (§9).
+    case 'before-after':
+    case 'versus':
+      return 2
     default:
       return 1
   }

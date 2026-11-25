@@ -10003,5 +10003,115 @@
     "line": 204,
     "newHome": "Shelf tile Upload, the right-click menu on a folder's header",
     "note": "REMOVE_FOLDER_NOTE: the title on Remove folder. Count 1."
+  },
+  {
+    "label": "Timeline",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 99,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES), step 6's three 3D templates (docs/CLIPS.md §9), piece 1. The only text node of these words in the Library on that drawer. Count reasoned from the code by step 6 piece 1, 2026-11-25: one tile each; not yet read on screen."
+  },
+  {
+    "label": "Before and after",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 110,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES), step 6's three 3D templates (docs/CLIPS.md §9), piece 1. The only text node of these words in the Library on that drawer. Count reasoned from the code by step 6 piece 1, 2026-11-25: one tile each; not yet read on screen."
+  },
+  {
+    "label": "Versus",
+    "match": "text",
+    "home": "library",
+    "needs": "library-graphics",
+    "file": "src/shared/graphics/library.ts",
+    "line": 114,
+    "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
+    "note": "A Graphics tile's name under its face (graphics/library.ts SAMPLES), step 6's three 3D templates (docs/CLIPS.md §9), piece 1. The only text node of these words in the Library on that drawer. Count reasoned from the code by step 6 piece 1, 2026-11-25: one tile each; not yet read on screen."
+  },
+  {
+    "label": "Before label",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-before-after",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 125,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of before.label (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"before after\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "Before value",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-before-after",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 126,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of before.value (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"before after\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "After label",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-before-after",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 127,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of after.label (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"before after\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "After value",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-before-after",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 128,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of after.value (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"before after\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "Left label",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-versus",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 129,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of left.label (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"versus\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "Left value",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-versus",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 130,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of left.value (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"versus\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "Right label",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-versus",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 131,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of right.label (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"versus\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "Right value",
+    "match": "text",
+    "home": "dock",
+    "needs": "graphic-versus",
+    "file": "src/renderer/src/components/GraphicPanel.tsx",
+    "line": 132,
+    "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
+    "note": "The field label of right.value (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"versus\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
   }
 ]

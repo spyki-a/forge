@@ -16,7 +16,7 @@
  */
 
 import { MULTIPLIERS, groupingOf } from '../graphics/numbers'
-import type { FieldMode, GraphicData, TemplateDef } from '../graphics/template'
+import { graphicFieldText, type FieldMode, type GraphicData, type TemplateDef } from '../graphics/template'
 import type { Segment, Word } from '../transcript'
 
 /** The zero of each native digit block §6.7 rule 3 maps to ASCII. */
@@ -810,7 +810,8 @@ export function claimsOf(data: GraphicData, def: TemplateDef): Claim[] {
   }
 
   const keys = Object.keys(modes)
-  for (const key of keys) if (!key.startsWith('items.')) field(key, key, record[key], topPair.get(key))
+  // A top-level field, or a side's leaf (`before.value`, step 6's two-sided templates), read as the dock reads it.
+  for (const key of keys) if (!key.startsWith('items.')) field(key, key, key.includes('.') ? graphicFieldText(data, key) : record[key], topPair.get(key))
   const items = Array.isArray(record.items) ? (record.items as Record<string, unknown>[]) : []
   const itemKeys = keys.filter((k) => k.startsWith('items.'))
   const itemPairs = pairs.filter(([label]) => label.startsWith('items.'))

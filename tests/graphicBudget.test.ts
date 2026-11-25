@@ -581,7 +581,7 @@ function zoomOver(c: Clip, at: [number, number]): Clip {
  *   zoom, and again with a zoom move put under its first candidate; and all
  *   of them back to back on one timeline, each asset with a Speaker, so the
  *   lower thirds and the spacing across clips are read;
- * - specs.json's 27 graphics, which have no transcript, as hand-built
+ * - specs.json's graphics (27, and step 6's three), which have no transcript, as hand-built
  *   candidates at seeded starts on one footage clip at two cut lengths (120 s
  *   and 60 s), with a zoom punch, and again with a zoom move as well.
  */
@@ -687,7 +687,10 @@ describe('applyBudget, the property (§6.12)', () => {
     expect(cases.filter((c) => !c.files.includes('specs.json')).length, 'transcript cases').toBeGreaterThanOrEqual(2 * talkFiles.length)
     for (const f of files) expect(alone(f), `${f}: cases of its own`).toBeGreaterThanOrEqual(2)
     expect([...new Set(cases.flatMap((c) => c.files))].sort()).toEqual(files)
-    for (const c of cases.filter((x) => x.files[0] === 'specs.json')) expect(c.candidates, c.name).toHaveLength(27)
+    // Every spec of specs.json is a candidate of each of its cases: counted from the file (the phase-2 27 and, since step 6, its three), never pinned.
+    const specCount = (JSON.parse(readFileSync(join(GRAPHICS_FIXTURE_DIR, 'specs.json'), 'utf8')) as { specs: unknown[] }).specs.length
+    expect(specCount).toBeGreaterThanOrEqual(27)
+    for (const c of cases.filter((x) => x.files[0] === 'specs.json')) expect(c.candidates, c.name).toHaveLength(specCount)
     let kept = 0
     const reasons: string[] = []
     for (const c of cases) {

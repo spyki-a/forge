@@ -25,6 +25,8 @@ const FILE = JSON.parse(
 ) as { note: string; specs: Entry[] }
 
 const SHAPES = ['counter', 'bars', 'steps', 'steps-connected', 'quote', 'callout', 'ring', 'keyword', 'lower-third']
+/** Step 6's three (docs/CLIPS.md §9): English written by its lane; their Hindi and Telugu fixtures are the owner's to write, so are not required here. */
+const STEP6_SHAPES = ['timeline', 'before-after', 'versus']
 const LANGUAGES = ['en', 'hi', 'te'] as const
 const LEAD_S = 0.5 // §6.8, not yet a constant in src (graphicBeats arrives with T3)
 const DEVANAGARI = /[ऀ-ॿ]/
@@ -49,6 +51,12 @@ function drawn(spec: GraphicSpec): string[] {
       return [d.words]
     case 'lower-third':
       return [d.name, d.role]
+    case 'timeline':
+      return d.items.flatMap((i) => [i.when, i.label])
+    case 'before-after':
+      return [d.before.label, d.before.value, d.after.label, d.after.value]
+    case 'versus':
+      return [d.left.label, d.left.value, d.right.label, d.right.value]
     default:
       return []
   }
@@ -57,9 +65,14 @@ function drawn(spec: GraphicSpec): string[] {
 const words = (s: string): string[] => s.split(/\s+/).filter(Boolean)
 
 describe('specs.json, the drawing fixtures (§6.2, §6.10)', () => {
-  it('holds 27 specs, one per shape and language, ids unique', () => {
-    expect(FILE.specs).toHaveLength(27)
-    expect(new Set(FILE.specs.map((e) => e.id)).size).toBe(27)
+  it('holds one spec per phase-2 shape and language (27), step 6’s three in English at least, and nothing else; ids unique', () => {
+    expect(new Set(FILE.specs.map((e) => e.id)).size).toBe(FILE.specs.length)
+    for (const e of FILE.specs) expect([...SHAPES, ...STEP6_SHAPES], e.id).toContain(e.shape)
+    expect(FILE.specs.filter((e) => SHAPES.includes(e.shape))).toHaveLength(27)
+    for (const shape of STEP6_SHAPES) {
+      expect(FILE.specs.filter((e) => e.shape === shape && e.language === 'en'), `${shape} en`).toHaveLength(1)
+      expect(FILE.specs.filter((e) => e.shape === shape).every((e) => e.spec.data.template === shape), shape).toBe(true)
+    }
     for (const shape of SHAPES) {
       for (const language of LANGUAGES) {
         expect(
@@ -91,11 +104,13 @@ describe('specs.json, the drawing fixtures (§6.2, §6.10)', () => {
     for (const { id, spec } of FILE.specs) {
       const d = spec.data
       const expected =
-        d.template === 'bars' || d.template === 'steps'
+        d.template === 'bars' || d.template === 'steps' || d.template === 'timeline'
           ? d.items.length
           : d.template === 'quote'
             ? words(d.text).length
-            : 1
+            : d.template === 'before-after' || d.template === 'versus'
+              ? 2
+              : 1
       expect(spec.beats, id).toHaveLength(expected)
       expect(spec.beats[0], id).toBeGreaterThanOrEqual(LEAD_S)
       for (let i = 1; i < spec.beats.length; i++) expect(spec.beats[i], id).toBeGreaterThan(spec.beats[i - 1])
@@ -106,7 +121,7 @@ describe('specs.json, the drawing fixtures (§6.2, §6.10)', () => {
   it('keeps each template’s own limits: item counts, parents, words, lit, shape and subject', () => {
     for (const { id, shape, spec } of FILE.specs) {
       const d = spec.data
-      if (d.template === 'bars' || d.template === 'steps') {
+      if (d.template === 'bars' || d.template === 'steps' || d.template === 'timeline') {
         const def = GRAPHIC_TEMPLATES[d.template]!
         expect(d.items.length, id).toBeGreaterThanOrEqual(def.minItems!)
         expect(d.items.length, id).toBeLessThanOrEqual(def.maxItems!)
@@ -129,6 +144,11 @@ describe('specs.json, the drawing fixtures (§6.2, §6.10)', () => {
       }
       if (d.template === 'counter' || d.template === 'ring') expect(numberOf(d.value), id).not.toBeNull()
       if (d.template === 'callout') expect(spec.subject, id).toBeDefined()
+      // Step 6's (§9): every pair's value one number as said, every label said.
+      if (d.template === 'timeline') for (const item of d.items) expect(item.label.trim() !== '' && numberOf(item.when) !== null, id).toBe(true)
+      if (d.template === 'before-after' || d.template === 'versus') {
+        for (const side of d.template === 'versus' ? [d.left, d.right] : [d.before, d.after]) expect(side.label.trim() !== '' && numberOf(side.value) !== null, id).toBe(true)
+      }
     }
   })
 
@@ -153,6 +173,8 @@ describe('specs.json, the drawing fixtures (§6.2, §6.10)', () => {
     expect(most('steps', (s) => (s.data.template === 'steps' ? s.data.items.length : 0))).toBe(6)
     expect(most('quote', (s) => (s.data.template === 'quote' ? words(s.data.text).length : 0))).toBe(16)
     expect(most('keyword', (s) => (s.data.template === 'keyword' ? words(s.data.words).length : 0))).toBe(4)
+    // Step 6 (§9): a timeline's most, 5 items.
+    expect(most('timeline', (s) => (s.data.template === 'timeline' ? s.data.items.length : 0))).toBe(GRAPHIC_TEMPLATES.timeline!.maxItems)
   })
 
   it('writes every Hindi string in Devanagari and every Telugu one in Telugu, numbers aside', () => {

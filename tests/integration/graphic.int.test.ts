@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from 'vitest'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises'
 import { isAbsolute, join, relative, resolve } from 'node:path'
 import { crc32, deflateSync } from 'node:zlib'
@@ -2062,6 +2062,302 @@ describe('try-out 1 piece 6: each Library graphic, made by the list’s own func
       ...Object.entries(LIBRARY_LEFT_OUT).map(([id, why]) => `  ${id}: ${why}`),
       '',
       '<template>-<shape>/  export.mp4, graph.txt, the PNG sequence, held-fNNN.png (the frame read, taken at (f − 0.25)/fps)',
+      '',
+      ...lines
+    ])
+  })
+})
+
+/* ------------------------------------------ step 6: the three 3D templates, flat */
+
+/*
+ * Step 6, piece 1 (docs/CLIPS.md §9 "The 3D templates"; the render check of
+ * §6.11, phase 2's bar "frame-exact at both shapes, on both builds"): each of
+ * `timeline`, `before-after` and `versus`, its English fixture from
+ * specs.json, on V2 over the red shot from frame S6_START, the clean look,
+ * flat, exported as phase 1 exports (`bakeForExport`, `buildRenderPlan`, the
+ * bundled ffmpeg; no new filter, so the 2018 Windows build runs what it
+ * already runs). The fake `Bakers.graphic` (`s6Bakers`) is the Library
+ * case's with two levels: each item of the REAL drawer's list at each moving
+ * frame as a box of its bounds, a shape grey and a word or a stroke white
+ * over it (so a word arriving over its panel shows), the box route cropped
+ * to `graphicBox`.
+ *
+ * Frame-exact: on each frame read, every exported pixel at least S6_MARGIN
+ * px inside a word the drawer's own list asks for at THAT frame (the last
+ * moving frame's for a held one) is white, every pixel that far inside a
+ * shape and clear of every word is the grey, and every pixel that far clear
+ * of everything is the red. The frames read are, for each element, the
+ * first frame it shows on and the frame before (their pictures differ, so an
+ * export one frame early or late fails), its beat frame, the last moving
+ * frame, a held frame before the exit, and the frame before the clip starts.
+ */
+
+const S6_START = 15
+const S6_SHOT_FRAMES = 300
+/** Pixels clear of an edge of the asked-for white, either side, before a pixel is judged: the encoder's ringing at a sharp edge (measured, see the README). */
+const S6_MARGIN = 3
+const S6_TEMPLATES = ['timeline', 'before-after', 'versus'] as const
+const S6_FIXTURES: Record<(typeof S6_TEMPLATES)[number], GraphicSpec> = (() => {
+  const all = (JSON.parse(readFileSync(new URL('../fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: { id: string; spec: GraphicSpec }[] }).specs
+  const of = (id: string): GraphicSpec => {
+    const f = all.find((e) => e.id === `${id}-en`)
+    if (!f) throw new Error(`specs.json has no ${id}-en`)
+    return f.spec
+  }
+  return { timeline: of('timeline'), 'before-after': of('before-after'), versus: of('versus') }
+})()
+
+/** The red footage on V1 at `shape`, captions off, the clean look, and `spec` on V2 from S6_START, landed as the store lands a graphic. */
+function s6Project(shot: string, shape: P1Shape, spec: GraphicSpec): { project: Project; duration: number } {
+  const empty = emptyProject('graphic-step6')
+  const red: MediaAsset = {
+    id: 'red', path: shot, name: 'red.mp4', kind: 'video', durationFrames: S6_SHOT_FRAMES, ...P1_SHOT, fps: FPS, hasVideo: true, hasAudio: false, size: 1
+  }
+  const duration = Math.round(spec.seconds * FPS)
+  const size = P1_SHAPES[shape]
+  const drawn = drawnGraphicAsset('g', size.width, size.height, Math.max(duration, FPS * 10), `${spec.data.template} — graphic`)
+  const transform = { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }
+  const color = { brightness: 0, contrast: 1, saturation: 1 }
+  const project: Project = {
+    ...empty,
+    settings: { ...empty.settings, ...size, fps: FPS },
+    captions: { enabled: false, styleId: empty.captions.styleId },
+    graphics: { styleId: CLEAN_GRAPHIC_STYLE.id, sound: true },
+    assets: [red, drawn],
+    clips: [
+      { id: 'red', assetId: 'red', trackId: 'v1', start: 0, duration: S6_SHOT_FRAMES, inPoint: 0, volume: 1, transform, color },
+      { id: 'g', assetId: drawn.id, trackId: 'v2', start: S6_START, duration, inPoint: 0, volume: 1, transform, color, keyframes: graphicExitKeys(duration, FPS), graphic: spec, generatedBy: { rule: CLIPS_GRAPHIC_RULE, reason: 'step 6 render check' } }
+    ]
+  }
+  return { project, duration }
+}
+
+/** The grey a shape item is painted in, under the white of words and strokes: luma far from the red's (about 81) and the white's alike. */
+const S6_GREY = 150
+/** Luma at or above this is a shape's grey or a word's white; under it, the red base. */
+const S6_SHAPE_FLOOR = 115
+
+/**
+ * The fake `Bakers.graphic` of this case: `libBakers`' (the real drawer's list
+ * at each moving frame, the box route cropped to `graphicBox`), but each
+ * shape item (a panel, the reveal, a dot) a box of S6_GREY and each word and
+ * stroke a white box over them, so a word that arrives over its panel shows.
+ */
+function s6Bakers(dir: string, asks: P1Ask[]): Bakers {
+  const lib = libBakers(dir, asks)
+  return {
+    ...lib,
+    graphic: async (spec, style, key, width, height, frames, fps, targetsAt, boxAllowed) => {
+      const ask: P1Ask = { key, width, height, frames, fps, boxAllowed, box: null, seq: '' }
+      asks.push(ask)
+      const size = { width, height }
+      const moving = graphicMovingFrames(spec, style, fps, frames)
+      const box = boxAllowed ? graphicBox(spec, style, fps, frames, size, LIB_MEASURE, targetsAt) : null
+      if (boxAllowed && !box) return null
+      const region = box ?? { x: 0, y: 0, width, height }
+      const seq = join(dir, `${key}.seq`)
+      await mkdir(seq, { recursive: true })
+      for (let i = 0; i < moving; i++) {
+        const rgba = Buffer.alloc(region.width * region.height * 4)
+        const { shapes, words } = s6Masks(spec, i, size, region)
+        for (let k = 0; k < region.width * region.height; k++) {
+          const v = words[k] ? 255 : shapes[k] ? S6_GREY : -1
+          if (v >= 0) rgba.fill(v, k * 4, k * 4 + 3), (rgba[k * 4 + 3] = 255)
+        }
+        await writeFile(join(seq, `${String(i).padStart(5, '0')}.png`), rgbaPng(region.width, region.height, rgba))
+      }
+      ask.box = box
+      ask.seq = seq
+      const pattern = join(seq, '%05d.png')
+      return box ? { pattern, frames: moving, box } : { pattern, frames: moving }
+    }
+  }
+}
+
+/** What the drawer asks for at a local frame, in `region` of the frame: its shape items' boxes and its words' and strokes' (opacity above 0, `itemBounds`, whole pixels). */
+function s6Masks(spec: GraphicSpec, local: number, size: { width: number; height: number }, region: Rect = { x: 0, y: 0, width: size.width, height: size.height }): { shapes: Uint8Array; words: Uint8Array } {
+  const shapes = new Uint8Array(region.width * region.height)
+  const words = new Uint8Array(region.width * region.height)
+  for (const item of drawListAt(spec, CLEAN_GRAPHIC_STYLE, local, FPS, size, LIB_MEASURE).items) {
+    if (!(item.opacity > 0)) continue
+    const r = itemBounds(item, size, LIB_MEASURE)
+    if (!r) continue
+    const into = item.kind === 'shape' ? shapes : words
+    for (let y = Math.max(Math.floor(r.y), region.y); y < Math.min(Math.ceil(r.y + r.height), region.y + region.height); y++) {
+      for (let x = Math.max(Math.floor(r.x), region.x); x < Math.min(Math.ceil(r.x + r.width), region.x + region.width); x++) into[(y - region.y) * region.width + (x - region.x)] = 1
+    }
+  }
+  return { shapes, words }
+}
+
+/** A summed-area table's window count: how many of a mask's pixels within `m` of (x, y) are set, and how many pixels the window holds. */
+function s6Window(mask: Uint8Array, size: { width: number; height: number }): (x: number, y: number, m: number) => { n: number; of: number } {
+  const { width, height } = size
+  const sat = new Int32Array((width + 1) * (height + 1))
+  for (let y = 0; y < height; y++) {
+    let row = 0
+    for (let x = 0; x < width; x++) {
+      row += mask[y * width + x]
+      sat[(y + 1) * (width + 1) + x + 1] = sat[y * (width + 1) + x + 1] + row
+    }
+  }
+  return (x, y, m) => {
+    const x0 = Math.max(0, x - m), y0 = Math.max(0, y - m), x1 = Math.min(width, x + m + 1), y1 = Math.min(height, y + m + 1)
+    return { n: sat[y1 * (width + 1) + x1] - sat[y0 * (width + 1) + x1] - sat[y1 * (width + 1) + x0] + sat[y0 * (width + 1) + x0], of: (x1 - x0) * (y1 - y0) }
+  }
+}
+
+/**
+ * Exported luma against what the drawer asks for, S6_MARGIN px in from and
+ * clear of every edge: a word's white is white; clear of every word, nothing
+ * is white; a shape's grey clear of every word is the grey (between
+ * S6_SHAPE_FLOOR and white); clear of everything, the red base. How many of
+ * each were read and how many failed.
+ */
+function s6Compare(luma: Buffer, masks: { shapes: Uint8Array; words: Uint8Array }, size: { width: number; height: number }) {
+  const words = s6Window(masks.words, size)
+  const shapes = s6Window(masks.shapes, size)
+  const m = S6_MARGIN
+  const out = { words: 0, wordsBad: 0, grey: 0, greyBad: 0, base: 0, baseBad: 0 }
+  for (let y = m; y < size.height - m; y++) {
+    for (let x = m; x < size.width - m; x++) {
+      const v = luma[y * size.width + x]
+      const w = words(x, y, m)
+      const sh = shapes(x, y, m)
+      if (w.n === w.of) {
+        out.words++
+        if (v < LIB_WHITE) out.wordsBad++
+      } else if (w.n === 0 && sh.n === sh.of) {
+        out.grey++
+        if (v < S6_SHAPE_FLOOR || v >= LIB_WHITE) out.greyBad++
+      } else if (w.n === 0 && sh.n === 0) {
+        out.base++
+        if (v >= S6_SHAPE_FLOOR) out.baseBad++
+      }
+    }
+  }
+  return out
+}
+
+interface S6Run {
+  spec: GraphicSpec
+  duration: number
+  moving: number
+  luma: Buffer[]
+  asks: P1Ask[]
+  notes: string[]
+  /** Each frame read, local to the clip (−1 the frame before it starts), and why. */
+  frames: { local: number; why: string }[]
+}
+
+describe('step 6, piece 1: timeline, before-after and versus drawn flat, through the export frame-exact at both shapes (docs/CLIPS.md §9, §6.11)', () => {
+  let dir = ''
+  const runs = {} as Record<string, Record<P1Shape, S6Run>>
+  const lines: string[] = []
+
+  beforeAll(async () => {
+    dir = join(root, 'step6')
+    await mkdir(dir, { recursive: true })
+    const shot = await makeColour(join(dir, 'red.mp4'), 'red', P1_SHOT, S6_SHOT_FRAMES / FPS, FPS)
+    for (const template of S6_TEMPLATES) {
+      runs[template] = {} as Record<P1Shape, S6Run>
+      const spec = S6_FIXTURES[template]
+      for (const shape of P1_SHAPE_NAMES) {
+        const { project, duration } = s6Project(shot, shape, spec)
+        const out = join(dir, `${template}-${shape}`)
+        await mkdir(out, { recursive: true })
+        const asks: P1Ask[] = []
+        const notes: string[] = []
+        const canvas = P1_SHAPES[shape]
+        const baked = await bakeForExport(project, canvas, s6Bakers(out, asks), (clip, err) => {
+          notes.push(`${clip.id}: ${err instanceof Error ? err.message : String(err)}`)
+        })
+        const file = join(out, 'export.mp4')
+        const plan = buildRenderPlan({ project: baked, outputPath: file, canvas })
+        await writeFile(join(out, 'graph.txt'), plan.args.join(' ').replace(/;/g, ';\n'), 'utf8')
+        await run(FFMPEG, plan.args, { maxBuffer: 64 * 1024 * 1024 })
+        const moving = graphicMovingFrames(spec, CLEAN_GRAPHIC_STYLE, FPS, duration)
+        const exit = duration - Math.round(EXIT_S * FPS)
+        // Each element's first frame on screen: the first frame any of its words is drawn with opacity above 0 that was not on the frame before
+        // (its words, not its shapes: the reveal comes on at a width under a pixel, which paints nothing to tell apart).
+        const frames: { local: number; why: string }[] = [{ local: -1, why: 'before the clip' }]
+        const shown = (local: number): Set<string> =>
+          new Set(drawListAt(spec, CLEAN_GRAPHIC_STYLE, local, FPS, canvas, LIB_MEASURE).items.filter((i) => i.kind === 'text' && i.opacity > 0).map((i) => i.id))
+        let prev = shown(0)
+        frames.push({ local: 0, why: 'the first frame' })
+        for (let f = 1; f < moving; f++) {
+          const now = shown(f)
+          const came = [...now].filter((id) => !prev.has(id))
+          if (came.length > 0) frames.push({ local: f - 1, why: `before ${came.join(', ')}` }, { local: f, why: `${came.join(', ')} first shown` })
+          prev = now
+        }
+        spec.beats.forEach((b, i) => frames.push({ local: beatFrame(b, FPS), why: `beat ${i}` }))
+        frames.push({ local: moving - 1, why: 'the last moving frame' }, { local: Math.min(moving + 2, exit - 1), why: 'held' })
+        runs[template][shape] = { spec, duration, moving, luma: await lumaFrames(file, canvas, 'gray'), asks, notes, frames }
+        for (const { local } of frames) {
+          const g = S6_START + local
+          await saveFrame(file, (g - 0.25) / FPS, join(out, `f${String(g).padStart(3, '0')}.png`))
+        }
+      }
+    }
+  }, 600_000)
+
+  it('bakes each by the box route with no error, every frame exported, and each element comes on a frame of its own after the first', () => {
+    for (const template of S6_TEMPLATES) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const r = runs[template][shape]
+        const at = `${template} ${shape}`
+        expect(r.notes, `${at}: the export's onError`).toEqual([])
+        expect(r.asks.map((a) => a.box !== null), `${at}: baked by the box route`).toEqual([true])
+        expect(r.asks[0].frames, `${at}: the clip's frames asked`).toBe(r.duration)
+        expect(r.luma.length, `${at}: frames exported`).toBe(S6_SHOT_FRAMES)
+        // As many comings as elements: a beat each (the timeline's edges and the versus' divider are there from the first frame, at 0 drawn).
+        expect(r.frames.filter((f) => f.why.endsWith('first shown')).length, `${at}: elements coming on`).toBeGreaterThanOrEqual(r.spec.beats.length)
+      }
+    }
+  })
+
+  it('on every frame read the export is the drawer’s own picture for that frame: its words white, its shapes grey, the red elsewhere; and the frame before an element comes differs from the frame it comes on', () => {
+    for (const template of S6_TEMPLATES) {
+      for (const shape of P1_SHAPE_NAMES) {
+        const r = runs[template][shape]
+        const size = P1_SHAPES[shape]
+        const said: string[] = []
+        const none = { shapes: new Uint8Array(size.width * size.height), words: new Uint8Array(size.width * size.height) }
+        for (const { local, why } of r.frames) {
+          const g = S6_START + local
+          const c = s6Compare(r.luma[g], local < 0 ? none : s6Masks(r.spec, Math.min(local, r.moving - 1), size), size)
+          const at = `${template} ${shape} frame ${g} (local ${local}, ${why})`
+          if (local >= 0 && why !== 'the first frame' && !why.startsWith('before ')) expect(c.words, `${at}: word pixels read`).toBeGreaterThan(0)
+          expect(c.wordsBad, `${at}: of ${c.words} pixels the drawer asks a word's white, not white`).toBe(0)
+          expect(c.greyBad, `${at}: of ${c.grey} pixels the drawer asks a shape's grey, not grey`).toBe(0)
+          expect(c.baseBad, `${at}: of ${c.base} pixels the drawer asks nothing of, not the red`).toBe(0)
+          said.push(`${g} (${why}) ${c.words} white, ${c.grey} grey, ${c.base} base`)
+        }
+        // Sensitivity: the words before an element comes are not the words it comes on.
+        const comings = r.frames.filter((x) => x.why.endsWith('first shown'))
+        expect(comings.length, `${template} ${shape}: comings`).toBeGreaterThan(0)
+        for (const f of comings) {
+          const a = s6Masks(r.spec, f.local - 1, size).words
+          const b = s6Masks(r.spec, f.local, size).words
+          expect(a.some((v, i) => v !== b[i]), `${template} ${shape}: local ${f.local - 1} and ${f.local} differ`).toBe(true)
+        }
+        lines.push(`- ${template} ${shape}: ${said.join('; ')}`)
+      }
+    }
+  })
+
+  it('writes the README', async () => {
+    await writeNote(dir, [
+      '# graphic, step 6 piece 1: timeline, before-after and versus, flat, through the export (docs/CLIPS.md §9, §6.11)',
+      '',
+      `A red ${P1_SHOT.width}×${P1_SHOT.height} source (red.mp4, ${S6_SHOT_FRAMES} frames at ${FPS} fps) on V1, captions off, the clean look.`,
+      `Each template's English fixture (specs.json: ${S6_TEMPLATES.map((t) => `${t}-en`).join(', ')}) on V2 from frame ${S6_START}, its exit keys as the store writes them;`,
+      `the fake Bakers.graphic paints each item of the real drawer's list as a box of its bounds (node's 0.55 em measure), a shape in grey ${S6_GREY}, a word or a stroke white over it, the box route.`,
+      `Each frame read is compared with the drawer's own list at that frame, ${S6_MARGIN} px in from and clear of each edge.`,
+      '',
+      '<template>-<shape>/  export.mp4, graph.txt, the PNG sequence, fNNN.png (each frame read, taken at (f − 0.25)/fps)',
       '',
       ...lines
     ])

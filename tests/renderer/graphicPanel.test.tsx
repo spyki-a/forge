@@ -298,6 +298,56 @@ describe('the dock’s graphic panel (§6.6)', () => {
     }
   })
 
+  it('step 6’s three (docs/CLIPS.md §9): each field in the panel’s own words, a side’s or a row’s field saved where the data holds it in one undo step, re-checked with its warning under it, and Depth offered', () => {
+    const three: GraphicData[] = [
+      { template: 'timeline', items: [{ when: '40', label: 'clients' }, { when: '40', label: 'year' }] },
+      { template: 'before-after', before: { label: 'clients', value: '40' }, after: { label: 'year', value: '40' } },
+      { template: 'versus', left: { label: 'clients', value: '40' }, right: { label: 'year', value: '40' } }
+    ]
+    const labels: Record<string, [string, string][]> = {
+      // As bars' rows: each field key in the row's order, then each row (every when, then every label).
+      timeline: [['items[0].when', 'Row 1 when'], ['items[1].when', 'Row 2 when'], ['items[0].label', 'Row 1 label'], ['items[1].label', 'Row 2 label']],
+      'before-after': [['before.label', 'Before label'], ['before.value', 'Before value'], ['after.label', 'After label'], ['after.value', 'After value']],
+      versus: [['left.label', 'Left label'], ['left.value', 'Left value'], ['right.label', 'Right label'], ['right.value', 'Right value']]
+    }
+    for (const data of three) {
+      start([graphicClip('g', data, { beats: [0.8, 1.2] })])
+      const want = labels[data.template]
+      // Every field, grounded, once each, in the template's order, labelled in the panel's own words.
+      expect(shownFields('g'), data.template).toEqual(want.map(([path]) => [path, 'grounded']))
+      for (const [path, label] of want) expect(field('g', path).label, `${data.template} ${path}`).toBe(label)
+      // The value field edited: a timeline's second when, a side template's after or right value.
+      const edited = want[data.template === 'timeline' ? 1 : 3][0]
+      expect(field('g', edited).input.props.defaultValue, data.template).toBe('40')
+      // An edit of the last field: saved on its own side or row, the rest untouched, one undo step.
+      const before = project()
+      const past = state().past.length
+      edit('g', edited, '45')
+      const saved = dataOf('g') as unknown as Record<string, unknown>
+      if (data.template === 'timeline') {
+        expect(saved.items).toEqual([{ when: '40', label: 'clients' }, { when: '45', label: 'year' }])
+      } else {
+        const [a, b] = data.template === 'versus' ? ['left', 'right'] : ['before', 'after']
+        expect(saved[a], data.template).toEqual({ label: 'clients', value: '40' })
+        expect(saved[b], data.template).toEqual({ label: 'year', value: '45' })
+        expect(Object.keys(saved).sort(), data.template).toEqual([a, b, 'template'].sort())
+      }
+      expect(state().past.length, data.template).toBe(past + 1)
+      // Re-checked: the value no one said is named under its own field.
+      expect(field('g', edited).warnings, data.template).toContain("'45' is not said in s00")
+      expect(field('g', edited).input.props.defaultValue, data.template).toBe('45')
+      undoesTo(before)
+      const depth = panel('g').find((h) => h.props['data-graphic-depth'] === '')
+      expect(depth ? hosts(depth.props.children as ReactNode).filter((h) => h.type === 'button').map(text) : [], data.template).toEqual(['Flat', 'Tilt', 'Parallax', 'Dolly', 'Focus'])
+    }
+    // A side that is missing starts empty when one of its fields is typed.
+    expect(GP.withField({ template: 'versus', left: { label: 'a', value: '1' } } as unknown as GraphicData, 'right.label', 'b')).toEqual({
+      template: 'versus',
+      left: { label: 'a', value: '1' },
+      right: { label: 'b', value: '' }
+    })
+  })
+
   it('a typed number not in the stretch shows a warning under its field; the field stays editable and the value is saved, in one undo step', () => {
     start([graphicClip('g', FIXTURES.counter)])
     expect(allWarnings('g')).toEqual([])

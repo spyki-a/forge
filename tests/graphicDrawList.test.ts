@@ -24,6 +24,9 @@ import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared
 import { MAX_GLOW_BATCHES, MAX_PLANES, cameraIsFlat, compositorRoute, flatItems, focusRadius, glowBatches, glowItemsOf, isFlat } from '@shared/graphics/compositor'
 import { DEPTH_DOLLY_FROM, DEPTH_FOCUS_BLUR_PX, DEPTH_MOVES, DEPTH_PARALLAX_YAW_FROM, DEPTH_PLANES, DEPTH_TILT_FROM, depthOf } from '@shared/graphics/templates/depth'
 import { DRAWERS } from '@shared/graphics/templates/index'
+import { drawTimeline } from '@shared/graphics/templates/timeline'
+import { drawBeforeAfter } from '@shared/graphics/templates/beforeAfter'
+import { drawVersus } from '@shared/graphics/templates/versus'
 import { EDGE_SWEEP_ID, EDGE_SWEEP_S, EDGE_SWEEP_SPAN, EDGE_SWEEP_START, bezelPath, bezelWidth, drawScreenCard, edgeSweepFrames, landingFrame } from '@shared/graphics/templates/screenCard'
 import { DURATIONS, entrance, progress } from '@shared/graphics/motion'
 import { graphicMovingFrames } from '@shared/graphics/frame'
@@ -154,13 +157,18 @@ const ARABIC = 'مرحبا بالعالم'
 /* -------------------------------------------------------------- the drawers */
 
 describe('graphicDrawList: the drawer seam', () => {
-  it('DRAWERS is a frozen record, each row a function, never a step-6 template; the screen card drawn since phase 3 piece 4', () => {
+  it('DRAWERS is a frozen record, each row a function, never the source card (after the beta); the screen card drawn since phase 3 piece 4, step 6’s three since its piece 1', () => {
     // Empty in phase 1; phase 2's template commits add rows (§6.2), so membership is asserted, not the whole list.
     expect(Object.isFrozen(DRAWERS)).toBe(true)
     for (const [id, drawer] of Object.entries(DRAWERS)) expect(typeof drawer, id).toBe('function')
-    for (const id of ['timeline', 'before-after', 'versus', 'source'] as GraphicTemplateId[]) expect(DRAWERS[id], id).toBeUndefined()
+    // The retrieved-fact cards are after the beta (docs/CLIPS.md §16.75): no row draws them.
+    expect(DRAWERS.source).toBeUndefined()
     // Phase 3's piece 4 (§6.16): the screen card's row is its own drawer.
     expect(DRAWERS['screen-card']).toBe(drawScreenCard)
+    // Step 6's piece 1 (§9): each of the three is its own file's drawer.
+    expect(DRAWERS.timeline).toBe(drawTimeline)
+    expect(DRAWERS['before-after']).toBe(drawBeforeAfter)
+    expect(DRAWERS.versus).toBe(drawVersus)
   })
 
   it('with no drawer for the template, the list is empty and flat, for every template id without a row in DRAWERS', () => {

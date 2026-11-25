@@ -119,6 +119,13 @@ export function drawnStrings(d: GraphicData): string[] {
       return [d.words]
     case 'lower-third':
       return [d.name, d.role]
+    // Step 6's three (§9), each pair in drawn order; a missing side or item field reads as nothing.
+    case 'timeline':
+      return (Array.isArray(d.items) ? d.items : []).flatMap((i) => [i?.when ?? '', i?.label ?? ''])
+    case 'before-after':
+      return [d.before?.label ?? '', d.before?.value ?? '', d.after?.label ?? '', d.after?.value ?? '']
+    case 'versus':
+      return [d.left?.label ?? '', d.left?.value ?? '', d.right?.label ?? '', d.right?.value ?? '']
     default:
       return []
   }

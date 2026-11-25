@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { emptyProject, type Clip, type MediaAsset, type Project } from '@shared/timeline'
 import { COPY_RULE, GRAPHIC_RULE, clearDirector } from '@shared/director/apply'
 import type { Segment, Transcript, Word } from '@shared/transcript'
-import { CLIPS_GRAPHIC_RULE, LIBRARY_GRAPHIC_RULE, applyGraphics, clearGraphics, clearClipGraphics, drawnText, withSpeaker } from '@shared/graphics/apply'
+import { CLIPS_GRAPHIC_RULE, LIBRARY_GRAPHIC_RULE, applyGraphics, clearGraphics, clearClipGraphics, drawnStrings, drawnText, withSpeaker } from '@shared/graphics/apply'
 import { LEAD_S, BEAT_GAP_S, graphicSeconds } from '@shared/graphics/beats'
 import { ON_SCREEN_REASON, tooCloseReason, zoomPunchReason } from '@shared/graphics/budget'
 import { drawListAt, drawnTemplates, graphicFits } from '@shared/graphics/drawList'
@@ -221,6 +221,24 @@ describe('each entry makes a whole spec', () => {
         expect(b!.width, at).toBeGreaterThan(TILE_FRAME.width * 0.1)
         expect(b!.height, at).toBeGreaterThan(TILE_FRAME.height * 0.08)
       }
+    }
+  })
+
+  it('step 6’s three (docs/CLIPS.md §9) are tiles by their names, a beat per row or side, and every word of their sample on the face', () => {
+    const names = Object.fromEntries(LIBRARY_GRAPHICS.map((e) => [e.id, e.name]))
+    expect(names).toMatchObject({ timeline: 'Timeline', 'before-after': 'Before and after', versus: 'Versus' })
+    for (const id of ['timeline', 'before-after', 'versus'] as const) expect(LIBRARY_LEFT_OUT[id], id).toBeUndefined()
+    const timeline = entry('timeline')
+    expect(libraryGraphicSpec(timeline).beats).toHaveLength((timeline.data as { items: unknown[] }).items.length)
+    expect(libraryGraphicSpec(entry('before-after')).beats).toHaveLength(2)
+    expect(libraryGraphicSpec(entry('versus')).beats).toHaveLength(2)
+    const texts = (items: readonly DrawItem[]): string[] => items.flatMap((i) => (i.kind === 'text' ? [i.text] : i.kind === 'group' ? texts(i.children) : []))
+    for (const id of ['timeline', 'before-after', 'versus'] as const) {
+      const e = entry(id)
+      const drawn = texts(librarySampleFace(e, CLEAN_GRAPHIC_STYLE, MEASURE).list.items).join(' ')
+      for (const word of drawnStrings(e.data).join(' ').split(/\s+/u).filter(Boolean)) expect(drawn.split(' '), `${id}: ${word} on the face`).toContain(word)
+      // No title: the app writes no headline (§9).
+      expect(e.data, id).not.toHaveProperty('title')
     }
   })
 

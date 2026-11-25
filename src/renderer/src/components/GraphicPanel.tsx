@@ -37,6 +37,10 @@ import { WEBGL_MISSING_NOTE } from '../graphicCompositor'
  *   `setSpeaker`, which redraws every graphic of that asset that drew the old name.
  * - **app** fields are choices, only on the templates that have them: the
  *   steps' connector (none, line, tree) and the callout's shape (arrow, circle).
+ * - step 6's templates (docs/CLIPS.md §9) as the others: a timeline's rows
+ *   as bars' and steps' ("Row 1 when", "Row 1 label"), a before-after's and a
+ *   versus's two sides one field each ("Before label" … "Right value"), every
+ *   one grounded and re-checked as above.
  * - the **seconds** within the template's bounds; the **place**, an auto third
  *   or a box you dragged, with a way back to auto.
  *
@@ -115,7 +119,17 @@ export const FIELD_LABELS: Readonly<Record<string, string>> = Object.freeze({
   name: 'Name',
   handle: 'Handle',
   date: 'Date',
-  link: 'Link'
+  link: 'Link',
+  // A timeline row's when ("Row 1 when"), and each side of step 6's two-sided templates (docs/CLIPS.md §9).
+  when: 'When',
+  'before.label': 'Before label',
+  'before.value': 'Before value',
+  'after.label': 'After label',
+  'after.value': 'After value',
+  'left.label': 'Left label',
+  'left.value': 'Left value',
+  'right.label': 'Right label',
+  'right.value': 'Right value'
 })
 
 /** The app's choices (§6.6 "App fields are choices"), by template; the rest of the app fields are not shown. */
@@ -178,18 +192,34 @@ function fieldsOf(data: GraphicData, def: TemplateDef): Field[] {
 }
 
 const ITEM = /^items\[(\d+)\]\.(\w+)$/u
+/** A side's leaf of step 6's two-sided templates: `before.value`, `right.label`. */
+const SIDE = /^(\w+)\.(\w+)$/u
 
 /** The field's stored value. */
 function valueAt(data: GraphicData, path: string): string | number {
   const record = data as unknown as Record<string, unknown>
   const m = ITEM.exec(path)
-  const v = m ? (record.items as Record<string, unknown>[] | undefined)?.[Number(m[1])]?.[m[2]] : record[path]
+  const side = m ? null : SIDE.exec(path)
+  const owner = side ? record[side[1]] : undefined
+  const v = m
+    ? (record.items as Record<string, unknown>[] | undefined)?.[Number(m[1])]?.[m[2]]
+    : side
+      ? owner !== null && typeof owner === 'object'
+        ? (owner as Record<string, unknown>)[side[2]]
+        : undefined
+      : record[path]
   return typeof v === 'number' ? v : typeof v === 'string' ? v : ''
 }
 
-/** The data with one field set; the input is never edited. */
+/** The data with one field set; the input is never edited. A side's leaf sets it on a copy of that side (a missing side starts empty). */
 export function withField(data: GraphicData, path: string, value: string | number): GraphicData {
   const m = ITEM.exec(path)
+  const side = m ? null : SIDE.exec(path)
+  if (side) {
+    const owner = (data as unknown as Record<string, unknown>)[side[1]]
+    const was = owner !== null && typeof owner === 'object' ? (owner as Record<string, unknown>) : { label: '', value: '' }
+    return { ...data, [side[1]]: { ...was, [side[2]]: value } } as unknown as GraphicData
+  }
   if (!m) return { ...data, [path]: value } as GraphicData
   const record = data as unknown as { items: Record<string, unknown>[] }
   const items = record.items.map((it, j) => (j === Number(m[1]) ? { ...it, [m[2]]: value } : it))

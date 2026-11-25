@@ -118,9 +118,10 @@ describe('the phase-2 options', () => {
 /* ------------------------------------------------------------ the fixtures */
 
 describe('TEMPLATE_FIXTURES, specs.json as the page reads it', () => {
-  it('is the file the node tests read: its 27 entries, in its order, each spec the file\'s', () => {
+  it('is the file the node tests read: every entry (phase 2’s 27 and step 6’s three since its piece 1), in its order, each spec the file\'s', () => {
     const file = JSON.parse(specsText) as { specs: { id: string; spec: GraphicSpec }[] }
-    expect(TEMPLATE_FIXTURES).toHaveLength(27)
+    expect(file.specs.length).toBeGreaterThanOrEqual(30)
+    expect(TEMPLATE_FIXTURES).toHaveLength(file.specs.length)
     expect(TEMPLATE_FIXTURES.map((f) => f.id)).toEqual(file.specs.map((e) => e.id))
     for (const e of file.specs) expect(fixture(e.id).spec, e.id).toEqual(e.spec)
   })
@@ -133,6 +134,18 @@ describe('TEMPLATE_FIXTURES, specs.json as the page reads it', () => {
   it('DRAWN_TEMPLATES holds the eight drawn templates, and the screen card since phase 3 piece 4 (it has no specs.json fixture: `templates` names it in noSpec)', () => {
     for (const id of ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third', 'screen-card']) expect(DRAWN_TEMPLATES, id).toContain(id)
     expect(templateCasesFor(['screen-card'], TEMPLATE_FIXTURES, DRAWN_TEMPLATES).noSpec).toEqual(['screen-card'])
+  })
+
+  it('step 6’s three (docs/CLIPS.md §9) are drawn, and `templates` reads their English fixtures; asked for Indic, each is named in noIndic until the owner writes its Hindi and Telugu', () => {
+    const three = ['timeline', 'before-after', 'versus']
+    for (const id of three) expect(DRAWN_TEMPLATES, id).toContain(id)
+    const got = templateCasesFor(three, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
+    expect(got.unknown).toEqual([])
+    expect(got.noSpec).toEqual([])
+    for (const id of ['timeline-en', 'before-after-en', 'versus-en']) expect(got.cases.map((c) => c.id), id).toContain(id)
+    const indic = indicTemplateCases(three, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
+    // Named, never dropped silently: an id leaves noIndic only with a Hindi or Telugu fixture of its own.
+    for (const id of three) expect(indic.noIndic.includes(id) || indic.cases.some((c) => c.spec.data.template === id), id).toBe(true)
   })
 })
 
@@ -167,7 +180,7 @@ describe('indicTemplateCases (the Indic render check\'s phase 2 sentence: every 
     expect(INDIC_LANGUAGES).not.toContain('en')
   })
 
-  it('over the real 27 fixtures and every drawn template: the eighteen Hindi and Telugu ones, no English, nothing unnamed', () => {
+  it('over the real fixtures of phase 2’s eight drawn templates: the eighteen Hindi and Telugu ones, no English, nothing unnamed', () => {
     const got = indicTemplateCases(['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third'], TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
     // specs.json's ids, read by hand: each of the eight templates in hi and te, and steps' connected shape in both.
     const want = [

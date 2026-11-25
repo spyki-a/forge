@@ -33,7 +33,9 @@ import { conforms, type Problem } from './conforms'
 import { graphicsSchema, type AnswerGraphic, type GraphicsAnswer } from './schemaGraphics'
 import { parentsValid, treeParents, connectorFor } from '../graphics/tree'
 import {
+  GRAPHIC_SIDES,
   GRAPHIC_TEMPLATES,
+  graphicFieldText,
   type GraphicCandidate,
   type GraphicData,
   type GraphicSpec,
@@ -194,12 +196,9 @@ function wordsOf(text: string): string[] {
   return text.split(/\s+/u).filter(Boolean)
 }
 
-/** The string at a claim's path in the data ('items[1].value'). */
+/** The string at a claim's path in the data ('items[1].value', 'before.value'): `graphicFieldText`, the dock's and the claims' reader. */
 function fieldText(data: GraphicData, path: string): string {
-  const m = /^items\[(\d+)\]\.(\w+)$/u.exec(path)
-  const record = data as unknown as Record<string, unknown>
-  const v = m ? (record.items as Record<string, unknown>[] | undefined)?.[Number(m[1])]?.[m[2]] : record[path]
-  return typeof v === 'string' ? v : String(v ?? '')
+  return graphicFieldText(data, path)
 }
 
 /** What `checkGraphicData` found, and what a kept graphic is built from. */
@@ -260,6 +259,16 @@ function check(
       problems.push({ path: '$.items', message: `a ${def.id} holds at most ${def.maxItems} items, has ${items.length}` })
     }
   }
+  // Step 6's two-sided templates (§9): each side a { label, value } of strings, or nothing is drawn or bound for it.
+  const sides = GRAPHIC_SIDES[data.template]
+  if (sides) {
+    const missing = sides.filter((side) => {
+      const v = record[side] as Record<string, unknown> | null | undefined
+      return v === null || typeof v !== 'object' || typeof v.label !== 'string' || typeof v.value !== 'string'
+    })
+    for (const side of missing) problems.push({ path: `$.${side}`, message: `a ${def.id.replace(/-/gu, ' ')} needs its ${side}: a label and a value` })
+    if (missing.length > 0) return out(stretch)
+  }
   if (data.template === 'quote' && data.kind !== 'social' && wordsOf(data.text).length > QUOTE_MAX_WORDS) {
     problems.push({ path: '$.text', message: `a quote is at most ${QUOTE_MAX_WORDS} words, this is ${wordsOf(data.text).length}` })
   }
@@ -313,7 +322,8 @@ function check(
   for (const path of fields) {
     if (hasClaim.has(path)) continue
     const text = fieldText(data, path)
-    const mustSay = (data.template === 'steps' && path.endsWith('.label')) || (data.template === 'callout' && path === 'label')
+    // A steps row, a timeline row and a callout's label must say something: each is drawn as a beat's words.
+    const mustSay = ((data.template === 'steps' || data.template === 'timeline') && path.endsWith('.label')) || (data.template === 'callout' && path === 'label')
     if (path === 'title' && fixedTitles.has(spokenKey(text))) continue
     if (text.trim() !== '' || mustSay) {
       problems.push({ path: `$.${path}`, message: `'${text}' holds no word the transcript can ground` })

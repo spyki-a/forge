@@ -249,8 +249,85 @@ export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> 
     fields: {},
     appFields: ['clipId', 'move'],
     threeD: true
+  },
+  /*
+   * Step 6's three (docs/CLIPS.md §9, "The 3D templates"): every drawn string
+   * grounded, each pair as §6.7 rule 6 binds a bars item (a value with its
+   * label; a timeline item's `when` is its value), no title and no fixed
+   * title, flat by default with depth the user's (`threeD`). The seconds are
+   * this piece's proposals until M16, set beside §6.2's rows:
+   * - `timeline`, 3 / 6 / 8, steps' own: a list arriving one row per beat as
+   *   steps does, two strings a row (a when and a label, about a steps row's
+   *   words), at most 5 rows to steps' 6; the same reading hold.
+   * - `before-after` and `versus`, 2.5 / 4 / 6: two label-value pairs, two
+   *   beats. Twice a counter's or a ring's one pair (2 / 3 / 4) to read, so
+   *   the default a second longer and the most bars' 6; the least is two
+   *   beats about a second apart after LEAD_S, plus TAIL_S (0.5 + 1 + 0.8 =
+   *   2.3), rounded up.
+   */
+  timeline: {
+    id: 'timeline',
+    seconds: { min: 3, default: 6, max: 8 },
+    fields: { 'items.when': 'grounded', 'items.label': 'grounded' },
+    pairs: [['items.label', 'items.when']],
+    maxItems: 5,
+    minItems: 2,
+    threeD: true
+  },
+  'before-after': {
+    id: 'before-after',
+    seconds: { min: 2.5, default: 4, max: 6 },
+    fields: { 'before.label': 'grounded', 'before.value': 'grounded', 'after.label': 'grounded', 'after.value': 'grounded' },
+    pairs: [
+      ['before.label', 'before.value'],
+      ['after.label', 'after.value']
+    ],
+    threeD: true
+  },
+  versus: {
+    id: 'versus',
+    seconds: { min: 2.5, default: 4, max: 6 },
+    fields: { 'left.label': 'grounded', 'left.value': 'grounded', 'right.label': 'grounded', 'right.value': 'grounded' },
+    pairs: [
+      ['left.label', 'left.value'],
+      ['right.label', 'right.value']
+    ],
+    threeD: true
   }
 } satisfies Partial<Record<GraphicTemplateId, TemplateDef>>)
+
+/**
+ * The sides of the two-sided templates (step 6, docs/CLIPS.md §9): each a
+ * `{ label, value }` field of the data, in the order they are drawn and said.
+ * A field key `<side>.<leaf>` of their rows names one side's leaf.
+ */
+export const GRAPHIC_SIDES: Readonly<Partial<Record<GraphicTemplateId, readonly [string, string]>>> = Object.freeze({
+  'before-after': Object.freeze(['before', 'after'] as const),
+  versus: Object.freeze(['left', 'right'] as const)
+})
+
+/**
+ * The string at a field path of a graphic's data, '' when it is not one: a
+ * top-level field (`value`), an item's (`items[1].label`) or a side's
+ * (`before.value`, step 6's two-sided templates). The one reader of a path the
+ * validator, the claims and the dock share.
+ */
+export function graphicFieldText(data: GraphicData, path: string): string {
+  const record = data as unknown as Record<string, unknown>
+  const item = /^items\[(\d+)\]\.(\w+)$/u.exec(path)
+  if (item) {
+    const v = (record.items as Record<string, unknown>[] | undefined)?.[Number(item[1])]?.[item[2]]
+    return typeof v === 'string' ? v : String(v ?? '')
+  }
+  const side = /^(\w+)\.(\w+)$/u.exec(path)
+  if (side) {
+    const owner = record[side[1]]
+    const v = owner !== null && typeof owner === 'object' ? (owner as Record<string, unknown>)[side[2]] : undefined
+    return typeof v === 'string' ? v : String(v ?? '')
+  }
+  const v = record[path]
+  return typeof v === 'string' ? v : String(v ?? '')
+}
 
 /**
  * The name a lower third placed by hand from the Library draws when the
