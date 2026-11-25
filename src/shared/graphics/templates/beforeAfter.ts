@@ -33,7 +33,8 @@
  * Depth (3D templates piece 3, templates/depth.ts `depthOut`): with a
  * `depth`, the same items on their planes (`DEPTH_PLANES['before-after']`)
  * with a camera over the card's entrance; under `focus` the labels, the
- * panel and the reveal blur until the after lands. A plain spec's list is
+ * panel and the reveal blur over the card's entrance, sharp as the before's
+ * value lands (so the after's enter sharp). A plain spec's list is
  * unchanged.
  *
  * Pure, as every drawer (§6.2).
@@ -84,6 +85,6 @@ export const drawBeforeAfter: Drawer = (spec, style, clock, size, measure, targe
   items.push(moved(reveal, cardMove, centre, size))
   for (const item of [...l.halves[1].label, ...l.halves[1].value]) items.push(moved(item, afterMove, centreOf(right), size))
 
-  // 3D templates piece 3 (§9, §6.16, templates/depth.ts): with a depth, the same items on their planes with a camera, settling flat by the after's beat.
-  return depthOut('before-after', spec, style, t, b0, size, withDim(dimFor(style, t, targets, size), items), b1)
+  // 3D templates piece 3 (§9, §6.16, templates/depth.ts): with a depth, the same items on their planes with a camera over the before's entrance (from b0 − entrance), flat from b0.
+  return depthOut('before-after', spec, style, t, b0, size, withDim(dimFor(style, t, targets, size), items), b0 - E)
 }

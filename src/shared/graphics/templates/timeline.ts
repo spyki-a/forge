@@ -30,8 +30,8 @@
  *
  * Depth (3D templates piece 3, templates/depth.ts `depthOut`): with a
  * `depth`, the same items on their planes (`DEPTH_PLANES.timeline`) with a
- * camera over the first row's entrance; under `focus` the labels blur until
- * the last row lands. A plain spec's list is unchanged.
+ * camera over the first row's entrance; under `focus` the labels blur over
+ * that entrance, sharp as the first when lands (later rows enter sharp). A plain spec's list is unchanged.
  *
  * Pure, as every drawer (§6.2): never paints, measures only through
  * `measure`, curves only from `motion.ts`.
@@ -156,6 +156,6 @@ export const drawTimeline: Drawer = (spec, style, clock, size, measure, targets)
     for (const item of [dot, ...words]) items.push(moved(item, move, centreOf(box), size))
   })
 
-  // 3D templates piece 3 (§9, §6.16, templates/depth.ts): with a depth, the same items on their planes with a camera, settling flat by the last beat.
-  return depthOut('timeline', spec, style, t, beatOf(spec, 0), size, withDim(dimFor(style, t, targets, size), items), beatOf(spec, l.laid.length - 1))
+  // 3D templates piece 3 (§9, §6.16, templates/depth.ts): with a depth, the same items on their planes with a camera over the first row's entrance (from its start, beat 0 − entrance), flat from beat 0.
+  return depthOut('timeline', spec, style, t, beatOf(spec, 0), size, withDim(dimFor(style, t, targets, size), items), beatOf(spec, 0) - E)
 }

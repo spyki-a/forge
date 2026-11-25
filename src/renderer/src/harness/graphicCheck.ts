@@ -3373,6 +3373,8 @@ export interface ParityTemplatesResult {
   /** `verdict.pass`, for the session's one look. */
   ok: boolean
   ms: number
+  /** The page before and after this half: a hidden or throttled page does not change its pixel figures, but stretches `ms`. */
+  conditions: { before: PageConditions; after: PageConditions; throttled: boolean }
   note: string
 }
 
@@ -3383,6 +3385,7 @@ const worstBakeMean = (r: TemplateReading): number => Math.max(0, ...[...r.bakeA
 
 async function checkParityTemplates(option: GraphicTemplateId[], templates: TemplatesResult, frames: Frames, summary: string[], notes: string[]): Promise<ParityTemplatesResult> {
   const began = performance.now()
+  const conditionsBefore = await pageConditions()
   const asked = templateIds(option)
   const { cases: fixtures, unknown, noSpec } = templateCasesFor(asked, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
   const named = [...new Set(asked)].filter((id) => !unknown.includes(id) && !noSpec.includes(id))
@@ -3409,6 +3412,10 @@ async function checkParityTemplates(option: GraphicTemplateId[], templates: Temp
   const cases = ours.length > 0 ? await checkDepthTemplates(ours, frames, summary) : []
   const verdict = depthTemplatesVerdict({ depth, notDepth, noSpec, unknown }, flat, cases, WEBGL_MISSING_NOTE)
   const verdicts = Object.entries(verdict.byTemplate).map(([k, v]) => `${k} ${v ? 'PASS' : 'FAIL'}`).join(', ')
+  const conditionsAfter = await pageConditions()
+  const conditions = { before: conditionsBefore, after: conditionsAfter, throttled: throttledPage(conditionsBefore) || throttledPage(conditionsAfter) }
+  const ms = Math.round(performance.now() - began)
+  summary.push(`parity templates: ${ms} ms, the page ${conditions.throttled ? 'THROTTLED (hidden, or animation frames slow), so the time is the throttle\'s; the figures stand' : 'visible and not throttled'}`)
   summary.push(`parity templates by template: ${verdicts}`)
   summary.push(`parity templates verdict: ${verdict.pass ? 'PASS' : `FAIL: ${verdict.failures.join('; ')}`}`)
   if (!verdict.pass) notes.push(...verdict.failures.map((f) => `parity templates: ${f}`))
@@ -3423,13 +3430,14 @@ async function checkParityTemplates(option: GraphicTemplateId[], templates: Temp
     byTemplate: verdict.byTemplate,
     verdict: { pass: verdict.pass, failures: verdict.failures },
     ok: verdict.pass,
-    ms: Math.round(performance.now() - began),
+    ms,
+    conditions,
     note:
       'Parity\'s phase-3 half over the named templates (docs/CLIPS.md §9, "Measure in the harness"; the 3D templates\' piece 3), under clean. ' +
       'Flat: the preview against the export at 9:16 is the templates row\'s own case (1080x1920), at 16:9 the same reading at 1920x1080 (TEMPLATES_BAR, within 1/255). ' +
-      'Depth, at 540x960 and 960x540 for each of tilt, parallax, dolly and focus: the last moving frame\'s camera exactly flat, a frame off flat and not all, every text item of every moving frame the flat twin\'s, the settled list the twin\'s; ' +
+      'Depth, at 540x960 and 960x540 for each of tilt, parallax, dolly and focus: the last moving frame\'s camera exactly flat, a frame off flat and not all, none from the last beat on, on the first frame with ink at least half of the move still to make, every text item of every moving frame the flat twin\'s, the settled list the twin\'s and inked; ' +
       'the settled frame through paintDrawList3d against the twin by painter A max 0; the first inked frame at least DEPTH_BAR.firstMinMax from the twin; ' +
-      'WebGL pretended missing: createCompositor null, the one note, the moving frame painter A\'s own picture and the settled one the twin\'s (max 0), and the Preview marking its clip drawn flat. ' +
+      'WebGL pretended missing: createCompositor null, the one note, the first inked frame (off flat) painter A\'s own picture and inked, the settled one the twin\'s (max 0), and the Preview marking its clip drawn flat at that frame. ' +
       'No hero is read: these templates are never a hero.'
   }
 }

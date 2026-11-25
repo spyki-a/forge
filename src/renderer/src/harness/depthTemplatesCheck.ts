@@ -18,9 +18,10 @@
  *   cannot pass);
  * - WebGL pretended missing (`resetCompositorSession({ missing: true })`):
  *   `createCompositor` null, the harness frames' one `WEBGL_MISSING_NOTE`,
- *   the first frame off flat drawn by `graphicFrameCanvases` equal to painter
- *   A's own picture of that list, the settled frame equal to the twin's; and
- *   once per fixture and shape, the Preview marking its clip drawn flat.
+ *   the first frame with ink (off flat, by the first-ink bar) drawn by
+ *   `graphicFrameCanvases` equal to painter A's own picture of that list,
+ *   which must have ink; the settled frame equal to the twin's; and once per
+ *   fixture and shape, the Preview marking its clip drawn flat at that frame.
  *
  * A contact sheet per fixture and shape: each depth's first inked frame and
  * its settled frame. No hero is read: step 6's three are never a hero
@@ -110,23 +111,25 @@ function readMove(base: GraphicSpec, move: DepthMove, style: GraphicStyle, size:
 }
 
 /** WebGL pretended missing for one depth: the session is reset to missing by the caller. */
-async function readMissing(base: GraphicSpec, move: DepthMove, style: GraphicStyle, size: Size, firstOffFlat: number, moving: number): Promise<DepthTemplateMoveReading['missing']> {
+async function readMissing(base: GraphicSpec, move: DepthMove, style: GraphicStyle, size: Size, firstInkFrame: number, moving: number): Promise<DepthTemplateMoveReading['missing']> {
   const { depth: _d, hero: _h, ...plain } = base
   const spec: GraphicSpec = { ...plain, depth: move }
   const measure = graphicMeasure()
   const total = Math.max(1, Math.round(spec.seconds * FPS))
-  const frame = Math.max(0, firstOffFlat)
+  const frame = Math.max(0, firstInkFrame)
   const last = Math.max(0, moving - 1)
   takeGraphicBakeNotes()
   const nothing = await createCompositor(size.width, size.height)
   const [moved, settledFrame] = await graphicFrameCanvases(spec, style, size.width, size.height, total, FPS, [frame, last], noTargets)
   const notes = takeGraphicBakeNotes()
   nothing?.dispose()
+  const own = pixelsOf(painterA(drawListAt(spec, style, frame, FPS, size, measure, {}), size))
   return {
     compositor: nothing ? 'a compositor' : 'null',
     notes,
     frame,
-    againstPainterA: diffChannels(pixelsOf(painterA(drawListAt(spec, style, frame, FPS, size, measure, {}), size)), copied(moved)),
+    inked: hasInk(own),
+    againstPainterA: diffChannels(own, copied(moved)),
     settledAgainstTwin: diffChannels(pixelsOf(painterA(drawListAt(plain, style, last, FPS, size, measure, {}), size)), copied(settledFrame))
   }
 }
@@ -184,12 +187,13 @@ export async function checkDepthTemplates(
     try {
       for (const f of fixtures) {
         const moves: DepthTemplateMoveReading[] = []
-        for (const r of readings.get(f.id)!) moves.push({ ...r, missing: await readMissing(f.spec, r.move, style, size, r.firstOffFlat, r.moving) })
+        for (const r of readings.get(f.id)!) moves.push({ ...r, missing: await readMissing(f.spec, r.move, style, size, r.firstInkFrame, r.moving) })
         const liveId = `parity-templates-missing-${f.id}-${shape.name.replace(':', 'x')}`
         const { depth: _d, hero: _h, ...plain } = f.spec
         const spec: GraphicSpec = { ...plain, depth: 'tilt' }
         const total = Math.max(1, Math.round(spec.seconds * FPS))
-        const at = Math.max(0, moves[0].firstOffFlat)
+        // The first frame with ink (tilt's, off flat there by the first-ink bar), not frame 0, which is blank for step 6's three.
+        const at = Math.max(0, moves[0].firstInkFrame)
         forgetGraphicPreview(liveId)
         graphicPreviewCanvas(liveId, spec, style, size.width, size.height, { frame: at, total, fps: FPS }, {})
         await new Promise((resolve) => setTimeout(resolve, 0))
@@ -207,9 +211,9 @@ export async function checkDepthTemplates(
     for (const r of c.moves) {
       summary.push(
         `parity templates ${c.fixture} ${r.move} at ${c.shape}: ${r.moving} moving frames, ${r.movingCamera} off flat (the first ${r.firstOffFlat}, ${r.offFlatAfterLastBeat} from the last beat on); last camera ${JSON.stringify(r.lastCamera)}; ` +
-          `${r.textsChecked} text items against the flat twin's, ${r.textsDiffer.length} differ; settled list the twin's: ${r.settledListEqual}; ` +
+          `first ink at ${r.firstInkFrame} with ${r.moveLeftAtFirstInk.toFixed(3)} of the move left; ${r.textsChecked} text items against the flat twin's, ${r.textsDiffer.length} differ; settled list the twin's: ${r.settledListEqual}, inked: ${r.settledInk}; ` +
           `settled against the flat twin max ${r.settled.maxAll}; frame ${r.firstFrame} against the twin max ${r.first.maxAll}; ` +
-          `WebGL missing: createCompositor ${r.missing.compositor}, notes ${JSON.stringify(r.missing.notes)}, frame ${r.missing.frame} against painter A max ${r.missing.againstPainterA.maxAll}, settled against the twin max ${r.missing.settledAgainstTwin.maxAll}`
+          `WebGL missing: createCompositor ${r.missing.compositor}, notes ${JSON.stringify(r.missing.notes)}, frame ${r.missing.frame} (inked: ${r.missing.inked}) against painter A max ${r.missing.againstPainterA.maxAll}, settled against the twin max ${r.missing.settledAgainstTwin.maxAll}`
       )
     }
     summary.push(`parity templates ${c.fixture} at ${c.shape}: with WebGL missing the Preview marked it drawn flat: ${c.previewDrawnFlat}`)

@@ -172,21 +172,30 @@ export const fieldOf = (id: string): string => id.replace(/(?:-\d+)+$/u, '')
 
 /**
  * The camera of `move` at `t` (§6.16's table): tilt, yaw or dolly from its
- * start to 0 on the style's curve over the entrance, ending no later than
- * `beat`; `focus` flat throughout, its blur falling on the value's own
- * draw-on curve (`drawOnEase`, the count's) to exactly 0 on `lastBeat`
- * (`beat` itself for counter and ring, which have one; a list's last beat
- * for step 6's three).
+ * start to 0 on the style's curve over the entrance, from `start` and ending
+ * no later than `beat`; `focus` flat throughout, its blur falling on the
+ * value's own draw-on curve (`drawOnEase`, the count's) from `start` to
+ * exactly 0 on `beat`, "as the value lands sharp".
+ *
+ * `start` is when the first element's entrance begins: 0 for counter and
+ * ring, which enter from t = 0; `beat − DURATIONS.entrance` (at least 0) for
+ * step 6's three, whose first element enters ending ON its beat. Before it,
+ * nothing of theirs is on screen, so a move spent there would be a move
+ * nobody sees (the critics of piece 3 measured 96% of it on blank frames).
+ * The blur ends on the FIRST beat, as the counter's on its one: the label
+ * plane holds every row's label, and a blur stretched to the last beat
+ * would blur each later label while it is being said.
  */
-export function depthCamera(move: DepthMove, style: GraphicStyle, t: number, beat: number, labelZ = DEPTH_PLANES.counter.focus.label, lastBeat = beat): Camera {
-  const span = Math.min(DURATIONS.entrance, Math.max(0, beat))
-  const rest = 1 - progress(t, 0, span, style.motion.ease)
+export function depthCamera(move: DepthMove, style: GraphicStyle, t: number, beat: number, labelZ = DEPTH_PLANES.counter.focus.label, start = 0): Camera {
+  const from = Math.max(0, Math.min(start, beat))
+  const span = Math.min(DURATIONS.entrance, Math.max(0, beat - from))
+  const rest = 1 - progress(t, from, span, style.motion.ease)
   const camera: Camera = { tilt: 0, yaw: 0, dolly: 0, fov: DEPTH_FOV }
   if (move === 'tilt') camera.tilt = zero(DEPTH_TILT_FROM * rest)
   if (move === 'parallax') camera.yaw = zero(DEPTH_PARALLAX_YAW_FROM * rest)
   if (move === 'dolly') camera.dolly = zero(DEPTH_DOLLY_FROM * rest)
   if (move === 'focus') {
-    const blur = 1 - progress(t, 0, lastBeat, drawOnEase(style))
+    const blur = 1 - progress(t, from, Math.max(0, beat - from), drawOnEase(style))
     camera.focus = { z: DEPTH_FOCUS_Z, px: zero((DEPTH_FOCUS_BLUR_PX * blur) / Math.abs(labelZ - DEPTH_FOCUS_Z)) }
   }
   return camera
@@ -230,8 +239,8 @@ export function heroGlow(template: DepthTemplate, spec: Pick<GraphicSpec, 'hero'
  * `withDim` returns them): on its planes with its camera when its spec asks
  * for a move, with the hero's glow when it is the hero; the flat items alone
  * otherwise, so a plain graphic's list is phase 2's exactly. `beat` is the
- * first beat (the camera's end), `lastBeat` the last (the focus blur's end;
- * `beat` for counter and ring).
+ * first beat (the camera's end and the focus blur's), `start` when the first
+ * element's entrance begins (`depthCamera`; 0 for counter and ring).
  */
 export function depthOut(
   template: DepthTemplate,
@@ -241,12 +250,12 @@ export function depthOut(
   beat: number,
   size: { width: number; height: number },
   items: DrawItem[],
-  lastBeat = beat
+  start = 0
 ): DrawOut {
   const move = depthOf(spec)
   const out: DrawOut = { items }
   if (move) {
-    const camera = depthCamera(move, style, t, beat, move === 'focus' ? DEPTH_FOCUS_LABEL_Z[template] : undefined, lastBeat)
+    const camera = depthCamera(move, style, t, beat, move === 'focus' ? DEPTH_FOCUS_LABEL_Z[template] : undefined, start)
     out.camera = camera
     // The planes while the camera moves or the label blurs; at rest the flat variant's own list (see the file's head).
     if (!cameraIsFlat(camera)) out.items = onPlanes(template, move, items)

@@ -12,13 +12,23 @@
  * (graphicCheck.ts `readTemplateFixture`).
  */
 
-import type { DrawList, Drawer, TextItem, TextMeasure } from '@shared/graphics/items'
+import type { Camera, DrawItem, DrawList, Drawer, TextItem, TextMeasure } from '@shared/graphics/items'
 import { drawListAt } from '@shared/graphics/drawList'
-import { cameraIsFlat } from '@shared/graphics/compositor'
+import { cameraIsFlat, focusRadius } from '@shared/graphics/compositor'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import type { GraphicStyle } from '@shared/graphics/style'
 import { GRAPHIC_TEMPLATES, type GraphicSpec, type GraphicTemplateId } from '@shared/graphics/template'
-import { DEPTH_MOVES, DEPTH_TEMPLATES, type DepthMove } from '@shared/graphics/templates/depth'
+import {
+  DEPTH_DOLLY_FROM,
+  DEPTH_FOCUS_BLUR_PX,
+  DEPTH_FOCUS_LABEL_Z,
+  DEPTH_MOVES,
+  DEPTH_PARALLAX_YAW_FROM,
+  DEPTH_TEMPLATES,
+  DEPTH_TILT_FROM,
+  type DepthMove,
+  type DepthTemplate
+} from '@shared/graphics/templates/depth'
 import type { ChannelDiff } from './compositorMeasure'
 import { DEPTH_BAR } from './depthMeasure'
 
@@ -35,7 +45,9 @@ export const FLAT_PARITY_WIDE: { readonly width: number; readonly height: number
 export const DEPTH_TEMPLATES_BAR = Object.freeze({
   settledMax: DEPTH_BAR.settledMax,
   firstMinMax: DEPTH_BAR.firstMinMax,
-  missingMax: 0
+  missingMax: 0,
+  /** On the first frame with ink, at least half of the move still to make: a move is seen, not spent on blank frames (the critics of piece 3). */
+  moveLeftAtFirstInkMin: 0.5
 })
 
 /** The templates whose depth this half reads: a drawn depth template whose `TemplateDef.threeD` is true. */
@@ -53,11 +65,57 @@ export interface DepthListReading {
   /** The frames from the last beat's (`ceil(last beat × fps)`) on whose camera is off flat: 0, the move settles flat ON the last beat (§9, §6.16). */
   offFlatAfterLastBeat: number
   lastCamera: { tilt: number; yaw: number; dolly: number; focusPx: number } | null
-  /** Text items (text, look and box) compared against the flat twin's over every moving frame, and where one differed (`@frame id`). */
+  /**
+   * Text items (text, look, box and opacity) compared against the flat
+   * twin's over every moving frame, and where one differed (`@frame id`).
+   * Not `z`, by design, and not the blur: focus is the camera's, so this
+   * cannot see words blurred while said (the focus blur ends on the first
+   * beat, templates/depth.ts `depthCamera`, and graphicDrawList pins it).
+   */
   textsChecked: number
   textsDiffer: string[]
   /** The settled frame's whole list equal to the flat twin's, in its order (route one's picture). */
   settledListEqual: boolean
+  /** The settled frame draws something (`hasListInk`): a drawer that draws nothing fails here, under its own name. */
+  settledInk: boolean
+  /**
+   * The first frame where the flat twin shows ink (`hasListInk`: an item that
+   * is not the dim, at opacity above 0, with extent; a stroke drawn), −1 for
+   * none; and how much of its move the camera still has to make there, as a
+   * fraction of the move's start (§6.16's `DEPTH_*_FROM`; under focus the
+   * label plane's blur against `DEPTH_FOCUS_BLUR_PX`). A move spent while
+   * nothing is on screen reads near 0 here.
+   */
+  firstInkFrame: number
+  moveLeftAtFirstInk: number
+}
+
+/** An item that puts ink on the frame: not the dim, opacity above 0, a scale not 0, and extent (a text with words and a box, a shape with a box, a stroke drawn; a group with such a child). */
+export function itemHasInk(item: DrawItem): boolean {
+  if (item.kind === 'dim' || !(item.opacity > 0)) return false
+  if (item.transform && item.transform.scale === 0) return false
+  switch (item.kind) {
+    case 'text':
+      return item.text.trim() !== '' && item.box.width > 0 && item.box.height > 0
+    case 'shape':
+    case 'image':
+      return item.box.width > 0 && item.box.height > 0
+    case 'stroke':
+      return item.to > item.from
+    case 'group':
+      return item.children.some(itemHasInk)
+  }
+}
+
+export const hasListInk = (l: DrawList): boolean => l.items.some(itemHasInk)
+
+/** The fraction of `move`'s start the camera still holds (1 at its start, 0 flat), for `template`'s label plane under focus. */
+export function moveLeft(move: DepthMove, camera: Camera | undefined, template: DepthTemplate): number {
+  if (!camera) return 0
+  if (move === 'tilt') return camera.tilt / DEPTH_TILT_FROM
+  if (move === 'parallax') return camera.yaw / DEPTH_PARALLAX_YAW_FROM
+  if (move === 'dolly') return camera.dolly / DEPTH_DOLLY_FROM
+  return focusRadius(camera, DEPTH_FOCUS_LABEL_Z[template]) / DEPTH_FOCUS_BLUR_PX
 }
 
 const texts = (l: DrawList): TextItem[] => l.items.filter((i): i is TextItem => i.kind === 'text')
@@ -73,11 +131,17 @@ export function depthListReading(spec: GraphicSpec, style: GraphicStyle, fps: nu
   const lastBeatFrame = Math.ceil(Math.max(0, ...spec.beats.filter((b) => Number.isFinite(b))) * fps - 1e-6)
   let textsChecked = 0
   const textsDiffer: string[] = []
+  let firstInkFrame = -1
+  let moveLeftAtFirstInk = 0
   let last: DrawList | null = null
   let lastTwin: DrawList | null = null
   for (let f = 0; f < moving; f++) {
     const list = drawListAt(spec, style, f, fps, size, measure, {}, drawer)
     const twin = drawListAt(twinSpec, style, f, fps, size, measure, {}, drawer)
+    if (firstInkFrame < 0 && hasListInk(twin)) {
+      firstInkFrame = f
+      moveLeftAtFirstInk = spec.depth && spec.depth !== 'flat' && isDepthTemplate(spec.data.template) ? moveLeft(spec.depth, list.camera, spec.data.template as DepthTemplate) : 0
+    }
     if (!cameraIsFlat(list.camera)) {
       movingCamera++
       if (firstOffFlat < 0) firstOffFlat = f
@@ -103,7 +167,10 @@ export function depthListReading(spec: GraphicSpec, style: GraphicStyle, fps: nu
     lastCamera: camera ? { tilt: camera.tilt, yaw: camera.yaw, dolly: camera.dolly, focusPx: camera.focus?.px ?? 0 } : null,
     textsChecked,
     textsDiffer,
-    settledListEqual: last !== null && lastTwin !== null && JSON.stringify(last.items) === JSON.stringify(lastTwin.items)
+    settledListEqual: last !== null && lastTwin !== null && JSON.stringify(last.items) === JSON.stringify(lastTwin.items),
+    settledInk: last !== null && hasListInk(last),
+    firstInkFrame,
+    moveLeftAtFirstInk
   }
 }
 
@@ -120,8 +187,11 @@ export interface DepthTemplateMoveReading extends DepthListReading {
    * harness frames left, the first frame off flat drawn by
    * `graphicFrameCanvases` against painter A's own picture of the same list
    * (camera and planes ignored), and the settled frame against the flat twin.
+   * `frame` is the first frame with ink (`firstInkFrame`, off flat by the
+   * first-ink bar), and `inked` says painter A's picture of it has ink: two
+   * blank pictures would agree and prove nothing.
    */
-  missing: { compositor: 'null' | 'a compositor'; notes: string[]; frame: number; againstPainterA: ChannelDiff; settledAgainstTwin: ChannelDiff }
+  missing: { compositor: 'null' | 'a compositor'; notes: string[]; frame: number; inked: boolean; againstPainterA: ChannelDiff; settledAgainstTwin: ChannelDiff }
 }
 
 export interface DepthTemplateCase {
@@ -169,6 +239,10 @@ export function depthListFailures(name: string, r: DepthListReading): string[] {
   if (r.movingCamera === 0) failures.push(`${name}: no frame has a camera off flat (a dead branch)`)
   if (r.movingCamera >= r.moving) failures.push(`${name}: every frame moves, so the held frame is not the flat graphic's`)
   if (r.offFlatAfterLastBeat > 0) failures.push(`${name}: ${r.offFlatAfterLastBeat} frames from the last beat on are off flat (it must settle flat on the last beat)`)
+  if (r.firstInkFrame < 0) failures.push(`${name}: no frame has ink`)
+  else if (!(r.moveLeftAtFirstInk >= DEPTH_TEMPLATES_BAR.moveLeftAtFirstInkMin))
+    failures.push(`${name}: on the first frame with ink (${r.firstInkFrame}) the camera has ${r.moveLeftAtFirstInk.toFixed(3)} of its move left, under ${DEPTH_TEMPLATES_BAR.moveLeftAtFirstInkMin} (the move is spent on blank frames)`)
+  if (!r.settledInk) failures.push(`${name}: the settled frame draws nothing`)
   if (r.textsChecked === 0) failures.push(`${name}: no text item was compared`)
   if (r.textsDiffer.length > 0) failures.push(`${name}: text items changed by depth at ${r.textsDiffer.slice(0, 5).join(', ')}${r.textsDiffer.length > 5 ? ` and ${r.textsDiffer.length - 5} more` : ''}`)
   if (!r.settledListEqual) failures.push(`${name}: the settled frame's list is not the flat twin's`)
@@ -211,6 +285,7 @@ export function depthTemplatesVerdict(
       const m = r.missing
       if (m.compositor !== 'null') fail(c.template, `${name}: with WebGL missing, createCompositor gave ${m.compositor}`)
       if (m.notes.length !== 1 || m.notes[0] !== missingNote) fail(c.template, `${name}: with WebGL missing, the notes were ${JSON.stringify(m.notes)}, not the one note`)
+      if (!m.inked) fail(c.template, `${name}: with WebGL missing, frame ${m.frame} has no ink, so drawing it flat proves nothing`)
       if (m.againstPainterA.maxAll > B.missingMax) fail(c.template, `${name}: with WebGL missing, frame ${m.frame} is not painter A's own picture (max ${m.againstPainterA.maxAll})`)
       if (m.settledAgainstTwin.maxAll > B.missingMax) fail(c.template, `${name}: with WebGL missing, the settled frame differs from its flat twin (max ${m.settledAgainstTwin.maxAll})`)
     }

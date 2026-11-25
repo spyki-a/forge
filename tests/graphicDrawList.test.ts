@@ -9,6 +9,7 @@ import {
   textItems,
   textSpecOf,
   unitFor,
+  type Camera,
   type DrawItem,
   type DrawList,
   type Drawer,
@@ -1057,7 +1058,7 @@ describe('graphicDrawList: the depth variants of timeline, before-after and vers
     }
   })
 
-  it('the focus variant: the label plane reads DEPTH_FOCUS_BLUR_PX at the start, above 0 the frame before the LAST beat and exactly 0 on it; the values are in focus throughout', () => {
+  it('the focus variant: the label plane reads DEPTH_FOCUS_BLUR_PX at the start, above 0 the frame before the FIRST beat and exactly 0 on it, so every later row or side enters sharp; the values are in focus throughout', () => {
     const st = resolveGraphicStyle('clean')
     for (const t of STEP_SIX) {
       const f = fixtures.find((x) => x.id === `${t}-en`)!
@@ -1065,10 +1066,32 @@ describe('graphicDrawList: the depth variants of timeline, before-after and vers
       const first = drawListAt(s, st, 0, FPS, SIZE, fake)
       expect(focusRadius(first.camera, DEPTH_FOCUS_LABEL_Z[t]), t).toBeCloseTo(DEPTH_FOCUS_BLUR_PX, 3)
       expect(focusRadius(first.camera, 0), t).toBe(0)
-      const last = Math.ceil(lastBeatOf(s) * FPS - 1e-6)
-      expect(last, t).toBeGreaterThan(Math.ceil(s.beats[0] * FPS - 1e-6))
-      expect(focusRadius(drawListAt(s, st, last - 1, FPS, SIZE, fake).camera, DEPTH_FOCUS_LABEL_Z[t]), t).toBeGreaterThan(0)
-      expect(focusRadius(drawListAt(s, st, last, FPS, SIZE, fake).camera, DEPTH_FOCUS_LABEL_Z[t]), t).toBe(0)
+      const beat0 = Math.ceil(s.beats[0] * FPS - 1e-6)
+      expect(Math.ceil(lastBeatOf(s) * FPS - 1e-6), t).toBeGreaterThan(beat0)
+      expect(focusRadius(drawListAt(s, st, beat0 - 1, FPS, SIZE, fake).camera, DEPTH_FOCUS_LABEL_Z[t]), t).toBeGreaterThan(0)
+      for (let frame = beat0; frame < Math.round(s.seconds * FPS); frame++) expect(focusRadius(drawListAt(s, st, frame, FPS, SIZE, fake).camera, DEPTH_FOCUS_LABEL_Z[t]), `${t} @${frame}`).toBe(0)
+    }
+  })
+
+  it('every move is made over the first element’s entrance, not before it: on the twin’s first inked frame at least half of tilt, yaw, dolly or the label blur is still to make, under every style at both shapes (the critics measured 0.034 of tilt left there before the fix)', () => {
+    // Ink, worked here apart from the harness's itemHasInk: not the dim, opacity above 0, with extent (a word with a box, a shape with a box, a stroke drawn).
+    const inked = (i: DrawItem): boolean =>
+      i.kind !== 'dim' && i.opacity > 0 && (i.kind === 'stroke' ? i.to > i.from : i.kind === 'text' ? i.text.trim() !== '' && i.box.width > 0 : 'box' in i && i.box.width > 0 && i.box.height > 0)
+    const leftOf = (c: Camera, depth: (typeof DEPTH_MOVES)[number], labelZ: number): number =>
+      depth === 'tilt' ? c.tilt / DEPTH_TILT_FROM : depth === 'parallax' ? c.yaw / DEPTH_PARALLAX_YAW_FROM : depth === 'dolly' ? c.dolly / DEPTH_DOLLY_FROM : focusRadius(c, labelZ) / DEPTH_FOCUS_BLUR_PX
+    for (const f of fixtures) {
+      const t = f.spec.data.template as StepSix
+      for (const size of SHAPES) {
+        for (const st of GRAPHIC_STYLES) {
+          const flatSpec = plain(f.spec)
+          const ink = framesOf(flatSpec).find((fr) => drawListAt(flatSpec, st, fr, FPS, size, fake).items.some(inked)) ?? -1
+          expect(ink, `${f.id} ${st.id}: ink`).toBeGreaterThan(0)
+          for (const depth of DEPTH_MOVES) {
+            const where = `${f.id} ${size.width}x${size.height} ${depth} ${st.id} @${ink}`
+            expect(leftOf(drawListAt({ ...flatSpec, depth }, st, ink, FPS, size, fake).camera!, depth, DEPTH_FOCUS_LABEL_Z[t]), where).toBeGreaterThanOrEqual(0.5)
+          }
+        }
+      }
     }
   })
 

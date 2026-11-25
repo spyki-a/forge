@@ -9,6 +9,7 @@ import {
   depthListReading,
   depthTemplatesVerdict,
   isDepthTemplate,
+  itemHasInk,
   type DepthTemplateCase,
   type DepthTemplateMoveReading,
   type FlatParityRow
@@ -17,7 +18,7 @@ import type { Drawer, TextItem, TextMeasure } from '@shared/graphics/items'
 import { DRAWERS } from '@shared/graphics/templates/index'
 import { GRAPHIC_STYLES, resolveGraphicStyle } from '@shared/graphics/style'
 import type { GraphicSpec } from '@shared/graphics/template'
-import { DEPTH_MOVES } from '@shared/graphics/templates/depth'
+import { DEPTH_FOCUS_LABEL_Z, DEPTH_MOVES, depthCamera } from '@shared/graphics/templates/depth'
 
 /*
  * The `parity` option's phase-3 half over named templates (docs/CLIPS.md §9,
@@ -51,6 +52,55 @@ describe('the parity option’s templates half, node’s side: every depth of th
         }
       }
     }
+  })
+
+  it('the camera is seen: on each of the three’s first inked frame at least half of every move is still to make, under every style at both shapes (the critics measured 0.034 of tilt left before the fix)', () => {
+    for (const f of fixtures) {
+      for (const shape of DEPTH_TEMPLATE_SHAPES) {
+        for (const st of GRAPHIC_STYLES) {
+          for (const move of DEPTH_MOVES) {
+            const name = `${f.id} ${move} at ${shape.name} under ${st.id}`
+            const r = depthListReading({ ...f.spec, depth: move }, st, FPS, shape, fake)
+            expect(r.firstInkFrame, name).toBeGreaterThan(0)
+            expect(r.moveLeftAtFirstInk, name).toBeGreaterThanOrEqual(DEPTH_TEMPLATES_BAR.moveLeftAtFirstInkMin)
+            expect(r.settledInk, name).toBe(true)
+          }
+        }
+      }
+    }
+  })
+
+  it('the reading itself: a camera spent before the first ink (the drawer before the fix: its span from t = 0) reads under half of its move at the first inked frame, and fails the bar by name', () => {
+    const base = fixtures.find((x) => x.id === 'versus-en')!.spec
+    const real = DRAWERS.versus!
+    const st = resolveGraphicStyle('clean')
+    // The real list, with the camera of a move that began at t = 0 rather than at the first element's entrance.
+    const early: Drawer = (spec, style, clock, sz, measure, targets) => {
+      const out = real(spec, style, clock, sz, measure, targets)
+      return out.camera && spec.depth && spec.depth !== 'flat' ? { ...out, camera: depthCamera(spec.depth, style, clock.t, spec.beats[0], DEPTH_FOCUS_LABEL_Z.versus) } : out
+    }
+    for (const move of DEPTH_MOVES) {
+      const r = depthListReading({ ...base, depth: move }, st, FPS, DEPTH_TEMPLATE_SHAPES[0], fake, early)
+      expect(r.firstInkFrame, move).toBeGreaterThan(0)
+      expect(r.moveLeftAtFirstInk, move).toBeLessThan(0.2)
+      expect(depthListFailures(move, r).join('\n'), move).toMatch(/on the first frame with ink \(\d+\) the camera has 0\.\d+ of its move left, under 0\.5/u)
+    }
+  })
+
+  it('itemHasInk: the dim, opacity 0, scale 0, an empty box or word and an undrawn stroke are not ink; a group is its children', () => {
+    const box = { x: 0, y: 0, width: 10, height: 10 }
+    const text: TextItem = { kind: 'text', id: 'w', opacity: 1, text: 'a', look: { textStyleId: 's', font: 'f', px: 10, align: 'left' }, box }
+    expect(itemHasInk(text)).toBe(true)
+    expect(itemHasInk({ ...text, opacity: 0 })).toBe(false)
+    expect(itemHasInk({ ...text, text: ' ' })).toBe(false)
+    expect(itemHasInk({ ...text, box: { ...box, width: 0 } })).toBe(false)
+    expect(itemHasInk({ ...text, transform: { x: 0, y: 0, scale: 0, rotate: 0 } })).toBe(false)
+    expect(itemHasInk({ kind: 'dim', id: 'dim', opacity: 1, color: '#000', alpha: 0.5 })).toBe(false)
+    const stroke = { kind: 'stroke' as const, id: 's', opacity: 1, d: 'M 0 0 L 1 1', from: 0, to: 0, width: 2, color: '#000', cap: 'round' as const, join: 'round' as const }
+    expect(itemHasInk(stroke)).toBe(false)
+    expect(itemHasInk({ ...stroke, to: 0.1 })).toBe(true)
+    expect(itemHasInk({ kind: 'group', id: 'g', opacity: 1, children: [stroke] })).toBe(false)
+    expect(itemHasInk({ kind: 'group', id: 'g', opacity: 1, children: [text] })).toBe(true)
   })
 
   it('a flat spec fails the list bars as a dead branch would (no camera at all)', () => {
@@ -91,7 +141,7 @@ describe('the parity option’s templates half, node’s side: every depth of th
   it('the shapes and sizes: 540×960 and 960×540 for depth, 1920×1080 for the flat 16:9 parity', () => {
     expect(DEPTH_TEMPLATE_SHAPES.map((s) => `${s.name} ${s.width}x${s.height}`)).toEqual(['9:16 540x960', '16:9 960x540'])
     expect(FLAT_PARITY_WIDE).toEqual({ width: 1920, height: 1080 })
-    expect(DEPTH_TEMPLATES_BAR).toEqual({ settledMax: 0, firstMinMax: 8, missingMax: 0 })
+    expect(DEPTH_TEMPLATES_BAR).toEqual({ settledMax: 0, firstMinMax: 8, missingMax: 0, moveLeftAtFirstInkMin: 0.5 })
   })
 
   it('isDepthTemplate: the three and counter and ring; never a template with no depth rows, the screen card among them', () => {
@@ -112,10 +162,13 @@ describe('depthTemplatesVerdict', () => {
     textsChecked: 400,
     textsDiffer: [],
     settledListEqual: true,
+    settledInk: true,
+    firstInkFrame: 5,
+    moveLeftAtFirstInk: 0.95,
     settled: diff(),
     firstFrame: 5,
     first: diff(120, 3),
-    missing: { compositor: 'null', notes: [WEBGL_NOTE], frame: 5, againstPainterA: diff(), settledAgainstTwin: diff() }
+    missing: { compositor: 'null', notes: [WEBGL_NOTE], frame: 5, inked: true, againstPainterA: diff(), settledAgainstTwin: diff() }
   })
   const passing = (): { flat: FlatParityRow[]; cases: DepthTemplateCase[] } => ({
     flat: STEP_SIX.flatMap((t) =>
@@ -157,6 +210,10 @@ describe('depthTemplatesVerdict', () => {
       ['WebGL started', (r) => (r.missing.compositor = 'a compositor'), /createCompositor gave a compositor/u],
       ['no note', (r) => (r.missing.notes = []), /the notes were \[\], not the one note/u],
       ['not painter A', (r) => (r.missing.againstPainterA = diff(3)), /is not painter A's own picture \(max 3\)/u],
+      ['the move spent on blank frames', (r) => (r.moveLeftAtFirstInk = 0.034), /on the first frame with ink \(5\) the camera has 0\.034 of its move left, under 0\.5/u],
+      ['no ink at all', (r) => (r.firstInkFrame = -1), /no frame has ink/u],
+      ['the settled frame blank', (r) => (r.settledInk = false), /the settled frame draws nothing/u],
+      ['WebGL missing read on a blank frame', (r) => (r.missing.inked = false), /with WebGL missing, frame 5 has no ink, so drawing it flat proves nothing/u],
       ['missing settled off', (r) => (r.missing.settledAgainstTwin = diff(2)), /with WebGL missing, the settled frame differs/u],
       ['no Preview mark', (_r, c) => (c.previewDrawnFlat = false), /the Preview did not mark its clip drawn flat/u]
     ]
