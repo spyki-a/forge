@@ -433,7 +433,8 @@ pass's menu, `timeline`, `before-after` and `versus`, each offered only
 for a window whose sentences hold what it needs
 (`src/shared/director/menuGraphics.ts` `stepSixOffered`, called from
 `graphicsMenuFor`: two years said as dates; two numbers in one unit with,
-except in Hindi and Telugu, an English cue word beside one of them), and
+except in Hindi and Telugu, an English cue word in a sentence that holds
+one of them), and
 listed in the prompt's TEMPLATES only then. **No schema key was added**:
 they fill the existing `items` (a timeline row's `value` is its year; the
 two sides are two items in drawn order), because every key is required

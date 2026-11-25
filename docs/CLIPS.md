@@ -16483,7 +16483,11 @@ comment: the three wait for their Hindi and Telugu fixtures), `graphicLibrary`,
 `graphicsValidator` (the property and its adversarial generators over
 the three), `uiCensus` (the Graphics tiles counted by `LIBRARY_GRAPHICS`),
 and the renderer's `graphicCheckPrimitives`, `graphicCheckTemplates`,
-`graphicCompositor`, `graphicPanel` and `transcriptGraphics`;
+`graphicCompositor`, `graphicPanel` and `transcriptGraphics`; the eval's
+`tests/eval/director.eval.test.ts` (the block asks step 6's three talks),
+`tests/eval/graphicsEval.ts` and `tests/eval/graphicsFixtures.ts`; the
+fixtures `tests/fixtures/graphics/specs.json` (the three's English
+specs) and `tests/fixtures/ui-census.json` (the census rows);
 `graphic.int` gained the describe "step 6, piece 1" (the render check
 below). Tests that pinned the fixture count or no step-6 row now assert
 membership. Mutations, the agents' readings: 23 + 4, 27 + 10, 22 + 8,
@@ -26103,8 +26107,8 @@ The tests and render checks are §6.11's, extended per template.
 >   is one year (`TIMELINE_YEARS = { from: 1000, to: 2999 }`): the answer's
 >   text four digits of any script with no unit or currency, else
 >   `notAYear`: "'<text>' is not a year: a timeline's when is one year as
->   said, such as 2019"; a when bound to an amount ('$2018') is "said in
->   <sentence> in another unit"; and since `b70b0bf` the speaker's own
+>   said, such as 2019"; a when bound to an amount ('$2018') is "'<text>'
+>   is said in <sentence> in another unit"; and since `b70b0bf` the speaker's own
 >   token (`spokenNumberAt`) must pass `saidAsYear(tokens, at, english)`:
 >   four digits as said ('1,500' and 'two thousand fifteen' are not), and in
 >   English after one of `YEAR_LEADS_EN` (in, since, by, until, till, from,
@@ -26154,7 +26158,8 @@ The tests and render checks are §6.11's, extended per template.
 >   negated year the trap), `step6-before-after-en` ($1,500 then $4,000,
 >   a negated $900 the trap) and `step6-versus-en` (600 leads against 350,
 >   a negated 900 the trap), each offering its own template and neither of
->   the other two. A `FORGE_EVAL_GRAPHICS` run (`director.eval.test.ts`)
+>   the other two (texts of their own: the harness stub's talks below,
+>   `graphicsStub.ts`, are separate, "… opened a studio"). A `FORGE_EVAL_GRAPHICS` run (`director.eval.test.ts`)
 >   now asks every `eval-*.json`, the nested set and these three, even with
 >   no `eval-*.json` (before, it returned early; `noEvalFixturesLine` now
 >   reads "No eval-*.json in <dir>: the ten eval transcripts are your
@@ -26243,14 +26248,17 @@ The tests and render checks are §6.11's, extended per template.
 >   `depthCamera(move, style, t, beat, labelZ?, start = 0)` and
 >   `depthOut(template, spec, style, t, beat, size, items, start = 0)`;
 >   the span is `[max(0, min(start, beat)), beat]`, capped at
->   `DURATIONS.entrance`. Counter and ring pass no `start` (they enter from
+>   `DURATIONS.entrance` for tilt, parallax and dolly (the focus blur's is
+>   uncapped: the same span for the three, which start the entrance's
+>   length before their first beat). Counter and ring pass no `start` (they enter from
 >   t = 0); the three pass their first beat less `DURATIONS.entrance`, when
 >   their first element's entrance begins. Tilt, parallax and dolly are flat
 >   from the FIRST beat; **the focus blur falls over the same span to
 >   exactly 0 on the first beat**, as the counter's on its one, so later
 >   rows and the second side enter sharp. `9fbb0b9` ran the camera from
->   t = 0, over frames blank for all three (the critics measured 0.034 of
->   tilt left on the first inked frame, frame 5), and its focus blur to the
+>   t = 0, over frames blank for all three (the critics measured the tilt
+>   at 0.817° of 24, 3.4% of the move left, on the first inked frame,
+>   frame 5; the fixer's mutation read 0.034 there), and its focus blur to the
 >   LAST beat through a `lastBeat` argument, which blurred each later label
 >   while it was said; `f06d083` removed `lastBeat`. The fixer's node
 >   reading: on the first inked frame 0.731 of each move is left under
@@ -26390,8 +26398,10 @@ The tests and render checks are §6.11's, extended per template.
 >    not before a plural), not any `when`; 'last year', 'March 2018', 'day
 >    3' and a range are refused; the years must rise (date order, beyond
 >    "spoken order").
-> 6. The two sides must share one unit, and a two-sided answer is exactly
->    two items; neither is in §9's words.
+> 6. The two sides must share one unit, a two-sided answer is exactly two
+>    items, and one number said once is never both sides (nor one year two
+>    rows; said twice, a no-change before-and-after is kept as said); none
+>    is in §9's words.
 > 7. The menu does not take the three "as … the nine shapes": they are
 >    offered only where a window's sentences hold what each needs
 >    (`menuGraphics.ts`, called from `run.ts` `graphicsMenuFor`; the
@@ -26430,7 +26440,10 @@ The tests and render checks are §6.11's, extended per template.
 > - Yours: `specs.json`'s `timeline-hi`, `timeline-te`, `before-after-hi`,
 >   `before-after-te`, `versus-hi`, `versus-te`; the Hindi and Telugu eval
 >   talks for the three; Hindi and Telugu cue words for the two-sided
->   templates and year postpositions. When the fixtures land, the three join
+>   templates and year postpositions (until then a Hindi or Telugu window
+>   with two numbers in one unit is offered both two-sided templates, and a
+>   year there, as in every language but English, needs only four digits as
+>   said, no date-word test). When the fixtures land, the three join
 >   `graphicHolds.test.ts`' walk; `timeline-en` already needs 7.9 s of its
 >   8 s, so a Hindi or Telugu timeline may exceed it.
 > - What a before-and-after MEANS is guarded only by the menu: 'My camera
@@ -26462,19 +26475,26 @@ The tests and render checks are §6.11's, extended per template.
 >   element's entrance carrying the camera (rows 2 to 5 enter flat); focus
 >   sharp from the first beat; the planes; the reveal on −0.02 under focus;
 >   the divider on 0.
+> - The three's sounds (restrained styles a tick on the first element's
+>   beat; `energetic` a tick every beat and the whooshes) are a proposal,
+>   unrated; yours after M18.
 > - Declined by piece 3's fixer: a critic's bar of "half the move left on
 >   the first frame with a word at opacity 0.5 or more", because counter-en
 >   itself reads 0.27 there under `clean` (frame 2) and the three now read
 >   0.37; the bar used is the first frame with any ink.
 > - The counter/ring proof is a kept rig, not a committed test.
 > - Not read: the dock's fields and Depth choices on the three driven by
->   hand (the census covers their labels, the panel's node tests the
+>   hand, nor its new warnings (`notAYear`, `notSaidAsAYear`, the two-unit
+>   note) (the census covers their labels, the panel's node tests the
 >   reading and writing); anything in the development app or on the
 >   Surface; the export of the three on Windows beyond CI's green
 >   `graphic.int` (no figure).
 > - `src/shared/graphics/templates/index.ts`' comment on the three's
 >   `DRAWERS` rows still says "their depth variants are this step's next
->   piece"; they are built (piece 3). A comment only.
+>   piece"; they are built (piece 3). And `templates/beforeAfter.ts`' head
+>   still says the after's box grows "over the before's card from the
+>   middle out"; the code grows the reveal over the after's (right) half
+>   only. Comments only.
 
 **Exit:** each of `timeline`, `before-after` and `versus` passes step 3's
 phase-2 bar (§6.12: the property test over its text items, the render check

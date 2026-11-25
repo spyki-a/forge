@@ -169,7 +169,7 @@ Paste, a separator and Select All, each enabled from Electron's
 nothing. `tests/editMenuText.test.ts` (new), 10 cases; the session's ten
 mutations each caught (the bug itself put back fails "gives Cut, Copy,
 Paste, Delete and Select All to the text…"). Read by the session on the
-harness page, on the Mac: a click in the link box made the report carry
+harness page, on the Mac: a click in a text box made the report carry
 `textFocus: true`, a click on the viewer `false`; the Electron half cannot
 run there and was not run by the session. **The user tried it in the
 development app on the Mac**: "perfect everything is good landed well"
@@ -367,7 +367,8 @@ and **Versus**, step 6's 3D templates (`docs/CLIPS.md` §9, piece 1:
 drag in placeholder words: "2020" "First moment", "2022" "Second moment",
 "2024" "Third moment"; "Before" "10", "After" "100"; "This one" "40",
 "That one" "60". No new control: three more tiles in the same grid; the
-census counts the tile title by `LIBRARY_GRAPHICS.length` (10). Placed from
+census rows carry the count 10, which `tests/uiCensus.test.ts` ties to
+`LIBRARY_GRAPHICS.length`. Placed from
 the store's `placeLibraryGraphic` and looked at by the session on the
 harness page, on the Mac, 2026-11-25, on a 16:9 project (not rated); not
 read in the development app or on the Surface.)

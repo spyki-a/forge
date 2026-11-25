@@ -84,7 +84,7 @@ the URL box; anywhere else they act on the clips, as before. **Undo** and
 **Cut**, **Copy**, **Paste** and **Select All**, each greyed as the box
 allows; on selected text that cannot be edited, **Copy** alone; anywhere
 else no text menu, so the page's own menus (a tile, a clip) are unchanged.
-Read on the harness page on the Mac (a click in the link box reports the
+Read on the harness page on the Mac (a click in a text box reports the
 text box focused, a click on the viewer not); the menu itself was tried by
 the user in the development app on the Mac ("perfect everything is good
 landed well"); not read on the Surface.
@@ -631,7 +631,7 @@ templates, `docs/CLIPS.md` §9) the model may also be offered a **timeline**,
 a **before-and-after** or a **versus**, each only for a stretch of the clip
 whose words hold what it needs (two years said as dates; two numbers in one
 unit with, except in Hindi and Telugu, a word such as "before", "used" or
-"than" in a sentence that holds one of them), so most clips are offered none; the baseline makes none of them. The
+"than" in a sentence that holds one of them); a clip whose talk holds none of these is offered none of the three, and the baseline makes none of them. The
 lists and notes name them "timeline", "before-and-after" and "versus", and
 their notes say why one was dropped ("… is not said in the order the
 before-and-after draws it in s01", "the timeline's years are not said in
@@ -1350,7 +1350,9 @@ gap to select it — Delete then closes it. Dragging one of several selected
 clips moves them all.
 
 **Editing.** Copy, cut, paste (at the playhead, keeping the arrangement) and
-duplicate (each copy straight after its original) are on ⌘C, ⌘X, ⌘V and ⌘D and
+duplicate (each copy straight after its original) are on ⌘C, ⌘X, ⌘V and ⌘D (⌘C, ⌘X and ⌘V
+only when no text box has the focus; in a text box they edit its text, "The
+Edit menu and text boxes" under The header) and
 on the clip's **right-click menu**, which also holds **Speed**, **Voice** (six
 presets: Chipmunk, Bright, Deep, Monster, Phone call, Radio), **Look** (the
 seven grades), **Split here**, **Detach audio** (and **Restore its own sound**),
