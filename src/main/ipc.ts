@@ -1,5 +1,6 @@
 import { BrowserWindow, dialog, ipcMain, shell, app, systemPreferences } from 'electron'
-import { access, mkdir, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import { access, mkdir, open, readdir, readFile, rename, stat, unlink, writeFile } from 'node:fs/promises'
+import { constants as fsConstants } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import type { Job } from '@shared/types'
 import type { MediaAsset, ParallaxBake, Project } from '@shared/timeline'
@@ -16,6 +17,9 @@ import {
   LOOK_CHANNELS,
   LOOK_EXPORT_FAILED,
   LOOK_EXTENSION,
+  LOOK_FILE_MAX_BYTES,
+  LOOK_NOT_A_LOOK,
+  LOOK_TOO_LARGE,
   LOOK_UNREADABLE,
   lookFileBase,
   lookSizeRefusal,
@@ -150,6 +154,33 @@ let helperJobs: HelperPackJobs | null = null
  */
 export function quitHelperJobs(): void {
   helperJobs?.quit()
+}
+
+/**
+ * A look file's text, read through one handle and never past
+ * LOOK_FILE_MAX_BYTES + 1 bytes, whatever its size says: the handle is
+ * opened without blocking (a file swapped for a named pipe after the `stat`
+ * would otherwise hang the open), then checked again as a regular file of
+ * at most the cap, so a file that grew after the `stat` is still refused.
+ */
+async function readLookBytes(target: string): Promise<string | 'not-a-file' | 'too-large'> {
+  const handle = await open(target, fsConstants.O_RDONLY | (fsConstants.O_NONBLOCK ?? 0))
+  try {
+    const s = await handle.stat()
+    if (!s.isFile()) return 'not-a-file'
+    if (lookSizeRefusal(s.size)) return 'too-large'
+    const buffer = Buffer.alloc(LOOK_FILE_MAX_BYTES + 1)
+    let filled = 0
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, filled)
+      if (bytesRead === 0) break
+      filled += bytesRead
+    }
+    if (filled > LOOK_FILE_MAX_BYTES) return 'too-large'
+    return buffer.subarray(0, filled).toString('utf8')
+  } finally {
+    await handle.close()
+  }
 }
 
 export interface IpcOptions {
@@ -1450,10 +1481,16 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
     const target = result.filePaths[0]
     let text: string
     try {
-      const size = (await stat(target)).size
-      const tooLarge = lookSizeRefusal(size)
+      // Only a regular file: a link to /dev/zero or a named pipe reports size
+      // 0, and reading one would fill main's memory or never return.
+      const s = await stat(target)
+      if (!s.isFile()) return { ok: false, reason: LOOK_NOT_A_LOOK }
+      const tooLarge = lookSizeRefusal(s.size)
       if (tooLarge) return { ok: false, reason: tooLarge }
-      text = await readFile(target, 'utf8')
+      const read = await readLookBytes(target)
+      if (read === 'not-a-file') return { ok: false, reason: LOOK_NOT_A_LOOK }
+      if (read === 'too-large') return { ok: false, reason: LOOK_TOO_LARGE }
+      text = read
     } catch {
       return { ok: false, reason: LOOK_UNREADABLE }
     }

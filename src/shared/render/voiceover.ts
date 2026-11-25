@@ -87,7 +87,9 @@ export function safeTakeBase(name: unknown, fallback: string): string {
     .slice(0, 80)
     .replace(/[. ]+$/, '')
   if (!cleaned) return fallback
-  return /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/i.test(cleaned) ? `_${cleaned}` : cleaned
+  // Windows also reserves COM0/LPT0, the superscript digits (COM¹…LPT³) and
+  // CONIN$/CONOUT$, and drops spaces before the dot when it matches one ("CON .x").
+  return /^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³]) *(\..*)?$/i.test(cleaned) ? `_${cleaned}` : cleaned
 }
 
 /** A three-count before recording starts: long enough to breathe, short enough not to wait. */

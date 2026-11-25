@@ -26,10 +26,12 @@
 import {
   CAPTION_STYLES,
   resolveStyle,
+  styleById,
   type CaptionStyle,
   type StyleOverrides
 } from './captions/style'
 import {
+  CLEAN_GRAPHIC_STYLE,
   GRAPHIC_OVERRIDE_KEYS,
   GRAPHIC_STYLES,
   graphicOverrideAccepted,
@@ -74,6 +76,8 @@ export const LOOK_FONT_MAX = 100
  * small; and fifty rows is already a long list in a 240-pixel column.
  */
 export const SAVED_LOOKS_MAX = 50
+/** How many saved entries are read at most on load (the app writes at most SAVED_LOOKS_MAX; the rest is room for refused ones). */
+export const SAVED_LOOKS_READ = SAVED_LOOKS_MAX * 4
 /** The largest version number kept; anything else reads as 1, and saving over a look at it keeps it there. */
 export const LOOK_VERSION_MAX = 1_000_000
 
@@ -176,10 +180,25 @@ function own(record: Record<string, unknown>, key: string): unknown {
   return Object.hasOwn(record, key) ? record[key] : undefined
 }
 
-/** Control characters out, ends trimmed, capped in code points so no surrogate pair is split. */
+/**
+ * What a name, a header line or a font family never keeps: control
+ * characters; the bidirectional controls (U+061C, U+200E/F, U+202A-202E,
+ * U+2066-2069), which can make "ab<RLO>gpj.forgelook" show as a picture's
+ * name; and a half of a surrogate pair standing alone, which is no character
+ * at all and makes an ill-formed file name on both systems. The joiners
+ * (U+200C/D) stay: Indic scripts and emoji need them.
+ */
+// eslint-disable-next-line no-control-regex
+const NEVER_KEPT = /[\u0000-\u001f\u007f\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]|[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g
+
+/** What NEVER_KEPT drops, removed from a text. */
+function withoutUnkept(value: string): string {
+  return value.replace(NEVER_KEPT, '')
+}
+
+/** Control and bidirectional characters and lone surrogate halves out, ends trimmed, capped in code points so no surrogate pair is split. */
 function cleanText(value: string, max: number): { text: string; shortened: boolean } {
-  // eslint-disable-next-line no-control-regex
-  const text = value.replace(/[\u0000-\u001f\u007f]/g, '').trim()
+  const text = withoutUnkept(value).trim()
   const points = Array.from(text)
   if (points.length <= max) return { text, shortened: false }
   return { text: points.slice(0, max).join('').trim(), shortened: true }
@@ -201,7 +220,8 @@ function isFontFamily(value: unknown): value is string {
     value.trim() === value &&
     value !== '' &&
     Array.from(value).length <= LOOK_FONT_MAX &&
-    FONT_FAMILY_OK.test(value)
+    FONT_FAMILY_OK.test(value) &&
+    withoutUnkept(value) === value
   )
 }
 
@@ -344,8 +364,12 @@ export function lookFromProject(project: Pick<Project, 'captions' | 'graphics'>,
     author: cleanText(made.author ?? '', LOOK_AUTHOR_MAX).text,
     version: saneVersion(made.version) ?? 1,
     licence: cleanText(made.licence ?? '', LOOK_LICENCE_MAX).text,
-    captions: { styleId: project.captions.styleId },
-    graphics: { styleId: project.graphics?.styleId ?? GRAPHIC_STYLES[0].id }
+    // The presets the resolvers actually DRAW: a project can hold an id this
+    // app lacks (opened from a newer app, a preset since removed), which both
+    // resolvers draw as their default. Copied as given, the look would be
+    // refused by parseLook on the next start and vanish from the list.
+    captions: { styleId: styleById(project.captions.styleId).id },
+    graphics: { styleId: (GRAPHIC_STYLES.find((s) => s.id === project.graphics?.styleId) ?? CLEAN_GRAPHIC_STYLE).id }
   }
   const co = sortedOrNone(captions.kept)
   if (co) look.captions.overrides = co as StyleOverrides
@@ -388,9 +412,9 @@ export function applyLook(project: Project, look: Look): Project {
     project.captions.styleId === look.captions.styleId &&
     canonical(project.captions.overrides ?? {}) === canonical(captionOverrides) &&
     (project.captions.placement === 'smart') === (look.captions.placement === 'smart') &&
-    project.graphics !== undefined &&
-    project.graphics.styleId === look.graphics.styleId &&
-    canonical(project.graphics.overrides ?? {}) === canonical(graphicOverrides)
+    // Absent graphics draw as clean with none, so a clean look without overrides changes nothing there.
+    (project.graphics?.styleId ?? CLEAN_GRAPHIC_STYLE.id) === look.graphics.styleId &&
+    canonical(project.graphics?.overrides ?? {}) === canonical(graphicOverrides)
   if (same) return project
   const { placement: _was, ...captions } = project.captions
   return {
@@ -401,8 +425,10 @@ export function applyLook(project: Project, look: Look): Project {
       overrides: captionOverrides,
       ...(look.captions.placement === 'smart' ? { placement: 'smart' as const } : {})
     },
+    // Spread as the setters do, so a field GraphicsSettings gains later is kept; absent means sounds on.
     graphics: {
-      sound: project.graphics?.sound ?? true,
+      sound: true,
+      ...project.graphics,
       styleId: look.graphics.styleId,
       overrides: graphicOverrides
     }
@@ -567,15 +593,16 @@ export function readLookText(text: string): LookRead {
  * The look as its file's text: keys in a fixed order (the header first, then
  * captions, then graphics; overrides sorted), two-space indent, a final
  * newline. Only the look's own fields are written, whatever else the object
- * carries.
+ * carries, the overrides included: each goes through the checks a file's
+ * do, so a key a look may not carry never reaches the text.
  */
 export function serializeLook(look: Look): string {
   const captions: Record<string, unknown> = { styleId: look.captions.styleId }
-  const co = look.captions.overrides ? sortedOrNone(look.captions.overrides as Record<string, unknown>) : undefined
+  const co = sortedOrNone(sortCaptionOverrides(look.captions.overrides).kept)
   if (co) captions.overrides = co
   if (look.captions.placement === 'smart') captions.placement = 'smart'
   const graphics: Record<string, unknown> = { styleId: look.graphics.styleId }
-  const go = look.graphics.overrides ? sortedOrNone(look.graphics.overrides) : undefined
+  const go = sortedOrNone(sortGraphicOverrides(look.graphics.overrides).kept)
   if (go) graphics.overrides = go
   const file = {
     kind: LOOK_KIND,
@@ -600,10 +627,12 @@ const FILE_FALLBACK = 'look'
  * become hyphens first (a name is not a path, and "Before/After" keeps both
  * words), then `safeTakeBase`'s rules (the illegal set, control characters,
  * leading and trailing dots and spaces, 80 characters, the reserved names),
- * and a half surrogate pair left by its cut removed.
+ * and a half surrogate pair left by its cut removed. What a name never keeps
+ * (bidirectional controls, a lone surrogate half) goes first, so a name of
+ * only those is the fallback, never a bare ".forgelook".
  */
 export function lookFileBase(name: string): string {
-  const base = safeTakeBase(name.replace(/[/\\]/g, '-'), FILE_FALLBACK)
+  const base = safeTakeBase(withoutUnkept(name).replace(/[/\\]/g, '-'), FILE_FALLBACK)
   const whole = base.replace(/[\uD800-\uDBFF]$/, '').replace(/[. ]+$/, '')
   return whole === '' ? FILE_FALLBACK : whole
 }
@@ -634,12 +663,13 @@ export function uniqueLookName(name: string, taken: readonly string[]): string {
  * The saved list as read from settings: each entry through `parseLook`, the
  * refused ones dropped, an unnamed one dropped, a second of the same name
  * dropped (the first kept), at most SAVED_LOOKS_MAX. Anything that is not a
- * list is no list.
+ * list is no list. At most SAVED_LOOKS_READ entries are looked at, so a
+ * settings value of millions of refused entries costs nothing.
  */
 export function saneSavedLooks(raw: unknown): Look[] {
   if (!Array.isArray(raw)) return []
   const out: Look[] = []
-  for (const entry of raw) {
+  for (const entry of raw.slice(0, SAVED_LOOKS_READ)) {
     if (out.length >= SAVED_LOOKS_MAX) break
     const read = parseLook(entry)
     if (!read.ok || read.look.name === '') continue

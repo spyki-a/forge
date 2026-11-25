@@ -148,6 +148,31 @@ describe('applying a look', () => {
     // What each resolves to is the source's again.
     expect(resolveStyle(state().project.captions.styleId, state().project.captions.overrides as StyleOverrides)).toStrictEqual(resolveStyle('pop', { fontSize: 99 }))
     expect(resolveGraphicStyle(state().project.graphics!.styleId, state().project.graphics!.overrides).radius).toBe(0.03)
+ 
+    // Redo brings the look back, a second undo the source again; the apply marked the project changed.
+    state().redo()
+    expect(state().project.captions).toStrictEqual(after.captions)
+    expect(state().project.graphics).toStrictEqual(after.graphics)
+    expect(state().dirty).toBe(true)
+    state().undo()
+    expect(state().project.captions).toStrictEqual(source.captions)
+    expect(state().project.graphics).toStrictEqual(source.graphics)
+  })
+
+  it('rebakes when only the graphic OVERRIDES change, the preset the same', async () => {
+    const rebaked: string[] = []
+    const rebakeGraphic = async (clipId: string): Promise<void> => {
+      rebaked.push(clipId)
+    }
+    const source = projectWith({ styleId: 'pop' }, { styleId: 'neon', overrides: { radius: 0.03 }, sound: true }, [clip('g1', true), clip('g2', true)])
+    useEditor.setState({ project: source, past: [], future: [], rebakeGraphic, lookNotes: [], savedLooks: [
+      look('Rounder', { styleId: 'pop' }, { styleId: 'neon', overrides: { radius: 0.05 }, sound: true })
+    ] })
+    state().applySavedLook('Rounder')
+    expect(state().past).toHaveLength(1)
+    await vi.waitFor(() => expect(rebaked).toHaveLength(2))
+    await new Promise((r) => setTimeout(r, 10))
+    expect(rebaked).toEqual(['g1', 'g2'])
   })
 
   it('rebakes each graphic clip once, and no other clip; none when the graphic style did not change', async () => {
@@ -224,6 +249,27 @@ describe('exporting a look', () => {
       expect(state().lookNotes).toEqual([LOOK_EXPORT_FAILED])
     } finally {
       forge.exportLook = was
+    }
+  })
+
+  it('says main’s sentence without Electron’s wrapping of a rejected call', async () => {
+    start(projectWith({ styleId: 'pop' }), [look('Studio')])
+    const forge = (window as unknown as { forge: { exportLook: unknown; importLook: unknown } }).forge
+    const was = { exportLook: forge.exportLook, importLook: forge.importLook }
+    // What ipcRenderer.invoke rejects with in the app when main throws.
+    forge.exportLook = async () => {
+      throw new Error(`Error invoking remote method 'look:export': Error: ${LOOK_EXPORT_FAILED}`)
+    }
+    forge.importLook = async () => {
+      throw new Error(`Error invoking remote method 'look:import': Error: ${LOOK_UNREADABLE}`)
+    }
+    try {
+      await state().exportSavedLook('Studio')
+      expect(state().lookNotes).toEqual([LOOK_EXPORT_FAILED])
+      await state().importLookFile()
+      expect(state().lookNotes).toEqual([LOOK_UNREADABLE])
+    } finally {
+      Object.assign(forge, was)
     }
   })
 })
@@ -313,6 +359,20 @@ describe('loading the saved looks', () => {
       await state().loadSavedLooks()
       expect(state().savedLooks, String(bad)).toEqual([])
     }
+  })
+
+  it('a look saved from a project holding presets this app lacks keeps the presets it draws, loads back and exports', async () => {
+    start(projectWith({ styleId: 'from-newer-app', overrides: { fontSize: 70 } }, { styleId: 'also-newer', sound: true }))
+    expect(await state().saveLook({ name: 'Studio' })).toBe(true)
+    // What the resolvers draw for an unknown id: their defaults.
+    expect(state().savedLooks[0].captions.styleId).toBe(resolveStyle('from-newer-app').id)
+    expect(state().savedLooks[0].graphics.styleId).toBe(resolveGraphicStyle('also-newer').id)
+    useEditor.setState({ savedLooks: [] })
+    await state().loadSavedLooks()
+    expect(state().savedLooks.map((l) => l.name)).toEqual(['Studio'])
+    await state().exportSavedLook('Studio')
+    expect(bridge.exported.map((l) => l.name)).toEqual(['Studio'])
+    expect(state().lookNotes).toEqual([lookExportedNote('Studio.forgelook')])
   })
 
   it('a round trip through settings: what is saved loads back the same', async () => {

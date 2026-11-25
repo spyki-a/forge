@@ -6604,7 +6604,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       const written = await window.forge.exportLook(look)
       set({ lookNotes: written === null ? [] : [lookExportedNote(fileNameOf(written))] })
     } catch (err) {
-      set({ lookNotes: [err instanceof Error && err.message ? err.message : LOOK_EXPORT_FAILED] })
+      // Main's sentence without Electron's "Error invoking remote method 'look:export'" wrapping (rule B).
+      set({ lookNotes: [(err instanceof Error && err.message && helperErrorText(err)) || LOOK_EXPORT_FAILED] })
     }
   },
 
@@ -6613,7 +6614,7 @@ export const useEditor = create<EditorState>((set, get) => ({
     try {
       read = await window.forge.importLook()
     } catch (err) {
-      set({ lookNotes: [err instanceof Error && err.message ? err.message : LOOK_UNREADABLE] })
+      set({ lookNotes: [(err instanceof Error && err.message && helperErrorText(err)) || LOOK_UNREADABLE] })
       return
     }
     // Cancelled: nothing happened, so nothing is said.

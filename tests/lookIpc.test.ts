@@ -1,5 +1,6 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { emptyProject } from '../src/shared/timeline'
@@ -40,7 +41,12 @@ vi.mock('node:fs/promises', async (importOriginal) => {
     readFile: ((path: unknown, ...rest: unknown[]) => {
       reads.push(String(path))
       return (real.readFile as (...a: unknown[]) => unknown)(path, ...rest)
-    }) as typeof real.readFile
+    }) as typeof real.readFile,
+    // Opening a handle is the read now: recorded the same way.
+    open: ((path: unknown, ...rest: unknown[]) => {
+      reads.push(String(path))
+      return (real.open as (...a: unknown[]) => unknown)(path, ...rest)
+    }) as typeof real.open
   }
 })
 
@@ -184,6 +190,30 @@ describe('look:import', () => {
     expect(JSON.stringify(read)).not.toMatch(/SECRET|Bride|forge-look-ipc/)
     // It was read: the refusal is the parse's, not the size's.
     expect(reads).toContain(path)
+  })
+
+  // A zip from a stranger can carry a link; a link to a device or a pipe reports size 0.
+  it.skipIf(process.platform === 'win32')('refuses a link to a device or a named pipe without reading it', async () => {
+    const zero = join(dir, 'zero.forgelook')
+    symlinkSync('/dev/zero', zero)
+    const pipe = join(dir, 'pipe')
+    execFileSync('mkfifo', [pipe])
+    const toPipe = join(dir, 'pipe.forgelook')
+    symlinkSync(pipe, toPipe)
+    for (const path of [zero, pipe, toPipe]) {
+      choose(path)
+      const read = (await (await handler(LOOK_CHANNELS.import))()) as LookRead
+      expect(read, basename(path)).toStrictEqual({ ok: false, reason: LOOK_NOT_A_LOOK })
+    }
+    expect(reads).toEqual([])
+  }, 10_000)
+
+  it('reads a file of exactly the cap, and the text is the file’s', async () => {
+    const path = join(dir, 'Padded.forgelook')
+    const text = serializeLook(LOOK)
+    writeFileSync(path, text + ' '.repeat(LOOK_FILE_MAX_BYTES - Buffer.byteLength(text)))
+    choose(path)
+    expect(await (await handler(LOOK_CHANNELS.import))()).toStrictEqual({ ok: true, look: LOOK, notes: [] })
   })
 
   it('a file that is gone gives the plain reason', async () => {

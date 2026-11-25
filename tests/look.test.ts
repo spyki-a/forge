@@ -28,7 +28,9 @@ import {
   LOOK_UNKNOWN_GRAPHIC_STYLE,
   LOOK_UNREADABLE,
   SAVED_LOOKS_MAX,
+  SAVED_LOOKS_READ,
   applyLook,
+  graphicsStyleChanged,
   fileNameOf,
   lookDroppedNote,
   lookFileBase,
@@ -179,7 +181,8 @@ describe('the round trip: make, write, read, apply', () => {
           expect(resolveStyle(target.captions.styleId, target.captions.overrides as StyleOverrides), where).toStrictEqual(
             resolveStyle(source.captions.styleId, source.captions.overrides as StyleOverrides)
           )
-          expect(resolveGraphicStyle(target.graphics!.styleId, target.graphics!.overrides), where).toStrictEqual(
+          // Absent graphics draw as clean (an apply that changes nothing there writes nothing).
+          expect(resolveGraphicStyle(target.graphics?.styleId ?? 'clean', target.graphics?.overrides), where).toStrictEqual(
             resolveGraphicStyle(source.graphics!.styleId, source.graphics!.overrides)
           )
           expect(target.captions.placement, where).toBe(source.captions.placement)
@@ -625,5 +628,117 @@ describe('graphicOverrideAccepted agrees with resolveGraphicStyle', () => {
     expect(resolveGraphicStyle('clean', { radius: 5 }).radius).toBe(0.1)
     expect(graphicOverrideAccepted('no-such-key', 1)).toBe(false)
     expect(graphicOverrideAccepted('__proto__', {})).toBe(false)
+  })
+})
+
+/* ------------------------------------------------------ the critics' cases */
+
+describe('characters a name never keeps', () => {
+  it('drops a lone surrogate half from a name, and a name of only one reads as no name', () => {
+    const read = (name: string): string => {
+      const r = parseLook({ ...goodFile(), name })
+      if (!r.ok) throw new Error(r.reason)
+      return r.look.name
+    }
+    expect(read('a\uD800b')).toBe('ab')
+    expect(read('a\uDC00')).toBe('a')
+    expect(read('\uD800')).toBe('')
+    // A whole pair is a letter, and stays.
+    expect(read('a𐌰b')).toBe('a𐌰b')
+  })
+
+  it('a name of only a lone half makes the fallback file, never a bare extension', () => {
+    expect(lookFileBase('\uD800')).toBe('look')
+    expect(lookFileBase('\uDC00\u202E')).toBe('look')
+    expect(fileNameOf(`C:\\Looks\\${lookFileBase('x\uD800')}.forgelook`)).toBe('x.forgelook')
+  })
+
+  it('drops the direction controls that can disguise a file’s extension, and keeps the joiners', () => {
+    const r = parseLook({ ...goodFile(), name: 'ab\u202Egpj', author: '\u2066Ana\u2069', licence: 'x\u200Fy' })
+    if (!r.ok) throw new Error(r.reason)
+    expect(r.look.name).toBe('abgpj')
+    expect(r.look.author).toBe('Ana')
+    expect(r.look.licence).toBe('xy')
+    expect(fileNameOf(`/Looks/${lookFileBase('ab\u202Egpj')}.forgelook`)).toBe('abgpj.forgelook')
+    // The zero-width joiners are part of how some scripts and emoji are written.
+    const joined = parseLook({ ...goodFile(), name: 'ქ\u200Dა\u200Cლ' })
+    expect(joined.ok && joined.look.name).toBe('ქ\u200Dა\u200Cლ')
+    // A font family with one is not a family this file keeps.
+    const font = parseLook({ ...goodFile(), captions: { styleId: 'pop', overrides: { fontFamily: 'A\u202Eb' } }, graphics: { styleId: 'clean', overrides: { font: 'B\uD800' } } })
+    expect(font.ok && font.look.captions.overrides).toBeUndefined()
+    expect(font.ok && font.look.graphics.overrides).toBeUndefined()
+  })
+})
+
+describe('the reserved names Windows also keeps', () => {
+  it('COM0, the superscript digits, CONIN$ and CONOUT$, and a space before the dot', () => {
+    for (const reserved of ['COM0', 'COM¹', 'lpt²', 'LPT³', 'CONIN$', 'conout$', 'CON .look', 'nul  .x']) {
+      expect(fileNameOf(`/Looks/${lookFileBase(reserved)}.forgelook`), reserved).toBe(`_${reserved}.forgelook`)
+    }
+    // Words that only begin like one are names.
+    for (const name of ['Console', 'COM10', 'Auxiliary', 'CONINx']) expect(lookFileBase(name)).toBe(name)
+  })
+})
+
+describe('a project holding presets this app lacks', () => {
+  it('makes a look of the presets it DRAWS, which reads back and resolves the same', () => {
+    const source = projectWith({ styleId: 'from-newer-app', overrides: { fontSize: 70 } }, { styleId: 'also-newer', overrides: { radius: 0.05 }, sound: true })
+    const look = lookFromProject(source, HEADER)
+    expect(CAPTION_STYLES.map((s) => s.id)).toContain(look.captions.styleId)
+    expect(GRAPHIC_STYLES.map((s) => s.id)).toContain(look.graphics.styleId)
+    const read = readLookText(serializeLook(look))
+    expect(read.ok).toBe(true)
+    if (!read.ok) return
+    const landed = applyLook(emptyProject(), read.look)
+    expect(resolveStyle(landed.captions.styleId, landed.captions.overrides as StyleOverrides)).toStrictEqual(resolveStyle('from-newer-app', { fontSize: 70 }))
+    expect(resolveGraphicStyle(landed.graphics!.styleId, landed.graphics!.overrides)).toStrictEqual(resolveGraphicStyle('also-newer', { radius: 0.05 }))
+  })
+})
+
+describe('graphicsStyleChanged', () => {
+  it('is true for the same preset with other overrides, false for equal ones in another order, and absent is clean with none', () => {
+    const g = (styleId: string, overrides?: Record<string, unknown>): Pick<Project, 'graphics'> => ({ graphics: { styleId, ...(overrides ? { overrides } : {}), sound: true } })
+    expect(graphicsStyleChanged(g('neon', { radius: 0.03 }), g('neon', { radius: 0.05 }))).toBe(true)
+    expect(graphicsStyleChanged(g('neon'), g('neon', { radius: 0.05 }))).toBe(true)
+    expect(graphicsStyleChanged(g('neon'), g('bold'))).toBe(true)
+    expect(graphicsStyleChanged(g('neon', { radius: 0.03, dim: false }), g('neon', { dim: false, radius: 0.03 }))).toBe(false)
+    expect(graphicsStyleChanged({}, g('clean', {}))).toBe(false)
+    expect(graphicsStyleChanged({}, g('clean'))).toBe(false)
+  })
+})
+
+describe('applyLook on a project with no graphics', () => {
+  it('a clean look with none changes nothing there; a field graphics gain later is kept by an apply', () => {
+    const plain = lookFromProject(projectWith({ styleId: 'pop' }), { name: 'Plain' })
+    expect(plain.graphics).toStrictEqual({ styleId: 'clean' })
+    const source = projectWith({ styleId: 'pop' })
+    expect(applyLook(source, plain)).toBe(source)
+    const later = { ...projectWith({ styleId: 'pop' }), graphics: { styleId: 'clean', sound: false, extra: 7 } as unknown as Project['graphics'] }
+    const neon = lookFromProject(projectWith({ styleId: 'pop' }, { styleId: 'neon', sound: true }), { name: 'Neon' })
+    expect((applyLook(later, neon).graphics as unknown as { extra: number }).extra).toBe(7)
+  })
+})
+
+describe('serializeLook with tampered overrides', () => {
+  it('writes only the override keys a look may carry, with values a file read would keep', () => {
+    const look = lookFromProject(projectWith({ styleId: 'pop', overrides: { fontSize: 70 } }, { styleId: 'neon', overrides: { radius: 0.05 }, sound: true }), HEADER)
+    const tampered = {
+      ...look,
+      captions: { ...look.captions, overrides: { ...look.captions.overrides, token: 'sk-live-1', wordsPerLine: 'huge' } },
+      graphics: { ...look.graphics, overrides: { ...look.graphics.overrides, apiKey: 'sk-live-2' } }
+    } as unknown as Look
+    const text = serializeLook(tampered)
+    expect(text).not.toMatch(/sk-live|token|apiKey|huge/)
+    expect(text).toBe(serializeLook(look))
+  })
+})
+
+describe('saneSavedLooks on a settings value of many refused entries', () => {
+  it('reads at most SAVED_LOOKS_READ entries', () => {
+    const good = lookFromProject(projectWith({ styleId: 'pop' }), { name: 'Late' })
+    const raw: unknown[] = Array.from({ length: SAVED_LOOKS_READ }, () => ({ kind: 'nope' }))
+    raw.push(good)
+    expect(saneSavedLooks(raw)).toEqual([])
+    expect(saneSavedLooks([...raw.slice(1)]).map((l) => l.name)).toEqual(['Late'])
   })
 })
