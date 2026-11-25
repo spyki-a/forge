@@ -542,6 +542,8 @@ export interface Claim {
   value?: CanonNumber
   pair?: number
   mid?: true
+  /** A value whose pairs are said in data order (`TemplateDef.pairsInOrder`, step 6): set on each pair's `number` claim. */
+  inOrder?: true
 }
 
 /**
@@ -798,7 +800,8 @@ export function claimsOf(data: GraphicData, def: TemplateDef): Claim[] {
     }
     if (at?.role === 'value') {
       const value = soleNumber(s)
-      out.push(value ? { path, text: s, kind: 'number', value, pair: at.pair } : { path, text: s, kind: 'number', pair: at.pair })
+      const claim: Claim = value ? { path, text: s, kind: 'number', value, pair: at.pair } : { path, text: s, kind: 'number', pair: at.pair }
+      out.push(def.pairsInOrder ? { ...claim, inOrder: true } : claim)
       return
     }
     const tokens = spokenTokensOf(s)
@@ -1103,7 +1106,7 @@ function bindOnce(claims: readonly Claim[], stretch: ClaimStretch, lang: string)
   const judge = (): boolean => {
     const at = chosen.map((o) => o.word)
     // Spoken order across the pairs.
-    const disordered = [...orderBroken(claims, chosen), ...itemsDisordered(claims, chosen)]
+    const disordered = [...orderBroken(claims, chosen), ...itemsDisordered(claims, chosen), ...valuesDisordered(claims, chosen)]
     if (disordered.length > 0) {
       if (!best || best.stage < 1) best = { stage: 1, reason: 'order', missing: disordered, at }
       return false
@@ -1231,6 +1234,27 @@ function orderBroken(claims: readonly Claim[], chosen: readonly Occurrence[]): C
         bad.add(a)
         bad.add(b)
       }
+    }
+  }
+  return claims.filter((c) => c.pair !== undefined && bad.has(c.pair))
+}
+
+/**
+ * Step 6's values in drawn order (docs/CLIPS.md §9, "in spoken order";
+ * `TemplateDef.pairsInOrder`): each `inOrder` value claim, by pair, is said
+ * after the one before it. A before-and-after whose after is said first, a
+ * versus whose right is said first, a timeline whose rows are not said in
+ * turn: every claim of both pairs, 'order'. Swapping the two sides of a
+ * before-and-after would otherwise draw a fall as a rise.
+ */
+function valuesDisordered(claims: readonly Claim[], chosen: readonly Occurrence[]): Claim[] {
+  const values = claims.map((c, i) => ({ c, i })).filter(({ c }) => c.inOrder && c.kind === 'number' && c.pair !== undefined)
+  values.sort((a, b) => a.c.pair! - b.c.pair!)
+  const bad = new Set<number>()
+  for (let k = 0; k + 1 < values.length; k++) {
+    if (!(chosen[values[k].i].first < chosen[values[k + 1].i].first)) {
+      bad.add(values[k].c.pair!)
+      bad.add(values[k + 1].c.pair!)
     }
   }
   return claims.filter((c) => c.pair !== undefined && bad.has(c.pair))

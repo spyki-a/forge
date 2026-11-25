@@ -27,6 +27,7 @@
  *   await window.__forgeGraphicCheck({ indic: true, templates: [...] })      and the Indic render check over their Hindi and Telugu
  *   const r = await window.__forgeGraphicCheck({ curves: { names: [...], clipId: '<id>' } })     M14, blind (§6.10)
  *   const r = await window.__forgeGraphicCheck({ look: { clipIds: ['<id>', ...] } })        the look rating, blind (§6.10)
+ *   await window.__forgeGraphicCheck({ find: ['timeline', 'before-after', 'versus'] })   3D templates piece 2: Find with the stubbed answer
  *
  * Every option is independent; one not passed runs nothing. The result carries
  * the numbers, a bounded sample of the frames drawn (PNG data URLs, never all
@@ -98,6 +99,8 @@ import { checkScreenCard, type ScreenCardResult } from './screenCardCheck'
 import { checkScreenCardRecording, type ScreenCardRecordingResult } from './screenCardRecordingCheck'
 import { checkReadback, type ReadbackResult } from './readbackCheck'
 import { checkBake3d, type Bake3dResult } from './bake3dCheck'
+import { checkFind, type FindResult } from './findCheck'
+import { HARNESS_STEP_SIX } from './graphicsStub'
 import {
   BLIND_FPS,
   CURVE_QUESTIONS,
@@ -297,12 +300,19 @@ export interface GraphicCheckOptions {
    * and shown blind on the page; the key in the result only.
    */
   curves?: { names: MotionEase[]; clipId: string }
+  /**
+   * 3D templates piece 2 (docs/CLIPS.md §9): Find graphics' own path for each
+   * named one of step 6's three with the harness's stubbed answer
+   * (findCheck.ts): offered, placed, beats, seconds, every string drawn at the
+   * settled frame, sounds. Plain data; nothing on the page's timeline changes.
+   */
+  find?: GraphicTemplateId[]
   /** The look rating (§6.10): each named graphic clip under `LOOK_VARIANTS`, lettered per clip and shown blind with `LOOK_QUESTIONS`; the keys in the result only. */
   look?: { clipIds: string[] }
 }
 
 /** Every option, in the order `runGraphicCheck` runs them. */
-export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'depth', 'screenCard', 'readback', 'bake3d', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look'] as const
+export const GRAPHIC_CHECK_OPTIONS = ['encode', 'segments', 'blur', 'parity', 'compositor', 'glow', 'focus', 'depth', 'screenCard', 'readback', 'bake3d', 'indic', 'primitives', 'pathLength', 'strokes', 'templates', 'curves', 'look', 'find'] as const
 export type GraphicCheckOption = (typeof GRAPHIC_CHECK_OPTIONS)[number]
 
 /** The options a call asked for, in run order: each one by itself, so an option not passed runs nothing (the file's rule). */
@@ -710,6 +720,7 @@ export interface GraphicCheckResult {
   /** The key of each is in it, never in `summary`, `notes`, `frames` or on the page. */
   curves?: CurvesResult
   look?: LookResult
+  find?: FindResult
   /** One line per figure, to copy. */
   summary: string[]
   notes: string[]
@@ -3801,6 +3812,10 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
   const blind: BlindShown[] = []
   if (options.curves) result.curves = await checkCurves(options.curves, result.date, summary, notes, blind)
   if (options.look) result.look = await checkLook(options.look, result.date, summary, notes, blind)
+  if (options.find) {
+    if (!Array.isArray(options.find)) throw new Error(`graphic check: find takes a list of template ids, of ${HARNESS_STEP_SIX.join(', ')}`)
+    result.find = checkFind(options.find, graphicMeasure(), summary, notes)
+  }
   if (asked.length === 0) {
     notes.push(`No option was passed, so nothing ran: ${GRAPHIC_CHECK_OPTIONS.join(', ')} (docs/CLIPS.md §6.11).`)
   }

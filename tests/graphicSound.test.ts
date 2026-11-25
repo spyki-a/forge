@@ -213,17 +213,29 @@ describe('graphicSounds: placement (§6.14)', () => {
       expect(at(30, { template: 'lower-third', name: 'Asha', role: 'Chef' }, [0.6], 'energetic')).toEqual([])
     })
 
-    it('step 6’s three are silent under every preset: §6.14 gives timeline, before-after and versus no row (a decision, not an accident)', () => {
-      const three: [GraphicData, number[]][] = [
-        [{ template: 'timeline', items: [{ when: '2019', label: 'started' }, { when: '2021', label: 'hired' }] }, [0.6, 1.0]],
-        [{ template: 'before-after', before: { label: 'before', value: '$1,500' }, after: { label: 'after', value: '$4,000' } }, [0.6, 1.4]],
-        [{ template: 'versus', left: { label: 'ours', value: '600' }, right: { label: 'theirs', value: '350' } }, [0.6, 1.4]]
-      ]
-      for (const [data, beats] of three) {
-        for (const style of [undefined, 'energetic', 'bold', 'editorial', 'neon', 'mono', 'accent']) {
-          expect(at(30, data, beats, style), `${data.template} ${style ?? 'clean'}`).toEqual([])
+    it('step 6’s three take the list templates’ row (3D templates piece 2): restrained, a tick on the first element’s beat; energetic, a tick on every beat and a whoosh on each entrance and stroke', () => {
+      // MUTATION (the three's arms removed from graphicSoundCues, silent again): fails every toEqual below.
+      // MUTATION (the versus' divider whoosh dropped): fails the versus energetic toEqual (no whoosh@319).
+      const timeline: GraphicData = { template: 'timeline', items: [{ when: '2019', label: 'started' }, { when: '2021', label: 'hired' }] }
+      const beforeAfter: GraphicData = { template: 'before-after', before: { label: 'before', value: '$1,500' }, after: { label: 'after', value: '$4,000' } }
+      const versus: GraphicData = { template: 'versus', left: { label: 'ours', value: '600' }, right: { label: 'theirs', value: '350' } }
+      // Restrained: a beat at 0.6 s from frame 300 lands on 318, under every preset but energetic.
+      for (const data of [timeline, beforeAfter, versus]) {
+        for (const style of [undefined, 'bold', 'editorial', 'neon', 'mono', 'accent']) {
+          expect(at(30, data, [0.6, 1.0], style), `${data.template} ${style ?? 'clean'}`).toEqual(['tick@318'])
         }
       }
+      // Energetic, beats 0.65 and 1.05 s: ticks on ceil(19.5, 31.5) = 20, 32. The first element enters from 0.30 s
+      // (frame 9), fastest on 10; the second's entrance from 0.70 s (frame 21), fastest on 22. A timeline's edge and a
+      // versus' divider stroke from 1.05 − 0.45 = 0.60 s (frame 18), fastest on 19. The before-and-after's reveal grows
+      // over the after's entrance span (from frame 21) on the draw-on curve, fastest on 22 too: one whoosh there.
+      expect(at(30, timeline, [0.65, 1.05], 'energetic')).toEqual(['whoosh@310', 'whoosh@319', 'tick@320', 'whoosh@322', 'tick@332'])
+      expect(at(30, versus, [0.65, 1.05], 'energetic')).toEqual(['whoosh@310', 'whoosh@319', 'tick@320', 'whoosh@322', 'tick@332'])
+      expect(at(30, beforeAfter, [0.65, 1.05], 'energetic')).toEqual(['whoosh@310', 'tick@320', 'whoosh@322', 'tick@332'])
+      // The cue's field is the element's value as said: the tick names the before's '$1,500'.
+      const s = spec(beforeAfter, [0.6, 1.0])
+      const p = project(30, [graphic('g', 300, 180, s)])
+      expect(graphicSoundCues(p, p.clips[1], s).map((c) => c.field)).toEqual(['$1,500'])
     })
   })
 

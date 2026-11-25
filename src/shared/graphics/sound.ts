@@ -146,11 +146,13 @@ export function fastestFrame(move: Move, fps: number, frames: number): number | 
 /**
  * The sounds a graphic asks for, before the cap (§6.14's table). Restrained
  * styles (every preset but `energetic`): `counter`, `ring` a tick on the
- * arrival beat; `bars`, `steps` a tick on the first item's beat; `keyword` a
- * tick on its beat; `callout` a whoosh on its stroke's fastest frame;
- * `quote`, `lower-third`, `screen-card`, step 6's `timeline`,
- * `before-after` and `versus` (§9 gives them no row of §6.14's table; the
- * owner's to decide) and every template not yet drawn, none. `energetic` adds a tick on every beat and a whoosh on the fastest
+ * arrival beat; `bars`, `steps` a tick on the first item's beat; step 6's
+ * `timeline`, `before-after` and `versus` likewise, a tick on their first
+ * element's beat (§9 gives them no row of §6.14's table; 3D templates piece
+ * 2 takes them as the list templates' row, the owner's to change after
+ * M18); `keyword` a tick on its beat; `callout` a whoosh on its stroke's
+ * fastest frame; `quote`, `lower-third`, `screen-card` and every template
+ * not yet drawn, none. `energetic` adds a tick on every beat and a whoosh on the fastest
  * frame of each stroke and each entrance, the moves as the drawers in
  * templates/ run them:
  * - `counter`, `ring`: the group's entrance from t = 0 (counter.ts:80, ring.ts:95),
@@ -164,10 +166,17 @@ export function fastestFrame(move: Move, fps: number, frames: number): number | 
  *   underline's stroke (keyword.ts:85, :114); the words' own staggered
  *   entrances are inside the card's and are not counted separately;
  * - `callout`: the stroke ending on its beat and the label's from the beat
- *   (callout.ts:162, :171).
- * Under `energetic` the quote, the lower third, the screen card and step
- * 6's three are still silent: the table's "none" is read as the template's, not the
- * style's. Two cues of one key on one frame are one. In frame order, ticks
+ *   (callout.ts:162, :171);
+ * - `timeline`: each row's entrance ending on its beat, and each edge's
+ *   stroke into rows after the first ending on its row's beat (timeline.ts,
+ *   `edge-i` and the row's `enterMove`);
+ * - `before-after`: the card's entrance ending on the before's beat, then the
+ *   reveal's growth (the entrance's span on the draw-on curve) and the
+ *   after's entrance, both ending on the after's beat (beforeAfter.ts);
+ * - `versus`: the left's entrance ending on its beat, then the divider's
+ *   stroke and the right's entrance ending on the right's (versus.ts).
+ * Under `energetic` the quote, the lower third and the screen card are still
+ * silent: the table's "none" is read as the template's, not the style's. Two cues of one key on one frame are one. In frame order, ticks
  * before whooshes on a tie.
  */
 export function graphicSoundCues(
@@ -231,6 +240,34 @@ export function graphicSoundCues(
         if (Number.isInteger(data.lit) && data.lit >= 0) moves.push({ move: strokeTo(beatOf(spec, 0)), field: data.words })
       } else ticks.push({ beat: beatOf(spec, 0), field: data.words })
       break
+    case 'timeline': {
+      const rows = Array.isArray(data.items) ? data.items : []
+      const whenOf = (i: number): string => (rows[i] ?? rows[rows.length - 1])?.when ?? ''
+      if (energetic) {
+        everyBeat(whenOf)
+        rows.forEach((row, i) => {
+          const beat = beatOf(spec, i)
+          if (i >= 1) moves.push({ move: strokeTo(beat), field: row.when })
+          moves.push({ move: enter(beat - E), field: row.when })
+        })
+      } else if (rows.length > 0) ticks.push({ beat: beatOf(spec, 0), field: whenOf(0) })
+      break
+    }
+    case 'before-after':
+    case 'versus': {
+      const [first, second] = data.template === 'before-after' ? [data.before, data.after] : [data.left, data.right]
+      const valueOf = (i: number): string => (i === 0 ? first?.value : second?.value) ?? ''
+      if (energetic) {
+        everyBeat((i) => valueOf(Math.min(i, 1)))
+        const b0 = beatOf(spec, 0)
+        const b1 = beatOf(spec, 1)
+        moves.push({ move: enter(b0 - E), field: valueOf(0) })
+        // The after's reveal grows over the entrance's span on the draw-on curve; the versus' divider is a stroke.
+        moves.push({ move: data.template === 'before-after' ? { start: b1 - E, seconds: E, ease: drawOnEase(style) } : strokeTo(b1), field: valueOf(1) })
+        moves.push({ move: enter(b1 - E), field: valueOf(1) })
+      } else ticks.push({ beat: beatOf(spec, 0), field: valueOf(0) })
+      break
+    }
     case 'callout':
       moves.push({ move: strokeTo(beatOf(spec, 0)), field: data.label })
       if (energetic) {

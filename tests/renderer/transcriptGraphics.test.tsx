@@ -906,3 +906,29 @@ describe('the census’s graphics run (harness/graphicsStub.ts)', () => {
     expect(proposal.note).toBe(`${CHECK_THE_NUMBER}: heard "40 clients"`)
   })
 })
+
+describe('Find graphics with each of step 6’s three (3D templates piece 2, docs/CLIPS.md §9)', () => {
+  const GOOD: Record<string, AnswerGraphic> = {
+    timeline: g({ sentence: 's00', template: 'timeline', items: [{ label: 'shot our first wedding', value: '2015' }, { label: 'hired an editor', value: '2018' }, { label: 'opened a studio', value: '2021' }] }),
+    'before-after': g({ sentence: 's00', template: 'before-after', items: [{ label: 'Before the course', value: '$1,500' }, { label: 'After the course', value: '$4,000' }] }),
+    versus: g({ sentence: 's00', template: 'versus', items: [{ label: 'Instagram', value: '600' }, { label: 'referrals', value: '350' }] })
+  }
+
+  it.each(['timeline', 'before-after', 'versus'] as const)('%s: the model’s graphic is offered, lands on the clip, is baked, listed in the tile with its words, and undoes in one step', async (template) => {
+    // MUTATION (stepSixOffered returns [] in graphicsMenuFor): fails "offered" (the request's TEMPLATES table lacks the row) and the placed toEqual.
+    // The harness's own step-6 talk of the template (graphicsStub.ts), on the talk shot's file.
+    const { harnessStepSixTranscript } = await import('../../src/renderer/src/harness/graphicsStub')
+    useEditor.setState({ project: { ...project(), transcripts: { ...project().transcripts, talk: harnessStepSixTranscript('talk', template) } } })
+    answer = answering(GOOD[template])
+    const before = project()
+    await pressFind()
+    expect(asks.some((a) => a.user.split('\n').some((l) => l.startsWith(`${template} — `))), 'offered').toBe(true)
+    const placed = clipItGraphics()
+    expect(placed.map((c) => c.graphic!.data.template)).toEqual([template])
+    expect(bake.asks).toContain(placed[0].id)
+    // The tile's row: its template as the words on screen name it, and the words it draws.
+    const words = row(placed[0].id).map((h) => text(h))
+    expect(words).toContain(template === 'before-after' ? 'before-and-after' : template)
+    undoesTo(before)
+  })
+})

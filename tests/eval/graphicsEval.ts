@@ -361,13 +361,13 @@ export const DROP_REASONS: readonly (readonly [string, RegExp])[] = Object.freez
   ['order', /is not said in the order /u],
   ['other-unit', /is said in \S+ in another unit/u],
   ['not-a-percentage', /is not said as a percentage in |is not a share of a whole/u],
-  ['not-a-number', /is not one number/u],
+  ['not-a-number', /is not one number|is not a year: /u],
   ['ungrounded', /holds no word the transcript can ground|which the transcript cannot ground/u],
   ['not-said', /is not said in /u],
   ['speaker', /is not who said it|it is reported speech and the transcript does not name who said it/u],
   [
     'template-rule',
-    /needs at least \d+ items|holds at most \d+ items|a quote is at most \d+ words|a keyword is 1 to \d+ said words|is not one of the keyword's|holds no word that says anything|in more than one unit|are not a valid tree/u
+    /needs at least \d+ items|holds at most \d+ items|a quote is at most \d+ words|a keyword is 1 to \d+ said words|is not one of the keyword's|holds no word that says anything|in more than one unit|are not a valid tree|is \d+ items, the \w+ and then the \w+; this has \d+|needs its \w+ side: a label and a value/u
   ]
 ] as const)
 

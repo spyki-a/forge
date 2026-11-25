@@ -13,8 +13,13 @@ import type { GraphicsMenu } from './run'
  * One flat decode. One graphic object carries the union of the offered
  * templates' fields, unused ones left as ''. The six templates every menu
  * offers (counter, bars, steps, quote, ring, keyword) already hold every
- * field a callout has, so the object is the same for every menu: only the
- * `sentence` and `template` enums are the menu's. That is what lets
+ * field a callout has, and step 6's three (§9) fill `items` (a timeline row's
+ * `value` is its year; a before-and-after's and a versus' two rows are its
+ * sides in drawn order, validateGraphics.ts `dataOf`), so the object is the
+ * same for every menu: only the `sentence` and `template` enums are the
+ * menu's. No key was added for them: every key is required, so each one
+ * would cost every graphic of every answer its tokens under
+ * `maxTokensForGraphics`' fixed room. That is what lets
  * `validateGraphics` check the shape of any answer against
  * `graphicsSchema(menu, { constrained: false })`, the one shape there is.
  *
@@ -93,7 +98,7 @@ export function graphicsSchema(menu: Pick<GraphicsMenu, 'sentences' | 'templates
     type: 'object',
     properties: {
       label: { type: 'string', ...limit(d.itemLabel), description: 'What this row says, copied' },
-      value: { type: 'string', ...limit(d.itemValue), description: "This row's number, copied, or empty" }
+      value: { type: 'string', ...limit(d.itemValue), description: "This row's number or year, copied, or empty" }
     },
     required: ['label', 'value'],
     additionalProperties: false

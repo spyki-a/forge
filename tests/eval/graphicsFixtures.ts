@@ -4,6 +4,8 @@ import { DEFAULT_COLOR, DEFAULT_TRANSFORM, emptyProject, type Clip, type MediaAs
 import type { Transcript } from '@shared/transcript'
 import type { GraphicTemplateId } from '@shared/graphics/template'
 import { GRAPHIC_TEMPLATES_ALWAYS, graphicsMenuFor } from '@shared/director/run'
+import { STEP_SIX_TEMPLATES } from '@shared/director/menuGraphics'
+import { graphicName } from '@shared/graphics/template'
 
 /**
  * The graphics eval's fixtures (docs/CLIPS.md §6.10, "Fixtures"), read with a
@@ -25,13 +27,21 @@ const REPO = resolve(__dirname, '..', '..')
 
 /**
  * The template ids a truth may name: the ones the eval's menu offers
- * (`GRAPHIC_TEMPLATES_ALWAYS`, run.ts `graphicsMenuFor`). A `callout` is
+ * (`GRAPHIC_TEMPLATES_ALWAYS`, run.ts `graphicsMenuFor`), and step 6's three
+ * (§9), which a menu offers only when the talk holds what each needs
+ * (menuGraphics.ts `stepSixOffered`): a truth naming one that no window of
+ * its transcript offers is refused (`notOfferedTruthLine`). A `callout` is
  * offered only beside a subject track, and the eval's project has none
  * (`projectForTranscript`), so no side could ever hit a callout truth: it is
  * refused with `CALLOUT_TRUTH_LINE`. A lower third and a screen card are the
  * app's, never a pass's (§6.6).
  */
-export const EVAL_TEMPLATE_IDS: readonly GraphicTemplateId[] = Object.freeze([...GRAPHIC_TEMPLATES_ALWAYS])
+export const EVAL_TEMPLATE_IDS: readonly GraphicTemplateId[] = Object.freeze([...GRAPHIC_TEMPLATES_ALWAYS, ...STEP_SIX_TEMPLATES])
+
+/** Why a truth naming one of step 6's three is refused when no window of its transcript offers it. */
+export function notOfferedTruthLine(template: string): string {
+  return `is a ${graphicName(template)}, which no window of this transcript offers (its talk does not hold what one needs), so neither side could hit it`
+}
 
 /** Why a callout truth is refused: the eval offers no callout. */
 export const CALLOUT_TRUTH_LINE = "is a callout, which the eval never offers (its project has no subject track), so neither side could hit it"
@@ -107,6 +117,12 @@ export function menuSentencesOf(transcript: Transcript): { id: string; text: str
   return graphicsMenuFor(project, clip, transcript).flatMap((m) => m.sentences.map((s) => ({ id: s.id, text: s.text })))
 }
 
+/** Every template any window of a transcript's menus offers (`graphicsMenuFor` over `projectForTranscript`). */
+export function menuTemplatesOf(transcript: Transcript): GraphicTemplateId[] {
+  const { project, clip } = projectForTranscript(transcript)
+  return [...new Set(graphicsMenuFor(project, clip, transcript).flatMap((m) => m.templates))]
+}
+
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null && !Array.isArray(v)
 
 /** Everything wrong with a transcript's shape, each naming the field under `transcript`. */
@@ -170,6 +186,7 @@ export function readEvalFixture(path: string, raw: unknown): EvalGraphicsFixture
   if (problems.length > 0) fail(file, problems)
   const transcript = raw.transcript as Transcript
   const ids = new Set(menuSentencesOf(transcript).map((s) => s.id))
+  const offered = new Set(menuTemplatesOf(transcript))
   const truth = raw.truth as unknown[]
   truth.forEach((t, i) => {
     if (!isObject(t) || typeof t.sentence !== 'string' || typeof t.template !== 'string') {
@@ -179,6 +196,7 @@ export function readEvalFixture(path: string, raw: unknown): EvalGraphicsFixture
     if (!ids.has(t.sentence)) problems.push(`truth[${i}].sentence '${t.sentence}' is not a sentence of the transcript`)
     if (t.template === 'callout') problems.push(`truth[${i}].template ${CALLOUT_TRUTH_LINE}`)
     else if (!(EVAL_TEMPLATE_IDS as string[]).includes(t.template)) problems.push(`truth[${i}].template '${t.template}' is not one of ${EVAL_TEMPLATE_IDS.join(', ')}`)
+    else if (!offered.has(t.template as GraphicTemplateId)) problems.push(`truth[${i}].template ${notOfferedTruthLine(t.template)}`)
   })
   ;(raw.traps as unknown[]).forEach((t, i) => {
     if (typeof t !== 'string') problems.push(`traps[${i}] is not a sentence id`)
@@ -231,10 +249,11 @@ export function loadGraphicsFixtures(dir = GRAPHICS_FIXTURE_DIR): { eval: EvalGr
 /**
  * The one line the eval prints when a folder holds no `eval-*.json` (today):
  * it names the folder (relative to the repo when inside it) and whose the ten
- * transcripts are; prepare then writes no request and fails nothing.
+ * transcripts are; prepare then asks the nested set and step 6's three
+ * code-built English talks (stepSixFixtures.ts) alone.
  */
 export function noEvalFixturesLine(dir = GRAPHICS_FIXTURE_DIR): string {
   const rel = relative(REPO, dir)
   const where = rel === '' || rel.startsWith('..') ? dir : rel.split('\\').join('/')
-  return `No eval-*.json in ${where}: the ten eval transcripts are your recordings and are not there yet, so no graphics request was written.`
+  return `No eval-*.json in ${where}: the ten eval transcripts are your recordings and are not there yet, so only the nested set and step 6's three English talks are asked.`
 }

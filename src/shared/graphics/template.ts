@@ -71,6 +71,13 @@ export interface TemplateDef {
   fixedTitles?: string[]
   /** Fields that bind as label–value pairs (§6.7 rule 6). */
   pairs?: [label: string, value: string][]
+  /**
+   * The pairs' values are said in the order the data draws them (step 6,
+   * docs/CLIPS.md §9: "in spoken order"): a before before its after, a left
+   * before its right, a timeline's rows in turn. Beyond §6.1's type: bars'
+   * values may be said in any order, these may not ('order' otherwise).
+   */
+  pairsInOrder?: true
   maxItems?: number
   /** The fewest items a list template draws: §6.2's "(at least 2)" for bars and steps. */
   minItems?: number
@@ -270,6 +277,7 @@ export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> 
     seconds: { min: 3, default: 6, max: 8 },
     fields: { 'items.when': 'grounded', 'items.label': 'grounded' },
     pairs: [['items.label', 'items.when']],
+    pairsInOrder: true,
     maxItems: 5,
     minItems: 2,
     threeD: true
@@ -282,6 +290,7 @@ export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> 
       ['before.label', 'before.value'],
       ['after.label', 'after.value']
     ],
+    pairsInOrder: true,
     threeD: true
   },
   versus: {
@@ -292,6 +301,7 @@ export const GRAPHIC_TEMPLATES: Partial<Record<GraphicTemplateId, TemplateDef>> 
       ['left.label', 'left.value'],
       ['right.label', 'right.value']
     ],
+    pairsInOrder: true,
     threeD: true
   }
 } satisfies Partial<Record<GraphicTemplateId, TemplateDef>>)

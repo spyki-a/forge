@@ -239,7 +239,9 @@ describe.skipIf(!PROVIDER || !LOOKS)('the look pass on a real model', () => {
 /**
  * `FORGE_EVAL_GRAPHICS=<folder> npm run eval -- -t "the graphics pass"` — the
  * graphics pass (docs/CLIPS.md §6.10) on every `eval-*.json` and
- * `nested-*.json` in a folder (tests/fixtures/graphics), one request per
+ * `nested-*.json` in a folder (tests/fixtures/graphics) and step 6's three
+ * code-built English talks (tests/eval/stepSixFixtures.ts: a timeline, a
+ * before-and-after and a versus, §9), one request per
  * menu window, built by the app's own loop (`runGraphicsPass`, with
  * `graphicsMenuFor`, `graphicsPrompt`, `graphicsSchema`,
  * `maxTokensForGraphics` and `askStructured`; tests/eval/graphicsEval.ts).
@@ -263,6 +265,7 @@ if (PROVIDER && GRAPHICS) {
         const { readFileSync } = await import('node:fs')
         const { GRAPHICS_PASS } = await import('@shared/director/schemaGraphics')
         const { loadGraphicsFixtures, noEvalFixturesLine } = await import('./graphicsFixtures')
+        const { stepSixFixtures } = await import('./stepSixFixtures')
         const { credentialsIn, graphicsFigures, graphicsRequestsFor, graphicsScoreRefusal, scoreGraphicsFixture, withRatingsOf } = await import('./graphicsEval')
         const folder = resolve(GRAPHICS!)
         const config = { provider: PROVIDER!, model: process.env.FORGE_EVAL_MODEL ?? '' }
@@ -272,13 +275,12 @@ if (PROVIDER && GRAPHICS) {
         const runId = process.env.FORGE_EVAL_RUN ?? `graphics-${stamp()}`
         const runDir = join(EVAL_ROOT, runId)
         const fixtures = loadGraphicsFixtures(folder)
-        if (fixtures.eval.length === 0) {
-          console.log(noEvalFixturesLine(folder))
-          return
-        }
+        // Step 6's three are asked whatever the folder holds: they are built in code, not the owner's recordings.
+        if (fixtures.eval.length === 0) console.log(noEvalFixturesLine(folder))
         const inputs = [
           ...fixtures.eval.map((f) => ({ ...f, set: 'eval' as const })),
-          ...fixtures.nested.map((f) => ({ ...f, set: 'nested' as const }))
+          ...fixtures.nested.map((f) => ({ ...f, set: 'nested' as const })),
+          ...stepSixFixtures()
         ]
         const clean = async (path: string): Promise<void> => {
           const { readFile } = await import('node:fs/promises')

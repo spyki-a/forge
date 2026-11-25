@@ -333,8 +333,9 @@ describe('the dock’s graphic panel (§6.6)', () => {
         expect(Object.keys(saved).sort(), data.template).toEqual([a, b, 'template'].sort())
       }
       expect(state().past.length, data.template).toBe(past + 1)
-      // Re-checked: the value no one said is named under its own field.
-      expect(field('g', edited).warnings, data.template).toContain("'45' is not said in s00")
+      // Re-checked: the value no one said is named under its own field; a timeline's when must be a year first (3D templates piece 2).
+      const warning = data.template === 'timeline' ? "'45' is not a year: a timeline's when is one year as said, such as 2019" : "'45' is not said in s00"
+      expect(field('g', edited).warnings, data.template).toContain(warning)
       expect(field('g', edited).input.props.defaultValue, data.template).toBe('45')
       undoesTo(before)
       const depth = panel('g').find((h) => h.props['data-graphic-depth'] === '')

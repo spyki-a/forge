@@ -21,6 +21,7 @@ import { type GraphicCandidate, type GraphicDrop, type GraphicTemplateId, type K
 import { answerDataForAdd, droppedCandidate, validateBaseline, validateGraphics, type AnswerGraphic } from './validateGraphics'
 import { drawnStrings, quoteSpeakerOf } from '../graphics/apply'
 import { GRAPHICS_PASS, graphicsSchema, maxTokensForGraphics } from './schemaGraphics'
+import { stepSixOffered } from './menuGraphics'
 import { graphicsPrompt } from './promptGraphics'
 import type { CompletionRequest } from './provider'
 
@@ -305,8 +306,11 @@ export function wordSourceOf(transcript: Pick<Transcript, 'model' | 'approximate
  * - **Windows**: at most `MAX_CANDIDATES` (24) sentences a menu; a longer
  *   clip is cut into 24-sentence windows, one menu (one call) each.
  * - **Templates**: `GRAPHIC_TEMPLATES_ALWAYS`, and `callout` only when the
- *   clip's asset has a subject track (`subjectTrackOf`). Never `lower-third`,
- *   `screen-card` or a later step's id.
+ *   clip's asset has a subject track (`subjectTrackOf`); then step 6's
+ *   `timeline`, `before-after` and `versus` (§9), each only when the window's
+ *   own sentences hold what it needs (`stepSixOffered`, menuGraphics.ts), so
+ *   one window of a clip may offer them and the next not. Never
+ *   `lower-third`, `screen-card` or `source`.
  * - **wordSource**: `wordSourceOf` the transcript.
  *
  * No menu (an empty list) when the clip shows no speech, or the transcript is
@@ -342,12 +346,13 @@ export function graphicsMenuFor(project: Project, clip: Clip, transcript: Transc
   const wordSource = wordSourceOf(transcript)
   const menus: GraphicsMenu[] = []
   for (let i = 0; i < sentences.length; i += MAX_CANDIDATES) {
+    const offeredOn = sentences.slice(i, i + MAX_CANDIDATES)
     menus.push({
       assetId: transcript.assetId,
       clipId: clip.id,
       language: transcript.language,
-      sentences: sentences.slice(i, i + MAX_CANDIDATES),
-      templates: [...templates],
+      sentences: offeredOn,
+      templates: [...templates, ...stepSixOffered(offeredOn, transcript)],
       wordSource
     })
   }
@@ -443,6 +448,12 @@ function answerDrawn(g: AnswerGraphic): string[] {
       return [g.label]
     case 'keyword':
       return [g.words]
+    // Step 6's three hold their fields in `items` (validateGraphics.ts `dataOf`): a timeline's when (the row's value) before its label.
+    case 'timeline':
+      return items.flatMap((i) => [i.value, i.label])
+    case 'before-after':
+    case 'versus':
+      return items.flatMap((i) => [i.label, i.value])
     default:
       return [g.title, g.value, g.label, g.quote, g.words]
   }

@@ -151,7 +151,7 @@ describe('the fixture readers (§6.10 "Fixtures")', () => {
     expect(byId.get('nested-en-2')).toEqual(['en', [-1, -1, 1, 1, 1, -1]])
     expect(byId.get('nested-en-3')).toEqual(['en', [-1, 0, 0, -1, 3, 3]])
     expect(noEvalFixturesLine()).toBe(
-      'No eval-*.json in tests/fixtures/graphics: the ten eval transcripts are your recordings and are not there yet, so no graphics request was written.'
+      "No eval-*.json in tests/fixtures/graphics: the ten eval transcripts are your recordings and are not there yet, so only the nested set and step 6's three English talks are asked."
     )
     expect(noEvalFixturesLine(GRAPHICS_FIXTURE_DIR)).toBe(noEvalFixturesLine())
   })
@@ -184,9 +184,8 @@ describe('the fixture readers (§6.10 "Fixtures")', () => {
     }
     expect(err({ ...base, truth: undefined })).toBe('eval-x.json: truth is not a list')
     expect(err({ ...base, traps: 's03' })).toBe('eval-x.json: traps is not a list')
-    expect(err({ ...base, truth: [{ sentence: 's00', template: 'tree' }] })).toBe(
-      "eval-x.json: truth[0].template 'tree' is not one of counter, bars, steps, quote, ring, keyword"
-    )
+    // The ids named are the readers' own (step 6's three joined them in 3D templates piece 2): membership, not the whole list.
+    expect(err({ ...base, truth: [{ sentence: 's00', template: 'tree' }] })).toMatch(/^eval-x\.json: truth\[0\]\.template 'tree' is not one of counter, bars, steps, quote, ring, keyword(, [a-z-]+)*$/u)
     // A callout is never offered in the eval (no subject track): its truth could never be hit, so it is refused, saying why.
     expect(err({ ...base, truth: [{ sentence: 's00', template: 'callout' }] })).toBe(`eval-x.json: truth[0].template ${CALLOUT_TRUTH_LINE}`)
     expect(CALLOUT_TRUTH_LINE).toBe('is a callout, which the eval never offers (its project has no subject track), so neither side could hit it')

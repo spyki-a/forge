@@ -227,6 +227,32 @@ function reasonText(reason: 'absent' | 'unpaired' | 'order' | 'negated' | 'whati
   }
 }
 
+/** A timeline item's `when` path ('items[2].when'). */
+const TIMELINE_WHEN = /^items\[\d+\]\.when$/u
+
+/** The earliest and latest year a timeline's when may be (step 6, docs/CLIPS.md §9). */
+export const TIMELINE_YEARS = { from: 1000, to: 2999 } as const
+
+/**
+ * A timeline's `when` (step 6, docs/CLIPS.md §9; beyond its words): a YEAR as
+ * said, four digits of any script and nothing else ('2019', native digits
+ * mapped by rule 3), between `TIMELINE_YEARS`. Its row makes it the pair's
+ * value, so rule 5 binds it as one number; a month, a date, 'last week',
+ * 'day 3' or a range is not one year and is refused (when in doubt, drop):
+ * the app never turns 'last year' into a year.
+ */
+function isYearClaim(c: Claim): boolean {
+  const v = c.value
+  if (c.kind !== 'number' || !v || v.unit !== '' || v.currency !== undefined) return false
+  if (!Number.isInteger(v.n) || v.n < TIMELINE_YEARS.from || v.n > TIMELINE_YEARS.to) return false
+  return /^\p{Nd}{4}$/u.test(c.text.normalize('NFC').trim())
+}
+
+/** The note a timeline's when that is not a year is refused with. */
+export function notAYear(text: string): string {
+  return `'${text}' is not a year: a timeline's when is one year as said, such as 2019`
+}
+
 /** The per-graphic core, which `checkGraphicData` returns the problems of and `validateGraphics` keeps the binding of. */
 function check(
   data: GraphicData,
@@ -289,9 +315,11 @@ function check(
   }
 
   const claims = claimsOf(data, def)
-  // A value field must be one number (rule 9: a counter must contain a number).
+  // A value field must be one number (rule 9: a counter must contain a number); a timeline's when, one year.
   for (const c of claims) {
-    if (c.kind === 'number' && c.value === undefined) {
+    if (data.template === 'timeline' && TIMELINE_WHEN.test(c.path)) {
+      if (!isYearClaim(c)) problems.push({ path: `$.${c.path}`, message: notAYear(c.text) })
+    } else if (c.kind === 'number' && c.value === undefined) {
       problems.push({ path: `$.${c.path}`, message: `'${c.text}' is not one number` })
     }
   }
@@ -340,9 +368,13 @@ function check(
       if (seen.has(c.path)) continue
       seen.add(c.path)
       const row = r.reason === 'order' && c.kind === 'token' && c.pair === undefined
+      // Step 6's pairs are drawn in spoken order (`pairsInOrder`): a before said after its after is out of the drawn order.
+      const drawnOrder = r.reason === 'order' && def.pairsInOrder === true
       const message = row
         ? `'${fieldText(data, c.path)}' is not said in the order the list draws it in ${sentence}`
-        : reasonText(r.reason, fieldText(data, c.path), sentence)
+        : drawnOrder
+          ? `'${fieldText(data, c.path)}' is not said in the order the ${graphicName(def.id)} draws it in ${sentence}`
+          : reasonText(r.reason, fieldText(data, c.path), sentence)
       problems.push({ path: `$.${c.path}`, message })
     }
     return out(stretch, claims)
@@ -360,6 +392,15 @@ function check(
     const m = r.matched[i]
     if (!m || m.unit !== '%') problems.push({ path: '$.value', message: `'${data.value}' is not said as a percentage in ${sentence}` })
     else if (m.n < 0 || m.n > 100) problems.push({ path: '$.value', message: `'${data.value}' is not a share of a whole (0 to 100%)` })
+  }
+  // A timeline's when is a year as said: a bare spec year never binds to an amount ('$2019').
+  if (data.template === 'timeline') {
+    claims.forEach((c, i) => {
+      const m = r.matched[i]
+      if (TIMELINE_WHEN.test(c.path) && m && (m.unit !== '' || m.currency !== undefined)) {
+        problems.push({ path: `$.${c.path}`, message: reasonText('unit', c.text, sentence) })
+      }
+    })
   }
   if (data.template === 'bars') {
     const units = claims.flatMap((c, i) => (c.kind === 'number' && r.matched[i] ? [`${r.matched[i]!.unit}${r.matched[i]!.currency ?? ''}`] : []))
@@ -451,15 +492,46 @@ function dataOf(g: AnswerGraphic, id: GraphicTemplateId): GraphicData | null {
     case 'lower-third':
       // Built so that it is rule 9's "not offered", not a missing arm, that drops a model's lower third.
       return { template: 'lower-third', name: '', role: '' }
+    // Step 6's three (§9) take the answer's `items`, so the one flat object gains no key (each would cost every graphic's answer tokens):
+    // a timeline's rows, each `value` its when; a before-and-after's and a versus' two rows, its sides in drawn order.
+    case 'timeline':
+      return { template: 'timeline', items: g.items.map((i) => ({ when: i.value, label: i.label })) }
+    case 'before-after':
+    case 'versus': {
+      if (g.items.length !== 2) return null
+      const [a, b] = g.items.map((i) => ({ label: i.label, value: i.value }))
+      return id === 'before-after' ? { template: 'before-after', before: a, after: b } : { template: 'versus', left: a, right: b }
+    }
     default:
       return null
   }
 }
 
-/** The answer's path of a data path: a quote's `text` is the answer's `quote`. */
+/** Step 6's two-sided templates: their answer `items` are exactly two rows, the sides in drawn order. */
+export const SIDE_ROWS = 2
+
+/** The note a two-sided graphic whose answer holds other than two rows is dropped with. */
+export function sideRowsNote(template: string, rows: number): string {
+  const [first, second] = GRAPHIC_SIDES[template as GraphicTemplateId] ?? ['first', 'second']
+  return `a ${graphicName(template)} is ${SIDE_ROWS} items, the ${first} and then the ${second}; this has ${rows}`
+}
+
+/**
+ * The answer's path of a data path: a quote's `text` is the answer's `quote`;
+ * a timeline row's `when` its item's `value`; a side ('$.after.value',
+ * '$.left') its answer item ('.items[1].value', '.items[0]').
+ */
 function answerPath(root: string, dataPath: string, template: string): string {
   const rest = dataPath.replace(/^\$/u, '')
-  return `${root}${template === 'quote' ? rest.replace(/^\.text\b/u, '.quote') : rest}`
+  if (template === 'quote') return `${root}${rest.replace(/^\.text\b/u, '.quote')}`
+  if (template === 'timeline') return `${root}${rest.replace(/^(\.items\[\d+\])\.when\b/u, '$1.value')}`
+  const sides = GRAPHIC_SIDES[template as GraphicTemplateId]
+  if (sides) {
+    const m = /^\.(\w+)(\..*)?$/u.exec(rest)
+    const k = m ? sides.indexOf(m[1]) : -1
+    if (m && k >= 0) return `${root}.items[${k}]${m[2] ?? ''}`
+  }
+  return `${root}${rest}`
 }
 
 function cutGraphemes(text: string, max: number): string {
@@ -483,9 +555,11 @@ function overLength(g: AnswerGraphic, def: TemplateDef, root: string): Problem[]
   if (f.label) over('label', g.label, k.label)
   if (f.text) over('quote', g.quote, k.quote)
   if (f.words) over('words', g.words, k.words)
+  // Step 6's three hold their fields in `items` (`dataOf`): each row's label and value (a when, a side's value).
+  const rows = f['items.value'] || f['items.when'] || GRAPHIC_SIDES[def.id] !== undefined
   g.items.forEach((it, j) => {
-    if (f['items.label']) over(`items[${j}].label`, it.label, k.itemLabel)
-    if (f['items.value']) over(`items[${j}].value`, it.value, k.itemValue)
+    if (f['items.label'] || GRAPHIC_SIDES[def.id]) over(`items[${j}].label`, it.label, k.itemLabel)
+    if (rows) over(`items[${j}].value`, it.value, k.itemValue)
   })
   return out
 }
@@ -506,6 +580,10 @@ function beatWordsOf(data: GraphicData, claims: readonly Claim[], bound: readonl
     case 'ring':
       return at((c) => c.kind === 'number').slice(0, 1)
     case 'bars':
+    // Step 6's three (§9): each element on its value's word, in drawn order (a timeline row on its when).
+    case 'timeline':
+    case 'before-after':
+    case 'versus':
       return at((c) => c.kind === 'number')
     case 'steps':
       return data.items.flatMap((_, j) => {
@@ -731,6 +809,12 @@ export function droppedCandidate(
         return [data.label]
       case 'keyword':
         return [data.words]
+      case 'timeline':
+        return data.items.flatMap((i) => [i.when, i.label])
+      case 'before-after':
+        return [data.before.label, data.before.value, data.after.label, data.after.value]
+      case 'versus':
+        return [data.left.label, data.left.value, data.right.label, data.right.value]
       default:
         // A lower third and a screen card are the app's, never a dropped graphic's: no arm, so nothing to draw, so no Add.
         return []
@@ -789,7 +873,10 @@ function strayFields(g: AnswerGraphic, template: GraphicTemplateId): string[] {
     steps: ['title', 'items'],
     quote: ['quote'],
     callout: ['label'],
-    keyword: ['words', 'lit']
+    keyword: ['words', 'lit'],
+    timeline: ['items'],
+    'before-after': ['items'],
+    versus: ['items']
   }
   const own = holds[template] ?? []
   const out: string[] = []
@@ -856,6 +943,10 @@ export function validateGraphics(
     const off = offered(g.template, g.sentence, menu, root)
     if (off) {
       dropped.push(off)
+      return
+    }
+    if (GRAPHIC_SIDES[g.template as GraphicTemplateId] && g.items.length !== SIDE_ROWS) {
+      dropped.push({ path: `${root}.items`, message: `graphic dropped: ${sideRowsNote(g.template, g.items.length)}` })
       return
     }
     const data = dataOf(g, g.template as GraphicTemplateId)

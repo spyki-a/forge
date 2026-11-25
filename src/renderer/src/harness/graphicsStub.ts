@@ -3,6 +3,7 @@ import type { Segment, Transcript, Word } from '@shared/transcript'
 import { graphicsMenuFor, pairSettled, quoteSpeakerFor, settleGraphics } from '@shared/director/run'
 import type { AnswerGraphic } from '@shared/director/schemaGraphics'
 import { replaceClipGraphics } from '@shared/graphics/apply'
+import type { SoundPack } from '@shared/director/soundRoles'
 
 /**
  * The census's graphics run (docs/CLIPS.md §6.6's census rows: "check the
@@ -137,4 +138,106 @@ export function harnessDropsTranscript(assetId: string): Transcript {
     segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * 250, endMs: (index - 1) * 250 + 200, text, wordStart: start, wordEnd: index - 1 })
   })
   return { assetId, language: 'en', model: 'whisper-small', durationMs: index * 250, words, segments }
+}
+
+/*
+ * Step 6's three (3D templates piece 2, docs/CLIPS.md §9): the harness bridge
+ * has no model, so Find graphics there never makes a timeline, a
+ * before-and-after or a versus (the baseline does not, §9). This stands in for
+ * the ANSWER only, as `harnessGraphicsRun` does: a made-up English talk that
+ * holds what the template needs (so the real menu offers it,
+ * menuGraphics.ts), and a fixed answer of one graphic of that template,
+ * settled through the real validator and landed as Find lands a run. One
+ * word every 300 ms from 0, so each talk ends inside the bridge's 6 s video.
+ * `__forgeGraphicCheck({ find: [...] })` reads the result (harness/findCheck.ts).
+ */
+
+export type HarnessStepSix = 'timeline' | 'before-after' | 'versus'
+export const HARNESS_STEP_SIX: readonly HarnessStepSix[] = Object.freeze(['timeline', 'before-after', 'versus'] as HarnessStepSix[])
+
+const STEP_SIX_TALKS: Record<HarnessStepSix, { sentences: string[]; answer: AnswerGraphic }> = {
+  timeline: {
+    sentences: ['In 2015 we shot our first wedding, in 2018 we hired an editor, in 2021 we opened a studio.'],
+    answer: answerGraphic({
+      sentence: 's00',
+      template: 'timeline',
+      items: [
+        { label: 'shot our first wedding', value: '2015' },
+        { label: 'hired an editor', value: '2018' },
+        { label: 'opened a studio', value: '2021' }
+      ]
+    })
+  },
+  'before-after': {
+    sentences: ['Before the course I charged $1,500 a wedding.', 'After the course I charge $4,000 a wedding.'],
+    answer: answerGraphic({
+      sentence: 's00',
+      template: 'before-after',
+      items: [
+        { label: 'Before the course', value: '$1,500' },
+        { label: 'After the course', value: '$4,000' }
+      ]
+    })
+  },
+  versus: {
+    sentences: ['Instagram brought 600 leads, while referrals brought 350 leads.'],
+    answer: answerGraphic({
+      sentence: 's00',
+      template: 'versus',
+      items: [
+        { label: 'Instagram', value: '600' },
+        { label: 'referrals', value: '350' }
+      ]
+    })
+  }
+}
+
+/** The step-6 talk of `template` for `assetId`: English, sure Whisper words, one every 300 ms from 0. */
+export function harnessStepSixTranscript(assetId: string, template: HarnessStepSix): Transcript {
+  const words: Word[] = []
+  const segments: Segment[] = []
+  let index = 0
+  STEP_SIX_TALKS[template].sentences.forEach((text, k) => {
+    const start = index
+    for (const w of text.split(/\s+/u).filter(Boolean)) {
+      words.push({ index, text: w, startMs: index * 300, endMs: index * 300 + 250, confidence: 0.95 })
+      index += 1
+    }
+    segments.push({ id: `s${String(k).padStart(2, '0')}`, startMs: start * 300, endMs: (index - 1) * 300 + 250, text, wordStart: start, wordEnd: index - 1 })
+  })
+  return { assetId, language: 'en', model: 'whisper-small', durationMs: index * 300, words, segments }
+}
+
+/**
+ * `project` with the clip `clipId`'s asset given `template`'s talk and the
+ * stubbed answer landed on it as Find lands a run: `placed` the graphic clip
+ * ids to bake, `offered` what the menu offered; `options.sounds` the library's
+ * sounds, as Find passes them. Throws unless the menu offered
+ * the template and exactly one graphic of it is placed.
+ */
+export function harnessStepSixRun(
+  project: Project,
+  clipId: string,
+  template: HarnessStepSix,
+  options: { sounds?: SoundPack } = {}
+): { project: Project; placed: string[]; offered: string[]; problems: string[] } {
+  const clip = project.clips.find((c) => c.id === clipId)
+  if (!clip) throw new Error(`find: clip ${clipId} is not on the timeline`)
+  const transcript = harnessStepSixTranscript(clip.assetId, template)
+  const withWords: Project = { ...project, transcripts: { ...project.transcripts, [clip.assetId]: transcript } }
+  const speaker = quoteSpeakerFor(withWords.assets.find((a) => a.id === clip.assetId))
+  const menus = graphicsMenuFor(withWords, clip, transcript)
+  const offered = [...new Set(menus.flatMap((m) => m.templates))]
+  const parts = menus.map((menu) => ({
+    menu,
+    settled: settleGraphics({ value: { reasoning: 'the harness', graphics: [STEP_SIX_TALKS[template].answer] }, truncated: false }, menu, transcript, { speaker })
+  }))
+  const { kept } = pairSettled(parts)
+  const landed = replaceClipGraphics(withWords, clipId, kept, { fps: withWords.settings.fps, sounds: options.sounds })
+  const problems = [...parts.flatMap((p) => p.settled.dropped), ...landed.problems].map((p) => p.message)
+  const placed = landed.clipIds.filter((id) => landed.project.clips.find((c) => c.id === id)?.graphic?.data.template === template)
+  if (!offered.includes(template) || placed.length !== 1) {
+    throw new Error(`find: the ${template} run was offered ${offered.join(', ')} and placed ${placed.length} of it, not 1${problems.length > 0 ? ` — ${problems.join('; ')}` : ''}`)
+  }
+  return { project: landed.project, placed, offered, problems }
 }

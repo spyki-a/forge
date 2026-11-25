@@ -20,7 +20,9 @@ import { loadGraphicsFixtures, projectForTranscript, readEvalFixture } from './e
  * 1. A fixed-seed generator (a seeded PRNG below; no Math.random) writes random
  *    talks in English, Hindi and Telugu and, for each, one graphic a model
  *    could write from what was said, on every template the model may write
- *    (not lower-third), with numbers in every format rule 4 names.
+ *    (not lower-third; step 6's timeline, before-after and versus since 3D
+ *    templates piece 2, their Hindi and Telugu words this file's own lists),
+ *    with numbers in every format rule 4 names.
  * 2. Adversarial generators each turn a graphic the speaker DID say (one
  *    settleGraphics kept) into one they did not: two pairs' values swapped; a
  *    negator put into the bound clause; a label from the neighbouring
@@ -313,6 +315,25 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
       else claims.push({ field: 'text', kind: 'run', run, said: saidMarks(data.text), negs: negsOf(data.text) })
       break
     }
+    case 'before-after':
+    case 'versus': {
+      // Step 6 (§9): each side a pair, as a bars item; its label may be empty, as a counter's.
+      const sides = data.template === 'before-after' ? [data.before, data.after] : [data.left, data.right]
+      sides.forEach((side, i) => {
+        bad = bad ?? value(`side${i}.value`, side.value, i) ?? tokens(`side${i}.label`, side.label, i)
+      })
+      break
+    }
+    case 'timeline':
+      // Each row a pair: its when one YEAR as said (four digits, no unit), its label something said.
+      if (data.items.length < 2 || data.items.length > 5) bad = 'a timeline is 2 to 5 rows'
+      data.items.forEach((it, i) => {
+        if (bad) return
+        if (!/^\p{Nd}{4}$/u.test(it.when.normalize('NFC'))) bad = `items[${i}].when '${it.when}' is not a year`
+        else if (it.label.trim() === '') bad = `items[${i}].label is empty`
+        else bad = value(`items[${i}].when`, it.when, i) ?? tokens(`items[${i}].label`, it.label, i)
+      })
+      break
     case 'keyword': {
       const words = data.words.split(/\s+/u).filter(Boolean)
       const run = phraseTokens(data.words)
@@ -423,8 +444,17 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
       const clauses = new Set(o.clauses.length > 0 ? o.clauses : st.toks.filter((x) => o.keys.includes(x.key)).map((x) => x.clause))
       if (st.toks.some((x) => clauses.has(x.clause) && isNeg(x.t) && !claims[i].negs.has(x.t))) return false
     }
+    // Step 6's values in drawn order: each pair's number said after the one before it.
+    if (data.template === 'timeline' || data.template === 'before-after' || data.template === 'versus') {
+      const at = pairs.map((p) => {
+        const v = chosen[claims.findIndex((c) => c.kind === 'num' && c.pair === p)]!
+        return v.first + 1000 * v.sent
+      })
+      for (let i = 0; i + 1 < at.length; i++) if (!(at[i] < at[i + 1])) return false
+    }
     // The template decides on the matched numbers.
     const matched = claims.flatMap((c, i) => (c.kind === 'num' ? [chosen[i]!.value!] : []))
+    if (data.template === 'timeline' && matched.some((m) => m.unit !== '')) return false
     if (data.template === 'ring' && !(matched[0].unit === '%' && matched[0].n >= 0 && matched[0].n <= 100)) return false
     if (data.template === 'bars' && new Set(matched.map((m) => `${m.unit}${m.currency ?? ''}`)).size > 1) return false
     return true
@@ -552,8 +582,10 @@ function numberOf(rng: Rng, lang: Lang, family: Family, sign = '$'): Num {
   }
 }
 
-type Tpl = 'counter' | 'ring' | 'bars' | 'steps' | 'quote' | 'callout' | 'keyword'
-const TEMPLATES: Tpl[] = ['counter', 'ring', 'bars', 'steps', 'quote', 'callout', 'keyword']
+type Tpl = 'counter' | 'ring' | 'bars' | 'steps' | 'quote' | 'callout' | 'keyword' | 'timeline' | 'before-after' | 'versus'
+const TEMPLATES: Tpl[] = ['counter', 'ring', 'bars', 'steps', 'quote', 'callout', 'keyword', 'timeline', 'before-after', 'versus']
+/** Step 6's three (§9): every graphic of theirs holds its pairs in `items`, as the answer carries them. */
+const STEP_SIX: Tpl[] = ['timeline', 'before-after', 'versus']
 
 /** Where a pair stands in the fact sentence (word indices into it). */
 interface PairAt {
@@ -722,6 +754,66 @@ function factFor(rng: Rng, lang: Lang, template: Tpl, cite: string): { words: st
       const words = [...intro.slice(0, -1), intro[intro.length - 1] + ',', ...clause]
       return { words: ended(words, lang), graphic: answerGraphic({ sentence: cite, template, quote: clause.join(' ') }), runs: [{ at: intro.length, len: clause.length }], nouns: [] }
     }
+    case 'before-after':
+    case 'versus': {
+      // Two pairs in one unit, said in the order drawn (the before, then the after; the left, then the right).
+      const family: Family = rng.pick(lang === 'en' ? ['bare', 'pct', 'cur', 'big', 'words'] : ['bare', 'pct', 'cur', 'big'])
+      const sign = rng.pick(M_SIGNS)
+      const nouns = rng.sample(NOUNS[lang], 2)
+      const nums: Num[] = []
+      while (nums.length < 2) {
+        const n = numberOf(rng, lang, family, sign)
+        if (!nums.some((m) => m.n === n.n)) nums.push(n)
+      }
+      const labelFirst = lang === 'en' && rng.chance(0.4)
+      const words: string[] = [...fill(rng, lang, 1, 2)]
+      const pairs: PairAt[] = []
+      nouns.forEach((noun, i) => {
+        if (i > 0) {
+          if (rng.chance(0.5)) words[words.length - 1] += ','
+          else words.push(lang === 'en' ? 'and' : lang === 'hi' ? 'और' : 'మరియు')
+        }
+        if (labelFirst) {
+          pairs.push({ num: nums[i], numAt: words.length + 1, label: [noun], labelAt: words.length })
+          words.push(noun, ...nums[i].said)
+        } else {
+          pairs.push({ num: nums[i], numAt: words.length, label: [noun], labelAt: words.length + nums[i].said.length })
+          words.push(...nums[i].said, noun)
+        }
+      })
+      if (lang !== 'en') words.push(CAME[lang])
+      const graphic = answerGraphic({ sentence: cite, template, items: pairs.map((p) => ({ label: p.label.join(' '), value: rng.pick(p.num.written) })) })
+      return { words: ended(words, lang), graphic, pairs, nouns }
+    }
+    case 'timeline': {
+      // Two to four dated rows, each a year said as four digits (native digits half the time in Hindi and Telugu) and a noun.
+      const k = rng.int(2, 4)
+      const nouns = rng.sample(NOUNS[lang], k)
+      const years: number[] = []
+      while (years.length < k) {
+        const y = rng.int(1990, 2030)
+        if (!years.includes(y)) years.push(y)
+      }
+      const nat = lang !== 'en' && rng.chance(0.5)
+      const labelFirst = lang === 'en' && rng.chance(0.4)
+      const words: string[] = [...fill(rng, lang, 1, 2)]
+      const pairs: PairAt[] = []
+      nouns.forEach((noun, i) => {
+        if (i > 0) words[words.length - 1] += ','
+        const said = nat ? toNative(String(years[i]), lang) : String(years[i])
+        const num: Num = { said: [said], stripped: [said], written: [String(years[i]), said], withUnit: '', n: years[i], unit: '', family: 'year' }
+        if (labelFirst) {
+          pairs.push({ num, numAt: words.length + 1, label: [noun], labelAt: words.length })
+          words.push(noun, said)
+        } else {
+          pairs.push({ num, numAt: words.length, label: [noun], labelAt: words.length + 1 })
+          words.push(said, noun)
+        }
+      })
+      if (lang !== 'en') words.push(CAME[lang])
+      const graphic = answerGraphic({ sentence: cite, template, items: pairs.map((p) => ({ label: p.label.join(' '), value: rng.pick(p.num.written) })) })
+      return { words: ended(words, lang), graphic, pairs, nouns }
+    }
     case 'keyword': {
       const nouns = rng.sample(NOUNS[lang], 2)
       const words = [...fill(rng, lang, 1, 3), nouns[0], ...fill(rng, lang, 0, 2), nouns[1], ...fill(rng, lang, 0, 2)]
@@ -772,7 +864,7 @@ function menuOf(t: Transcript): GraphicsMenu {
     clipId: 'clip-1',
     language: t.language,
     sentences: t.segments.map((s) => ({ id: s.id, startMs: s.startMs, text: s.text, wordStart: s.wordStart, wordEnd: s.wordEnd })),
-    templates: ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword'],
+    templates: ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'timeline', 'before-after', 'versus'],
     wordSource: 'whisper'
   }
 }
@@ -801,6 +893,13 @@ function dataOfAnswer(g: AnswerGraphic): GraphicData {
       return { template: 'quote', kind: 'said', text: g.quote, speaker: '' }
     case 'callout':
       return { template: 'callout', label: g.label, shape: 'arrow' }
+    // Step 6's three from the answer's items, as the validator reads them: a row's value is a timeline's when; two rows are the sides.
+    case 'timeline':
+      return { template: 'timeline', items: g.items.map((i) => ({ when: i.value, label: i.label })) }
+    case 'before-after':
+      return { template: 'before-after', before: { ...g.items[0] }, after: { ...g.items[1] } }
+    case 'versus':
+      return { template: 'versus', left: { ...g.items[0] }, right: { ...g.items[1] } }
     default:
       return { template: 'keyword', words: g.words, lit: g.lit }
   }
@@ -856,6 +955,18 @@ function expectedDrawn(d: GraphicData): Record<string, string> {
       return { 'data.label': d.label }
     case 'keyword':
       return { 'data.words': normalised(d.words) }
+    case 'timeline': {
+      const out: Record<string, string> = {}
+      d.items.forEach((it, i) => {
+        out[`data.items.${i}.when`] = it.when
+        out[`data.items.${i}.label`] = it.label
+      })
+      return out
+    }
+    case 'before-after':
+      return { 'data.before.label': d.before.label, 'data.before.value': d.before.value, 'data.after.label': d.after.label, 'data.after.value': d.after.value }
+    case 'versus':
+      return { 'data.left.label': d.left.label, 'data.left.value': d.left.value, 'data.right.label': d.right.label, 'data.right.value': d.right.value }
     default:
       return {}
   }
@@ -915,6 +1026,15 @@ function drawnGrounds(k: GraphicCandidate, t: Transcript): string | null {
       break
     case 'keyword':
       back = { template: 'keyword', words: field('data.words'), lit: d.lit }
+      break
+    case 'timeline':
+      back = { template: 'timeline', items: d.items.map((_, i) => ({ when: field(`data.items.${i}.when`), label: field(`data.items.${i}.label`) })) }
+      break
+    case 'before-after':
+      back = { template: 'before-after', before: { label: field('data.before.label'), value: field('data.before.value') }, after: { label: field('data.after.label'), value: field('data.after.value') } }
+      break
+    case 'versus':
+      back = { template: 'versus', left: { label: field('data.left.label'), value: field('data.left.value') }, right: { label: field('data.right.label'), value: field('data.right.value') } }
       break
     default:
       return `${d.template} is not drawn here`
@@ -1134,7 +1254,7 @@ type Made = { case: Case; graphic: AnswerGraphic } | null
 const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Made; outcome: 'dropped' }[] = [
   {
     name: 'swap the values of two pairs',
-    from: ['bars'],
+    from: ['bars', ...STEP_SIX],
     make: (c, rng) => {
       const items = c.graphic.items
       const [i, j] = rng.sample([...items.keys()], 2)
@@ -1145,7 +1265,7 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
   },
   {
     name: 'insert a negator into the bound clause',
-    from: ['counter', 'ring', 'bars', 'steps', 'callout', 'quote'],
+    from: ['counter', 'ring', 'bars', 'steps', 'callout', 'quote', ...STEP_SIX],
     make: (c, rng) => {
       const words = c.sentences[c.fact]
       const at = c.pairs ? rng.pick(c.pairs).numAt : rng.pick(c.runs!).at
@@ -1155,7 +1275,7 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
   },
   {
     name: 'take a label from the neighbouring sentence',
-    from: ['counter', 'ring', 'bars'],
+    from: ['counter', 'ring', 'bars', ...STEP_SIX],
     make: (c, rng) => {
       const near = [c.fact - 1, c.fact + 1].filter((i) => i >= 0 && i < c.sentences.length && Math.abs(i - c.cite) <= 1)
       if (near.length === 0) return null
@@ -1163,7 +1283,7 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
       const nouns = c.sentences[rng.pick(near)].map((w) => w.replace(M_BREAK, '')).filter((w) => NOUNS[c.lang].includes(w) && !fact.has(w))
       if (nouns.length === 0) return null
       const noun = rng.pick(nouns)
-      if (c.template === 'bars') {
+      if (c.template === 'bars' || STEP_SIX.includes(c.template)) {
         const i = rng.int(0, c.graphic.items.length - 1)
         return { case: c, graphic: { ...c.graphic, items: c.graphic.items.map((it, k) => (k === i ? { ...it, label: noun } : it)) } }
       }
@@ -1173,7 +1293,7 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
   },
   {
     name: 'strip a unit from the talk but not the spec',
-    from: ['counter', 'ring', 'bars'],
+    from: ['counter', 'ring', 'bars', 'before-after', 'versus'],
     make: (c, rng) => {
       const withUnit = (c.pairs ?? []).map((p, i) => ({ p, i })).filter(({ p }) => p.num.unit !== '')
       if (withUnit.length === 0) return null
@@ -1184,7 +1304,7 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
       const stripped = p.num.stripped.map((w, k) => (k === p.num.stripped.length - 1 ? w + end : w))
       const next = [...words.slice(0, p.numAt), ...stripped, ...words.slice(last + 1)]
       const graphic =
-        c.template === 'bars'
+        c.template === 'bars' || STEP_SIX.includes(c.template)
           ? { ...c.graphic, items: c.graphic.items.map((it, k) => (k === i ? { ...it, value: p.num.withUnit } : it)) }
           : { ...c.graphic, value: p.num.withUnit }
       return { case: withFact(c, next), graphic }
@@ -1208,7 +1328,7 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
   },
   {
     name: 'decorate a value, a label or a quoted run with a mark no word says',
-    from: ['counter', 'ring', 'bars', 'callout', 'keyword', 'quote'],
+    from: ['counter', 'ring', 'bars', 'callout', 'keyword', 'quote', ...STEP_SIX],
     make: (c, rng) => {
       const mark = rng.pick(MARKS)
       const deco = (s: string): string => (mark.before ? mark.s + s : s + mark.s)
@@ -1216,7 +1336,10 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
         case 'counter':
         case 'ring':
           return { case: c, graphic: rng.chance(0.5) ? { ...c.graphic, value: deco(c.graphic.value) } : { ...c.graphic, label: deco(c.graphic.label) } }
-        case 'bars': {
+        case 'bars':
+        case 'timeline':
+        case 'before-after':
+        case 'versus': {
           const i = rng.int(0, c.graphic.items.length - 1)
           const key = rng.pick(['label', 'value'] as const)
           return { case: c, graphic: { ...c.graphic, items: c.graphic.items.map((it, k) => (k === i ? { ...it, [key]: deco(it[key]) } : it)) } }
@@ -1234,6 +1357,16 @@ const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Mad
   {
     name: 'reorder two steps',
     from: ['steps'],
+    make: (c, rng) => {
+      const [i, j] = rng.sample([...c.graphic.items.keys()], 2)
+      const items = c.graphic.items.map((it, k) => (k === i ? c.graphic.items[j] : k === j ? c.graphic.items[i] : it))
+      return { case: c, graphic: { ...c.graphic, items } }
+    },
+    outcome: 'dropped'
+  },
+  {
+    name: 'reorder two rows or the two sides of a step-6 graphic, each with its own value (against spoken order)',
+    from: STEP_SIX,
     make: (c, rng) => {
       const [i, j] = rng.sample([...c.graphic.items.keys()], 2)
       const items = c.graphic.items.map((it, k) => (k === i ? c.graphic.items[j] : k === j ? c.graphic.items[i] : it))
