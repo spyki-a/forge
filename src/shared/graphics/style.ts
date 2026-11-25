@@ -298,7 +298,7 @@ function easeOr(value: unknown, fallback: MotionEase): MotionEase {
  * restrained presets, a preset change, and no planned control writes this
  * override, which lets a project dim under a restrained preset.
  */
-const OVERRIDES: Record<string, (style: GraphicStyle, value: unknown) => void> = {
+const OVERRIDES = {
   textStyleId: (s, v) => {
     if (typeof v === 'string' && GRAPHIC_TEXT_STYLES.some((t) => t.id === v)) s.textStyleId = v
   },
@@ -326,10 +326,62 @@ const OVERRIDES: Record<string, (style: GraphicStyle, value: unknown) => void> =
   dim: (s, v) => {
     if (typeof v === 'boolean') s.dim = v
   }
-}
+} satisfies Record<string, (style: GraphicStyle, value: unknown) => void>
+
+/** A key `resolveGraphicStyle` reads from `overrides`. */
+type GraphicOverrideKey = keyof typeof OVERRIDES
 
 /** The keys `resolveGraphicStyle` reads from `overrides`, in the order it applies them. An export §6.5 does not name, for the tests and phase 2's controls. */
 export const GRAPHIC_OVERRIDE_KEYS: readonly string[] = Object.freeze(Object.keys(OVERRIDES))
+
+/**
+ * Whether each guard in `OVERRIDES` takes a value as given (or clamps it)
+ * rather than falling back to the preset's: the same tests, as predicates,
+ * for a reader of a stranger's file (shared/look.ts) that keeps only what
+ * would be used. Typed by `OVERRIDES`' own keys, so a key added there
+ * without its row here fails typecheck.
+ */
+const ACCEPTS: Record<GraphicOverrideKey, (value: unknown) => boolean> = {
+  textStyleId: (v) => typeof v === 'string' && GRAPHIC_TEXT_STYLES.some((t) => t.id === v),
+  font: (v) => typeof v === 'string' && v.trim() !== '',
+  'palette.ink': isColour,
+  'palette.accent': isColour,
+  'palette.muted': isColour,
+  'palette.panel': isColour,
+  'palette.panelOpacity': isUsableNumber,
+  'palette.dim': isColour,
+  'palette.dimOpacity': isUsableNumber,
+  radius: isUsableNumber,
+  stroke: isUsableNumber,
+  shadow: isUsableNumber,
+  'motion.entrance': (v) => typeof v === 'string' && Object.hasOwn(ENTRANCES, v),
+  'motion.ease': isEase,
+  'motion.exit': isEase,
+  strokeLook: (v) => v === 'clean' || v === 'marker',
+  dim: (v) => typeof v === 'boolean'
+}
+
+function isColour(value: unknown): boolean {
+  return typeof value === 'string' && HEX_COLOUR.test(value)
+}
+
+/** What `numberIn` keeps (clamped) rather than replacing with the preset's: a finite number, not negative. */
+function isUsableNumber(value: unknown): boolean {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+}
+
+function isEase(value: unknown): boolean {
+  return typeof value === 'string' && Object.hasOwn(EASES, value)
+}
+
+/**
+ * Whether `resolveGraphicStyle` would use this override (as given, or
+ * clamped into range) rather than ignore it or fall back to the preset's
+ * value. False for a key it does not read.
+ */
+export function graphicOverrideAccepted(key: string, value: unknown): boolean {
+  return Object.hasOwn(ACCEPTS, key) && ACCEPTS[key as GraphicOverrideKey](value)
+}
 
 /**
  * A preset plus the project's overrides (§6.5), as `resolveStyle` does for
@@ -352,7 +404,7 @@ export function resolveGraphicStyle(styleId: string, overrides?: Record<string, 
   if (preset.glow) style.glow = { ...preset.glow }
   if (overrides !== null && typeof overrides === 'object') {
     for (const key of GRAPHIC_OVERRIDE_KEYS) {
-      if (Object.hasOwn(overrides, key)) OVERRIDES[key](style, overrides[key])
+      if (Object.hasOwn(overrides, key)) OVERRIDES[key as GraphicOverrideKey](style, overrides[key])
     }
   }
   style.motion.entrance = ENTRANCES[style.motion.entrance]

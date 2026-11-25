@@ -12,6 +12,18 @@ import {
 } from '@shared/project/recovery'
 import { dirNameOf, matchByName } from '@shared/project/relink'
 import { safeTakeBase, voiceOverArgs } from '@shared/render/voiceover'
+import {
+  LOOK_CHANNELS,
+  LOOK_EXPORT_FAILED,
+  LOOK_EXTENSION,
+  LOOK_UNREADABLE,
+  lookFileBase,
+  lookSizeRefusal,
+  parseLook,
+  readLookText,
+  serializeLook,
+  type LookRead
+} from '@shared/look'
 import { execFile } from 'node:child_process'
 import { probeMany } from './ffmpeg/probe'
 import { getSidecar, helperPackDeps, settleHelperStatus, sidecarStatus } from './sidecar/service'
@@ -1386,6 +1398,66 @@ export function registerIpc(getWindow: () => BrowserWindow | null, options: IpcO
     // The speech model choice is read by main (chosenSpeechModel): only one of the three names is written.
     if (key === SPEECH_MODEL_SETTING && !isSpeechModelName(value)) throw new Error(`There is no speech model ${JSON.stringify(value)}`)
     return setRendererSetting(key, value)
+  })
+
+  /* ------------------------------------------------- creator looks (step 7) */
+
+  /**
+   * Export a saved look (docs/CLIPS.md §10, shared/look.ts): the user's own
+   * Save dialog, then the look's file written atomically. What is written is
+   * the payload read as a stranger's look and serialised again, so only a
+   * look's own fields reach the disk whatever the window sent. Answers the
+   * file's NAME (never its folder), or null when the dialog was cancelled.
+   */
+  ipcMain.handle(LOOK_CHANNELS.export, async (_e, payload: unknown) => {
+    const read = parseLook(payload)
+    if (!read.ok) throw new Error(read.reason)
+    const window = getWindow()
+    if (!window) return null
+    const result = await dialog.showSaveDialog(window, {
+      title: 'Export look',
+      defaultPath: `${lookFileBase(read.look.name)}.${LOOK_EXTENSION}`,
+      filters: [{ name: 'Look', extensions: [LOOK_EXTENSION] }]
+    })
+    if (result.canceled || !result.filePath) return null
+    try {
+      await writeAtomic(result.filePath, serializeLook(read.look))
+    } catch {
+      throw new Error(LOOK_EXPORT_FAILED)
+    }
+    return basename(result.filePath)
+  })
+
+  /**
+   * Import a look: the user's own Open dialog, the size by `stat` BEFORE any
+   * read (a file past LOOK_FILE_MAX_BYTES is never read), then the text read
+   * as a stranger's (`readLookText`: parsed inside a guard, then
+   * `parseLook`). A cancelled dialog is null, never an error; a refusal is
+   * an answer with a plain reason that carries nothing of the file.
+   */
+  ipcMain.handle(LOOK_CHANNELS.import, async (): Promise<LookRead | null> => {
+    const window = getWindow()
+    if (!window) return null
+    const result = await dialog.showOpenDialog(window, {
+      title: 'Import look',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Look', extensions: [LOOK_EXTENSION] },
+        { name: 'All files', extensions: ['*'] }
+      ]
+    })
+    if (result.canceled || result.filePaths.length === 0) return null
+    const target = result.filePaths[0]
+    let text: string
+    try {
+      const size = (await stat(target)).size
+      const tooLarge = lookSizeRefusal(size)
+      if (tooLarge) return { ok: false, reason: tooLarge }
+      text = await readFile(target, 'utf8')
+    } catch {
+      return { ok: false, reason: LOOK_UNREADABLE }
+    }
+    return readLookText(text)
   })
 
   /* ------------------------------------------------- autosave & recovery */

@@ -250,6 +250,8 @@ export default function App(): ReactNode {
   // Saved export settings, read once at startup.
   useEffect(() => {
     void useEditor.getState().loadPresets()
+    // The creator's saved looks (docs/CLIPS.md §10): settings too, beside the presets.
+    void useEditor.getState().loadSavedLooks()
   }, [])
 
   /*

@@ -122,7 +122,27 @@ import { isLoudnessTarget } from '@shared/render/loudness'
 import { normalisePath, pathAt } from '@shared/render/path'
 import { normaliseKeys, type Ease, type Keyframe, type KeyedProperty } from '@shared/render/keyframes'
 import { transitionById } from '@shared/transitions/registry'
-import { entriesOfKind } from '@shared/assets/catalog'
+import { SYSTEM_FONT_FAMILIES, entriesOfKind, fontFamilies, type FontMeta } from '@shared/assets/catalog'
+import {
+  LOOKS_SETTING,
+  LOOK_EXPORT_FAILED,
+  LOOK_LIST_FULL,
+  LOOK_NAME_NEEDED,
+  LOOK_NOTE_RENAMED,
+  LOOK_UNREADABLE,
+  LOOK_VERSION_MAX,
+  SAVED_LOOKS_MAX,
+  applyLook,
+  fileNameOf,
+  graphicsStyleChanged,
+  lookExportedNote,
+  lookFontNotes,
+  lookFromProject,
+  saneSavedLooks,
+  sameLookName,
+  uniqueLookName,
+  type Look
+} from '@shared/look'
 import { DEFAULT_TRIGGER_OPTIONS, tagsForProp } from '@shared/automation/keywords'
 import { solveCrop as solveCropFor } from '@shared/render/crop'
 import { dropPatch, type DropIntent } from '@shared/render/dropIntent'
@@ -1756,6 +1776,34 @@ interface EditorState {
    * edit", not "file this away". Returns the ids it placed.
    */
   dropExternal: (paths: string[], trackId: string | null, frame: number) => Promise<void>
+  /**
+   * The creator's saved looks (docs/CLIPS.md §10, shared/look.ts): app-level,
+   * in settings under LOOKS_SETTING, read sane on start. Not in a project.
+   */
+  savedLooks: Look[]
+  /** What the last look action has to say: a refusal's reason, or the notes of a look read or applied. Empty when there is nothing. */
+  lookNotes: string[]
+  /** The saved looks, read once at startup beside the export presets; a bad value in settings reads as what it sanely holds. */
+  loadSavedLooks: () => Promise<void>
+  /**
+   * The project's two styles saved as a look under `name`, with the header's
+   * two optional lines. Saving over a name (any case) replaces that look and
+   * adds 1 to its version. False, with the reason in `lookNotes`, for no name
+   * or a full list.
+   */
+  saveLook: (made: { name: string; author?: string; licence?: string }) => Promise<boolean>
+  /**
+   * The saved look's two styles on the project: ONE undo step for both, the
+   * graphic clips rebaked once (only when the graphic style changed); captions
+   * on or off and the sounds switch untouched. A font the look names that this
+   * computer lacks gets its note.
+   */
+  applySavedLook: (name: string) => void
+  removeSavedLook: (name: string) => Promise<void>
+  /** The saved look written to a file through the user's Save dialog. */
+  exportSavedLook: (name: string) => Promise<void>
+  /** A look read from a file through the user's Open dialog and added to the list (a taken name gets a number); not applied. */
+  importLookFile: () => Promise<void>
   exportPresets: ExportPreset[]
   loadPresets: () => Promise<void>
   savePreset: (preset: ExportPreset) => Promise<void>
@@ -1933,6 +1981,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   scrubAudio: true,
   exportRequests: 0,
   recording: null,
+  savedLooks: [],
+  lookNotes: [],
   exportPresets: BUILT_IN_PRESETS,
   exportChoice: DEFAULT_CHOICE,
   encoders: null,
@@ -6492,6 +6542,97 @@ export const useEditor = create<EditorState>((set, get) => ({
     } catch (err) {
       notify(err instanceof Error ? err.message : String(err))
     }
+  },
+
+  loadSavedLooks: async () => {
+    try {
+      const settings = await window.forge.getSettings()
+      set({ savedLooks: saneSavedLooks(settings[LOOKS_SETTING]) })
+    } catch {
+      // As loadPresets: a settings file that cannot be read is no saved looks, not a message.
+    }
+  },
+
+  saveLook: async (made) => {
+    // The name as it will be kept (cleaned and capped), so saving over a long name finds it.
+    const made1 = lookFromProject(get().project, made)
+    if (made1.name === '') {
+      set({ lookNotes: [LOOK_NAME_NEEDED] })
+      return false
+    }
+    const list = get().savedLooks
+    const was = list.find((l) => sameLookName(l.name, made1.name))
+    if (!was && list.length >= SAVED_LOOKS_MAX) {
+      set({ lookNotes: [LOOK_LIST_FULL] })
+      return false
+    }
+    const look: Look = { ...made1, version: was ? Math.min(was.version + 1, LOOK_VERSION_MAX) : 1 }
+    // In the old one's place when saving over it, else last.
+    const next = was ? list.map((l) => (l === was ? look : l)) : [...list, look]
+    set({ savedLooks: next, lookNotes: [] })
+    await window.forge.setSetting(LOOKS_SETTING, next).catch(() => undefined)
+    return true
+  },
+
+  applySavedLook: (name) => {
+    const look = get().savedLooks.find((l) => sameLookName(l.name, name))
+    if (!look) return
+    const before = get().project
+    // One update: one undo step holds both styles.
+    get().update((p) => applyLook(p, look))
+    const after = get().project
+    const { catalog } = useCatalog.getState()
+    const installed = catalog
+      ? [...SYSTEM_FONT_FAMILIES, ...fontFamilies(catalog).map((e) => (e.meta as FontMeta).family)]
+      : null
+    set({ lookNotes: lookFontNotes(look, installed) })
+    // The graphic clips rebaked once, as setGraphicsStyle does, and only when their style changed.
+    if (after !== before && graphicsStyleChanged(before, after)) rebakeGraphicClips(get)
+  },
+
+  removeSavedLook: async (name) => {
+    const next = get().savedLooks.filter((l) => !sameLookName(l.name, name))
+    if (next.length === get().savedLooks.length) return
+    set({ savedLooks: next, lookNotes: [] })
+    await window.forge.setSetting(LOOKS_SETTING, next).catch(() => undefined)
+  },
+
+  exportSavedLook: async (name) => {
+    const look = get().savedLooks.find((l) => sameLookName(l.name, name))
+    if (!look) return
+    try {
+      const written = await window.forge.exportLook(look)
+      set({ lookNotes: written === null ? [] : [lookExportedNote(fileNameOf(written))] })
+    } catch (err) {
+      set({ lookNotes: [err instanceof Error && err.message ? err.message : LOOK_EXPORT_FAILED] })
+    }
+  },
+
+  importLookFile: async () => {
+    let read: Awaited<ReturnType<typeof window.forge.importLook>>
+    try {
+      read = await window.forge.importLook()
+    } catch (err) {
+      set({ lookNotes: [err instanceof Error && err.message ? err.message : LOOK_UNREADABLE] })
+      return
+    }
+    // Cancelled: nothing happened, so nothing is said.
+    if (read === null) return
+    if (!read.ok) {
+      set({ lookNotes: [read.reason] })
+      return
+    }
+    const list = get().savedLooks
+    if (list.length >= SAVED_LOOKS_MAX) {
+      set({ lookNotes: [LOOK_LIST_FULL] })
+      return
+    }
+    const name = uniqueLookName(read.look.name, list.map((l) => l.name))
+    const notes = [...read.notes]
+    if (name !== read.look.name && read.look.name.trim() !== '') notes.push(LOOK_NOTE_RENAMED)
+    const next = [...list, { ...read.look, name }]
+    set({ savedLooks: next, lookNotes: notes })
+    await window.forge.setSetting(LOOKS_SETTING, next).catch(() => undefined)
   },
 
   loadPresets: async () => {

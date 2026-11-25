@@ -6,6 +6,8 @@ import type { DroppedMedia } from '@shared/dropped'
 import type { Transcript } from '@shared/transcript'
 import type { ModelStatus } from '@shared/sidecar/protocol'
 import type { SidecarStatus } from '@shared/sidecar/status'
+import { LOOK_CHANNELS } from '@shared/lookChannels'
+import type { Look, LookRead } from '@shared/look'
 import { SPEECH_MODEL_CHANNELS, type SpeechModelName, type SpeechModelProgress, type SpeechModelStatus } from '@shared/asr/speechModel'
 import type {
   FaceModelProgress,
@@ -141,6 +143,13 @@ const api = {
   getSettings: (): Promise<Record<string, unknown>> => ipcRenderer.invoke('settings:get'),
   setSetting: (key: string, value: unknown): Promise<Record<string, unknown>> =>
     ipcRenderer.invoke('settings:set', { key, value }),
+
+  /* -------------------------------------------- creator looks (step 7) */
+
+  /** Export a saved look through the user's Save dialog: the file's name (never its folder), or null when cancelled. */
+  exportLook: (look: Look): Promise<string | null> => ipcRenderer.invoke(LOOK_CHANNELS.export, look),
+  /** Import a look through the user's Open dialog: the look with its notes, a plain refusal, or null when cancelled. */
+  importLook: (): Promise<LookRead | null> => ipcRenderer.invoke(LOOK_CHANNELS.import),
 
   /* --------------------------------------------- autosave and recovery */
 

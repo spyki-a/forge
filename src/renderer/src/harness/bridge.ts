@@ -1,6 +1,7 @@
 import type { MediaAsset } from '@shared/timeline'
 import type { PackListing } from '@shared/assets/pack'
 import { LOOKS, cubeFor } from '@shared/render/looks'
+import { LOOK_EXTENSION, lookFileBase, lookSizeRefusal, parseLook, readLookText, serializeLook, type LookRead } from '@shared/look'
 import type { Job } from '@shared/types'
 import { buildYtDlpArgs, captionKeys, outputStem, type IngestRequest, type LinkMeta } from '@shared/ingest/args'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
@@ -85,6 +86,55 @@ const unsupported = (what: string) => async (): Promise<never> => {
 
 /** Settings for this page's lifetime; the harness has no disk to keep them on. */
 const harnessSettings: Record<string, unknown> = {}
+
+/**
+ * The look file (docs/CLIPS.md §10, shared/look.ts), held in memory: there
+ * is no disk and no dialog here. An export writes `text` and `name` (and
+ * counts itself); an import reads `text` through main's own checks
+ * (`lookSizeRefusal` on its UTF-8 bytes, then `readLookText`), so any text a
+ * driving script puts here, a hostile one included, is tried as main would
+ * try a file. `cancel` plays the dialog's Cancel for both. Exposed as
+ * `window.__forgeLookFile`.
+ */
+export const harnessLookFile = {
+  /** The file's text, or null for no file chosen (an import then answers null, as a cancelled dialog does). */
+  text: null as string | null,
+  /** The last export's file name. */
+  name: '',
+  /** How many exports were written. */
+  writes: 0,
+  /** While true, both dialogs answer as Cancel did. */
+  cancel: false,
+  /** Put any text in the file, so a bad one can be tried on the page. */
+  put(text: string): void {
+    harnessLookFile.text = text
+  },
+  reset(): void {
+    harnessLookFile.text = null
+    harnessLookFile.name = ''
+    harnessLookFile.writes = 0
+    harnessLookFile.cancel = false
+  }
+}
+
+async function harnessExportLook(look: unknown): Promise<string | null> {
+  // As main's look:export: what is written is the payload read as a stranger's look.
+  const read = parseLook(look)
+  if (!read.ok) throw new Error(read.reason)
+  if (harnessLookFile.cancel) return null
+  harnessLookFile.text = serializeLook(read.look)
+  harnessLookFile.name = `${lookFileBase(read.look.name)}.${LOOK_EXTENSION}`
+  harnessLookFile.writes++
+  return harnessLookFile.name
+}
+
+async function harnessImportLook(): Promise<LookRead | null> {
+  if (harnessLookFile.cancel || harnessLookFile.text === null) return null
+  // As main's look:import: the size first (main's is a stat, before any read), then the text.
+  const tooLarge = lookSizeRefusal(new TextEncoder().encode(harnessLookFile.text).length)
+  if (tooLarge) return { ok: false, reason: tooLarge }
+  return readLookText(harnessLookFile.text)
+}
 
 /** Files the harness has made, so they can be handed back as assets. */
 const made = new Map<string, { width: number; height: number }>()
@@ -1585,6 +1635,10 @@ export function installHarnessBridge(): void {
       return { ...harnessSettings }
     },
 
+    // A look's file, in memory (`harnessLookFile`).
+    exportLook: harnessExportLook,
+    importLook: harnessImportLook,
+
     /*
      * Autosave and recovery: inert, by design.
      *
@@ -1636,4 +1690,6 @@ export function installHarnessBridge(): void {
   ;(window as unknown as { forgeReframe: typeof harnessReframe }).forgeReframe = harnessReframe
   // The AI helper stub's switches and its record (`harnessHelper`): set(state), reset(), presses.
   ;(window as unknown as { __forgeHelperStub: typeof harnessHelper }).__forgeHelperStub = harnessHelper
+  // The look file in memory (`harnessLookFile`): put(text) a file to import, read the last export's text and name.
+  ;(window as unknown as { __forgeLookFile: typeof harnessLookFile }).__forgeLookFile = harnessLookFile
 }

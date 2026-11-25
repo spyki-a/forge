@@ -74,7 +74,10 @@ export function installFallbackBridge(): void {
     checkHelperAgain: unavailable,
     helperModelsBytes: async () => null,
     speechModel: unavailable,
-    cancelSpeechModel: async () => undefined
+    cancelSpeechModel: async () => undefined,
+    // A look's file: only from a button, by which time the warning is on screen; the store says the reason.
+    exportLook: unavailable,
+    importLook: unavailable
   } as unknown as Window['forge']
 
   queueMicrotask(() => {
