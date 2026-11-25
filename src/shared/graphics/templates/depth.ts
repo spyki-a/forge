@@ -37,11 +37,13 @@
  * **Step 6's three** (docs/CLIPS.md §9, "The 3D templates"): `timeline`,
  * `before-after` and `versus` take the same four moves through this file,
  * each its own rows in `DEPTH_PLANES` (3D templates piece 3). The camera
- * moves over the entrance ending no later than the FIRST beat (the card's
- * entrance, as the table says "over the entrance"); the focus blur falls
- * over the whole list to exactly 0 on the LAST beat (`depthOut`'s
- * `lastBeat`), so every move is flat from the last beat on and the settled
- * frame is the flat variant's own, as for counter and ring. No hero: the
+ * moves over the first element's entrance (from `depthOut`'s `start`, the
+ * first beat less the entrance) and ends no later than the FIRST beat, as
+ * the table says "over the entrance"; the focus blur falls over the same
+ * span to exactly 0 on the first beat, as the counter's on its one, so the
+ * later rows and the second side enter sharp. Every move is flat from the
+ * first beat on and the settled frame is the flat variant's own, as for
+ * counter and ring. No hero: the
  * three have no `HERO_GLOW_ITEM` row, so `heroGlow` gives them none, and
  * graphics/apply.ts `HERO_TEMPLATES` stays counter and ring.
  *
