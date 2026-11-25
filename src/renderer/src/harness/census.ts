@@ -29,6 +29,7 @@ import { LIBRARY_GRAPHICS } from '@shared/graphics/library'
 import { HARNESS_HELPER_PACK, HARNESS_LINKS, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
 import { harnessDropsTranscript, harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
+import { stubComplete } from './bestClipsStub'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
@@ -2417,6 +2418,30 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     await editor().analyseBestClips()
     const shown = editor().bestClips.last?.result.cards.length ?? 0
     if (shown !== 3) throw new Error(`census: Analyse on the bridge's talk gave ${shown} cards, not 3`)
+    return {}
+  },
+  /*
+   * The same Analyse with the harness's model stub answering (bestClipsStub.ts
+   * 'good': the first three ids of the request's own menu, titled with their
+   * windows' words): three cards, each "Picked by the model". The stub stands
+   * in for the bridge's status and complete for the press only.
+   */
+  'link-best-clips-model': async () => {
+    const transcript = await linkWords()
+    const meta = editor().urlSource?.meta ?? null
+    const forge = window.forge as unknown as Record<string, unknown>
+    const kept = { directorStatus: forge.directorStatus, directorComplete: forge.directorComplete }
+    Object.assign(forge, {
+      directorStatus: async () => [{ id: 'openai', label: 'the harness’s model stub', kind: 'local', ready: true, reason: null }],
+      directorComplete: stubComplete('good', { transcript, heatmap: meta?.heatmap ?? null, language: meta?.language ?? '', targetMs: editor().bestClips.targetMs })
+    })
+    try {
+      await editor().analyseBestClips()
+    } finally {
+      Object.assign(forge, kept)
+    }
+    const cards = editor().bestClips.last?.result.cards ?? []
+    if (cards.length !== 3 || cards.some((c) => c.scoredBy !== 'model')) throw new Error(`census: the model stub's Analyse gave ${cards.length} cards, ${cards.filter((c) => c.scoredBy === 'model').length} of them the model's, not 3`)
     return {}
   },
   /* an Analyse held in flight through the store: the no-model run answers too fast to look at */

@@ -8,6 +8,7 @@ import { installMomentCheck } from './momentCheck'
 import { installCensus } from './census'
 import { installSwatch } from './swatch'
 import { installClipItCheck } from './clipItCheck'
+import { installBestClipsCheck } from './bestClipsCheck'
 import { installReframeCheck } from './reframeCheck'
 import { installHelperPackCheck } from './helperPackCheck'
 import { installGraphicCheck } from './graphicCheck'
@@ -39,6 +40,9 @@ installSwatch()
 
 /* Clip it from a link's transcript, pressed through on screen (docs/CLIPS.md §3b.8). */
 installClipItCheck()
+
+/* Best clips' cards and Clip it from a card, pressed through on screen with a model stub (docs/CLIPS.md §7.7). */
+installBestClipsCheck()
 
 /* Following the subject, pressed through and looked at on screen (docs/CLIPS.md §4.9). */
 installReframeCheck()

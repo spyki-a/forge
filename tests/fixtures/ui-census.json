@@ -5916,6 +5916,17 @@
     "note": "Who picked each card (scoredBy ‘signals’). Count 3: Analyse at 1 min on the twelve-row talk with no model (the bridge’s director status has none) gives three cards."
   },
   {
+    "label": "Picked by the model",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-clips-model",
+    "count": 3,
+    "file": "src/shared/bestclips/session.ts",
+    "line": 53,
+    "newHome": "Shelf tile URL",
+    "note": "Who picked each card (scoredBy ‘model’). Count 3: Analyse at 1 min on the twelve-row talk with the harness’s model stub (bestClipsStub.ts, 'good') answering for the press: three cards, all the model’s."
+  },
+  {
     "label": "Picked without a model, from the talk's own signals.",
     "match": "text",
     "home": "url",
