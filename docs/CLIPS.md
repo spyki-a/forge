@@ -430,6 +430,68 @@
 > §6.12), step 4, 1g, step 6's three 3D templates and step 7, then
 > `BETA.md`.
 >
+> **2026-11-23: your word from the Surface.** You pulled origin
+> (`e70c9e9`) on the Surface and tried the speech models: "everything
+> landed as expected". No figures came with it (no accuracy on Hindi,
+> Telugu or Hinglish, no speed, no sizes, not which of the three models
+> you downloaded), so it is recorded as your word that they worked; it
+> closes no exit list by itself (phase 2's, phase 3's, the three items').
+>
+> **Step 4, Best clips, is built and pushed, 2026-11-23 to 25** (§7),
+> in five pieces, eleven commits `e354cd8..d6000ed`, each piece built by
+> one agent, read by two critics with different lenses and fixed by one
+> agent, in two runs (run A, pieces 1 and 2; run B, pieces 3 to 5;
+> `cf35644` is the session's): piece 1, the windows, the six signals, the
+> prefilter and the no-model three, `e354cd8`, fix `b0ab09a`; piece 2,
+> the model's pick of three, its fallback and the eval block, `a1085a0`,
+> fix `6d46ee7`, then the session's `cf35644`; piece 3, Analyse and the
+> three cards in the URL tile, `46f21b6`, fix `dc489d4`; piece 4, Clip it
+> from a card with step 0's question and steps 3 to 5 after it,
+> `4d898b0`, fix `08875ea`; piece 5, the checks, `131cefe`, fix
+> `d6000ed`. You held the work at 00:30 on 2026-11-24 ("hey can you hold
+> thh work will do tom"), piece 5's first builder stopped mid-work, and it
+> resumed on 2026-11-25. Every push waited for the whole step, as you
+> asked ("do the push after the full ?"): one push, 2026-11-25, origin
+> `e70c9e9` → `d6000ed`. Each piece's Built note is in §7.3, §7.4, §7.5
+> and §7.7. **The session's readings at `d6000ed`, on the Mac**:
+> typecheck 0; the suite 379 files passed and 6 skipped (385), 6265 tests
+> passed and 67 skipped (6332), the new skipped file the gated ten-links
+> recorder; build 0. On the harness page (the development Mac):
+> `__forgeBestClipsCheck()` `ok: true`, 36 cases, every one ok, 10,221
+> ms, its seven Clip it cases among them; the census missing [], 1018
+> checked, 12 skipped (984 checked before step 4, 2026-11-20). **CI at
+> `d6000ed`** (run 45658046940): `windows-latest` success, so the full
+> suite, `bestClipsCard.int` on the 2018 Windows ffmpeg among it, passed
+> there; `macos-15` cancelled before any step ran, GitHub having no Mac
+> runner to give it ("The job was not acquired by Runner of type hosted
+> even after multiple attempts"): **macOS CI is not read at `d6000ed`**;
+> it waits for your "Re-run failed jobs" on GitHub or the next code push.
+> What the app does now that it did not: under a link's rows in the URL
+> tile, Best clips (1, 2, 3 or 4 min, Analyse) finds up to three stretches
+> from the fetched captions, by a model when one is set up and by the
+> talk's own signals when not, as stacked cards each with Clip it, which
+> downloads exactly that stretch, with Make it vertical on into a 9:16
+> short (asking first when the timeline holds an edit), and then follows the subject, turns captions on
+> and finds graphics, each step listed on the card (§7.5; step 6, B-roll,
+> after the beta). **Not read, by anyone**: no real model has answered a
+> Best clips request (the relay was tried on 2026-11-23 and 2026-11-25:
+> every request status 500 within 2 to 31 ms, LM Studio not running); no
+> real link was fetched through Analyse, and no real download, reframe or
+> graphics pass ran through a card (the harness's stubs and the render
+> check's generated ramp stand in); the ten-links recorder has run only
+> against the fake yt-dlp, never against YouTube; nothing was read in the
+> development app or on the Surface. **§7.8's exit is not met**, and
+> every item still open on it is yours (§7.8, item by item). The
+> decisions step 4 left to you are §16.89-95.
+> **Next, by the agreed order** (as the session's record of 2026-11-25
+> gives it; §2's 2026-11-25 note): step 6's three 3D templates (2 days),
+> step 7's creator style (2) and saved template (2.5, gated on `MARKET.md`
+> Stage 0, §10), Florence-2's caption placement (1g, 3, gated by its own
+> measurement), then `BETA.md`'s R1–R12, R13 and R14; still open beside
+> them, yours: phase 2's and phase 3's exit readings (§6.12) and §7.8's.
+> **The deadline is unchanged: 25 December 2026.** A feature freeze about
+> 10 December is the session's suggestion, not confirmed by you.
+>
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
@@ -802,6 +864,20 @@ this and will get back to the beta". **This plan comes first**, then
   development app and on the Surface, yours, §6.12), then step 4, 1g,
   step 6's three 3D templates, step 7, then `BETA.md` R1–R12 → R13 →
   R14.
+- **2026-11-25: step 4 is built** (M3; §7, built 2026-11-23 to 25 in five
+  pieces, `e354cd8..d6000ed`, pushed once on 2026-11-25; the status block
+  at the top). Its exit (§7.8) is open and yours; the decisions it left
+  are §16.89-95. No day figure or total in this section changes: step 4's
+  3.5 stand as planned. **Next, in the agreed order as the session's
+  record of 2026-11-25 gives it**: step 6's three 3D templates (2), step
+  7's creator style (2) and saved template (2.5, gated on `MARKET.md`
+  Stage 0, below), Florence-2's caption placement (1g, 3, gated), then
+  `BETA.md` R1–R12 → R13 → R14. That puts 1g after step 7, where the
+  2026-11-14 order had it before step 6; that order already let 1g slip
+  behind M3 without blocking anything ("free to slip behind M3"). Still open
+  beside them, all yours: phase 2's and phase 3's exit readings (§6.12) and
+  §7.8's. **The deadline is unchanged: 25 December 2026.** A feature freeze
+  about 10 December is the session's suggestion, not confirmed by you.
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
   redistribution rights or the `filler-supplies` policy alone for paid
@@ -23477,7 +23553,12 @@ stays here:
 each piece's Built note under §7.3, §7.4, §7.5 and §7.7. Two things above
 did not hold: steps 3–5 were NOT already on M0's path, so step 4 wired them
 for a card's clip only, and the three cards are stacked, not tall cards side
-by side; §7.5's piece 4 note lists every departure.)
+by side; §7.5's piece 4 note lists every departure. The days above are
+the plan's, 3.5, and were not re-estimated; the build took three calendar
+days, 2026-11-23, the small hours of 2026-11-24 and 2026-11-25, held at
+your word from 00:30 on 2026-11-24 to the morning of 2026-11-25. Where the
+step stands, its exit and the decisions it left: the status block at the
+top, §7.8 and §16.89-95.)
 
 ### 7.1 Metadata and the transcript from a link — measured with yt-dlp 2026.08.19
 
@@ -24721,13 +24802,76 @@ rows.
 - Ten real links chosen by the user (talks and podcasts; two in Hindi or
   Telugu): on ≥ 7 of 10, at least one card the user would post, with the
   model and with signals alone, recorded separately.
+  (2026-11-25: the instrument exists, the ten-links recorder of §7.7's
+  piece 5 note, `tests/integration/bestClipsExit.int.test.ts`, gated and
+  never under CI. Your run: write
+  `tests/output/_session-keep/bestclips-exit-links.txt` (one link a line,
+  its length 1 to 4 min, optionally the captions' language); pass 1,
+  `FORGE_BESTCLIPS_EXIT=1 npx vitest run
+  tests/integration/bestClipsExit.int.test.ts`, which fetches details and
+  captions only and writes the signals' cards and the model's requests;
+  then, with LM Studio open and serving the model, on the harness page
+  `window.__forgeEvalRelay('bestclips-exit')`; pass 2, the same command
+  with `FORGE_BESTCLIPS_EXIT_STEP=score`, no network; then rate each card
+  yes or no in `tests/output/bestclips-exit/index.html`, which tallies the
+  model's side and the signals' side apart against 7 of 10, the model's
+  only over the links it answered. It has run only against the fake
+  yt-dlp, by its builder and fixer, never against YouTube; no link is
+  chosen and nothing is rated. **Open, yours.**)
 - Every window on sentence boundaries, by property.
+  (2026-11-25: held by `tests/bestClips.test.ts`, "windowsFor: boundaries,
+  band and stride (§7.3)" › "every window starts at a capped segment start
+  and ends at a capped segment end, inside the band, for random
+  transcripts", green in the session's suite at `d6000ed`. Over 60 seeded
+  transcripts (half punctuated, 200 to 1,199 words, even seeds with gaps in
+  `Word.index`, lengths of 1 to 4 min, tolerance 0.1, 0.2 or 0.3; more than
+  500 windows asserted) it pins: every window starts at a capped segment's
+  start and ends at a capped segment's end, inside the band taken from the
+  numbers themselves; its words counted by position; and its starts are
+  exactly the feasible ones, in a punctuated track (a fifth or more of the
+  capped segments ending on `.` or `?`) only where the segment before ends
+  on a mark. What it does not pin: an END on a sentence mark is preferred,
+  not required (a separate case, "prefers an end on a full stop to a nearer
+  end without one", holds the preference), and in an unpunctuated track a
+  boundary is a capped segment's, made by a pause, an event gap or the
+  30-word, 15 s cap. That is §7.3's own definition of a boundary, not a
+  sentence mark at both ends, so the item is **not marked met here**:
+  whether the property as built meets its words is §16.90's.)
 - Clip it's captions within one frame on the exact cut, and the exact cut
   cross-correlated with §16.13 decided: **M0's exit** (§3b.9), already met.
+  (2026-11-25: unchanged, met with M0. Step 4 changed M0's download in one
+  way, projects told apart by id, §16.91; M0's Clip download from picked
+  rows chains no later step, the harness check's last Clip it case and
+  `tests/renderer/clipItCollect.test.ts`.)
 - Clip it from a card end to end on the Surface without swapping, with the
   reframe and graphics attached (§12.1).
+  (2026-11-25: what exists toward it: the chain and its order rules
+  (§7.5's piece 4 note, §12.1's note of 2026-11-23/24); the harness
+  check's seven Clip it cases, read `ok` by the session on the harness page
+  on the Mac on 2026-11-25 (the empty timeline set to 9:16 with one exact
+  download; landed without the AI helper; landed with it, followed, the
+  order watched both ways; the helper there and no face finder; the 16:9
+  edit's question; unsaved work saved first; M0's rows chaining nothing),
+  over stubbed downloads, a stubbed reframe and no model; and the render
+  check `bestClipsCard.int`, green on the Mac in the session's suite and on
+  the 2018 Windows ffmpeg in CI at `d6000ed`, over the fake yt-dlp and a
+  generated ramp. What it still needs: the Surface itself, a real download
+  landing through a card, a real reframe job releasing its sessions before
+  the local model loads, a real graphics pass, and a reading of swap, for
+  which nothing is built and no way is stated (`vm_stat` on the Mac, Task
+  Manager on the Surface). **Open, yours.**)
 - YouTube ASR timing against Whisper measured on three videos and written
   into `EFFECTS.md`.
+  (2026-11-25: not measured; no piece of step 4 built or addressed it. It
+  needs §2's "three YouTube videos for ASR timing against Whisper" from
+  you. **Open, yours.**)
+
+**§7.8's state, 2026-11-25.** Of the five items, M0's (the third) is met,
+with M0; none other is. The second is held by a property the session
+read green, which is §7.3's rule and not a sentence mark at both ends
+(§16.90); the first, fourth and fifth are your runs, and none has been
+made. Nothing of the exit was read in the development app or on the
+Surface.
 
 ---
 
@@ -27430,6 +27574,163 @@ the development app or on the Surface.
     transcribe and depth ("should at least be considered").
 
     **Answer (2026-11-20): OPEN.** Yours.
+
+**Added 2026-11-25, from step 4's build (§7, 2026-11-23 to 25); OPEN.**
+Each is a wording, a stated departure, a gap or a chosen constant that the
+builders, critics, fixers or the session left to you (the two runs'
+reports and the session's record); the session decided none. A
+recommendation is given only where the session's record states one; a
+critic's or a fixer's suggestion is quoted as theirs. Everything here was
+read in the suite or on the harness page on the Mac, never in the
+development app or on the Surface, and no real model, link, download or
+reframe has gone through Best clips.
+
+89. **The words on the cards.** On-screen words no one has chosen for you:
+    - "signals" and "talk" in `SCORED_BY_LABEL`'s "Picked from the talk's
+      own signals" and in every note that shares the phrase (`NO_MODEL_NOTE`
+      "Picked without a model, from the talk's own signals.", the three
+      `MODEL_*_NOTE`s, `FILLED_NOTE`, the two "talk's own signal" fallback
+      notes): "signals" is jargon to a user, and a wedding film is not a
+      talk. One wording for all of them is yours (piece 3's fixer); a critic
+      of piece 3 suggested "Picked by the app, without a model" or "Picked
+      from what is said".
+    - "Shape" and "Follow the subject" as step labels on a clipped card
+      (`STEP_LABEL`; "Follow the subject" is the Trimmer's own name for the
+      press), and "Best clips reads the video’s captions: press Get
+      transcript first." (`BEST_CLIPS_NEEDS_TRANSCRIPT`) shown also after a
+      fetch that failed and while a language is to be picked; a critic of
+      piece 3 suggested "Best clips reads the video’s captions, and there
+      are none yet." for those two states.
+    - The why with no model: on all three harness cards on 2026-11-25 it
+      read "ends on a full stop" (`signals.ts` `endingReason`, a line that
+      stands out, so it may be a card's why). The session's observation,
+      not put to you before this record: true and plain, but a weak reason
+      to post. Whether the ending signal should supply a card's why is
+      yours; the session made no recommendation.
+    - The apostrophes: `SCORED_BY_LABEL` and the notes in `run.ts` are
+      written with a straight one ("talk's"), while
+      `BEST_CLIPS_NEEDS_TRANSCRIPT`, `CLIP_IT_CARD_TITLE` ("…with its words
+      and the link’s credit") and the recorder's page use the curly one.
+
+    No recommendation beyond the critics' suggestions quoted.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+90. **The departures from §7's words, to confirm or overrule.** Each is
+    built differently from the plan and listed with its reason in §7.4's
+    and §7.5's notes ("Departures from the plan's words", "Departures
+    from the plan"):
+    - the three cards stacked in the 240 px column, each with a 48 px 9:16
+      face, not side by side as sheet 27 draws them (three side by side
+      leave about 68 px each, piece 3's builder);
+    - no thumbnail on a card (the plan's own "left out of v1");
+    - "Make it vertical" a toggle above the cards, on by default (the plan
+      left its place open; sheet 27 does not draw it);
+    - a missing face finder a line on the card pointing at the Trimmer,
+      "skipped: the face finder is not downloaded, so the crop is centred.
+      Follow the subject, in the Trimmer, gets it.", not "a button with its
+      size" on the card: one home for that press (piece 4's builder);
+    - Analyse never fetching captions: with no transcript it is greyed and
+      points at Get transcript;
+    - the no-captions line, "This video has no captions, and Best clips
+      cannot listen to a video yet." with or without the AI helper, not
+      §7.5's "…needs the AI helper to listen to it": Listen to it is not
+      built, so the line does not send you to install the helper for it (a
+      panel test lets it point at Listen to it once that button is built);
+    - step 4 turning captions on only in a new project or on an empty
+      timeline, never in an existing edit, where §7.5's step 4 turned them
+      on for the project (`08875ea`, after a critic);
+    - two lines the fixers declined to change: a cancelled reframe reads
+      "the faces could not be found, so the crop is centred.", and after the
+      9:16 change is undone (its own undo step) the card still reads "this
+      project set to 9:16.";
+    - and §7.8's second item: whether the property as built, §7.3's
+      capped-segment boundaries with a punctuated track's starts on a
+      sentence start and every end on a mark preferred, not required, meets
+      "Every window on sentence boundaries, by property" (§7.8's note of
+      2026-11-25).
+
+    No recommendation; each builder's reason is in its note.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+91. **Projects told apart by id, for every download.** `08875ea` (piece
+    4's fixer, after a critic found an untitled project's null path
+    matching another's) records the project's id with each pending download,
+    and `collectIngest` compares ids when one was recorded, paths
+    otherwise. So a download that finishes after you moved to another
+    untitled project is now refused and said, where before it landed in the
+    wrong project. This changes M0's Clip download and a plain Get too, not
+    only Best clips (`INGEST.md`'s note of 2026-11-25; one M0 test fixture,
+    `clipItCollect`'s 'elsewhere', now sets the id). The fixer called it
+    intended; it is a behaviour change outside step 4, for you to confirm.
+    No recommendation.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+92. **The request after the timeout, and one model for three features.**
+    Analyse runs under one deadline, `BEST_CLIPS_TIMEOUT_MS` 180_000 (the
+    session's suggested value, unmeasured), covering the status check and
+    the ask. When it runs out the panel says "The model took too long, so
+    these are picked from the talk's own signals." and drops a late answer,
+    but the request is not cancelled: `directorComplete` has no
+    `AbortSignal` and no cancel over IPC, so it runs on in main and at the
+    local server, and the next request queues behind it there (piece 3's
+    builder: cancelling needs a cancel path through `director:complete` and
+    both providers' fetch). A status check out of time is reported the same
+    way, untested against a real server. And nothing serialises the model
+    across features: Best clips allows one Analyse at a time, but Find
+    graphics or Direct can run beside it, and a Find graphics or Follow the
+    subject you press while a card's chain runs is not held back (only the
+    card chains obey §12.1 among themselves); two prompts on one local
+    model is what §12.1 keeps off the 8 GB machine. No recommendation.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+93. **A pointer to Settings from the no-model note.** With no model set up
+    the cards say "Picked without a model, from the talk's own signals."
+    and nothing on the panel says where a model is set up, where
+    `ReframePanel` and `LinkTranscript` point at Settings for a missing AI
+    helper (`HelperPointer`). A critic of piece 3 suggested "a short 'Set up
+    a model in Settings' pointer"; the fixer did not build it (a new control,
+    a census row and a route to Settings, beyond a fix). No recommendation.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+94. **The ten-links recorder's missing "ask" pass, and the cases left to
+    node.** The recorder has two passes, `prepare` and `score`, and the
+    relay on the harness page between them is its only way to the model
+    (§7.8's first item). On your own machine node can reach the model
+    server, so a critic of piece 5 suggested an optional
+    `FORGE_BESTCLIPS_EXIT_STEP=ask` calling the model from node, one command
+    a pass; the fixer declined it as a new network path. The same fixer
+    left five page cases to node (`tests/renderer/bestClipsClipIt.test.ts`,
+    `tests/renderer/bestClipsPanel.test.tsx`): the steps after Add and after
+    Start new, a second card while the first downloads (Start new greyed
+    with "Waits until the clip downloading now has landed in this
+    project."), a download that finishes under another project, and a
+    second Analyse while one runs ("Best clips is already looking: one
+    Analyse at a time."); the harness check stays at 36 cases. No
+    recommendation.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+95. **The chosen constants, and what judges them.** Each is a builder's or
+    the session's choice, unmeasured against a real talk or a real model:
+    `SIGNAL_WEIGHTS` (heat 3, density 1.5, ending 1, opening 1, hook 1,
+    quiet 1.5) and which reason lines stand out as a why; the thresholds
+    (`PUNCTUATED_SHARE` 0.2, `ENGLISH_MIN_SHARE` 0.01 with
+    `ENGLISH_MIN_COUNT` 3, `QUIET_GAP_MS` 2000, `HEAT_MIN_COVER` 0.5,
+    `HEAT_FLAT_SPREAD` 0.05, `MAX_CANDIDATES` 24, `MAX_OVERLAP` 0.5,
+    `CONDENSED_MAX_CHARS` 240); the 180 s deadline (§16.92); the answer's
+    room, `maxTokensForBestClips` = 200 + 250 a pick (950 for three); the
+    prompt's estimate, 3,353 tokens at 3.0 characters a token; and Indic
+    token density, where at one character a token the worst case is 8,159
+    of `NUM_CTX` 8,192, 33 spare (piece 2's fixer: if Indic is denser than
+    about two characters a token, `CONDENSED_MAX_CHARS` or `MAX_CANDIDATES`
+    must vary by script). Beside them, no connective or address list for
+    Hindi or Telugu exists, so those talks have no opening signal and no
+    address hook (§7.4's piece 1 note); the lists are yours to give. What
+    judges the constants is the ten links, with the model and with the
+    signals alone (§7.8's first item), and a real model answering the eval
+    block's requests (run `bestclips-a1`, prepared, never answered: LM
+    Studio was not running). No recommendation until those are read.
+
+    **Answer (2026-11-25): OPEN.** Yours.
 
 ---
 

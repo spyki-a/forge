@@ -43,6 +43,26 @@
 > is left of `CLIPS.md` before the beta: phase 2's and phase 3's exit
 > readings, step 4, 1g, step 6's three 3D templates and step 7, then
 > R1–R12, R13 and R14 here.
+>
+> **2026-11-25: step 4, Best clips, is built** (`CLIPS.md` §7, built
+> 2026-11-23 to 25 in five pieces, `e354cd8..d6000ed`, pushed once on
+> 2026-11-25; CI green on `windows-latest` at `d6000ed`, the `macos-15`
+> job cancelled unstarted for want of a runner, so not read; the
+> session's suite, harness check and census green on the Mac). It is done
+> on the build side only: its exit (`CLIPS.md` §7.8: the ten links rated,
+> Clip it from a card on the Surface without swapping, YouTube's ASR
+> timing against Whisper) is open and the user's, no real model or link
+> has gone through it, and nothing of it was read in the development app
+> or on the Surface; its decisions are `CLIPS.md` §16.89-95. On
+> 2026-11-23 the user said the speech models, tried on the Surface after a
+> pull, "landed as expected" (no figures; it closes no exit by itself).
+> So what is left of `CLIPS.md` before the beta, in the agreed order as
+> the session's record of 2026-11-25 gives it (`CLIPS.md` §2's 2026-11-25
+> note): step 6's three 3D templates, step 7's creator style and saved
+> template, Florence-2's caption placement (1g, gated), then R1–R12, R13
+> and R14 here; beside them, the user's exit readings for phase 2, phase
+> 3 and step 4. The deadline is unchanged, 25 December 2026; the R list
+> and its estimates are unchanged.
 
 ## 0. What "beta" means
 
