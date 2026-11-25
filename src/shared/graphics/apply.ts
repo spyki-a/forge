@@ -25,7 +25,7 @@ import { graphicClipAsset, graphicExitKeys } from './frame'
 import { NO_CLIP_NOTE, NO_FREE_THIRD_NOTE, graphicLane, placeGraphic, subjectAtOnset, thirdPreference } from './place'
 import { GRAPHIC_SOUND_LANE_NAME, NO_SOUND_LIBRARY_NOTE, footageOf, graphicSoundFiles, graphicSounds } from './sound'
 import { CLEAN_GRAPHIC_STYLE } from './style'
-import { GRAPHIC_TEMPLATES, SPEAKER_PLACEHOLDER, type GraphicData, type GraphicDrop, type GraphicSpec, type KeptGraphic } from './template'
+import { GRAPHIC_TEMPLATES, SPEAKER_PLACEHOLDER, graphicName, type GraphicData, type GraphicDrop, type GraphicSpec, type KeptGraphic } from './template'
 import type { GraphicProposal } from '../timeline'
 
 /**
@@ -138,7 +138,7 @@ export function drawnText(d: GraphicData): string {
 
 /** A template as a note says it: "lower third", not "lower-third". */
 function cardName(template: string): string {
-  return template.replace(/-/g, ' ')
+  return graphicName(template)
 }
 
 /** How a dropped graphic is named in a note: its kind and the first thing it draws. */

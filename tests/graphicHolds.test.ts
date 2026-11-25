@@ -26,6 +26,11 @@ interface Fixture {
 
 const FIXTURES = (JSON.parse(readFileSync(new URL('./fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: Fixture[] }).specs
 const LANGUAGES = ['en', 'hi', 'te'] as const
+// Step 6's timeline, before-after and versus are not here: this walks every
+// template in all three languages, and their Hindi and Telugu fixtures are
+// the owner's still to write (specs.json has only timeline-en, before-after-en
+// and versus-en). Their English hold is checked in graphic3dTemplates.test.ts
+// (timeline-en needs 7.9 s of its 8 max). Add them here with those fixtures.
 const TEMPLATES = ['counter', 'bars', 'steps', 'quote', 'callout', 'ring', 'keyword', 'lower-third'] as const
 
 /** The 0.6 s a word of §6.2's stricter rule, twice at 200 words a minute (the research [34]). */

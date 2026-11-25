@@ -307,6 +307,19 @@ export const GRAPHIC_SIDES: Readonly<Partial<Record<GraphicTemplateId, readonly 
 })
 
 /**
+ * How the words on screen name a template (the dock's heading, the
+ * Transcript tile's lists, the notes): its id with the dash read as a space
+ * ("lower third", "screen card"), except where that reads wrong: a
+ * before-after said "before after" beside the Library's "Before and after"
+ * tile. Any string, since a dropped answer's template may be no known id.
+ */
+const GRAPHIC_NAMES: Readonly<Partial<Record<GraphicTemplateId, string>>> = Object.freeze({ 'before-after': 'before-and-after' })
+
+export function graphicName(template: string): string {
+  return GRAPHIC_NAMES[template as GraphicTemplateId] ?? template.replace(/-/gu, ' ')
+}
+
+/**
  * The string at a field path of a graphic's data, '' when it is not one: a
  * top-level field (`value`), an item's (`items[1].label`) or a side's
  * (`before.value`, step 6's two-sided templates). The one reader of a path the

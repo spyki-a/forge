@@ -18,7 +18,7 @@ import { captionWindowMs } from '../captions/placement'
 import { framesToSeconds, type Clip, type Project } from '../timeline'
 import type { Transcript } from '../transcript'
 import { EXIT_S, beatFrame } from './frame'
-import type { GraphicTemplateId, TemplateDef } from './template'
+import { graphicName, type GraphicTemplateId, type TemplateDef } from './template'
 
 /** The graphic clip starts this long before its first beat, the entrance (§6.8). */
 export const LEAD_S = 0.5
@@ -229,5 +229,5 @@ export function graphicTiming(
 
 /** A template's id as the note says it: "lower third", not "lower-third". */
 function cardName(id: GraphicTemplateId): string {
-  return id.replace(/-/g, ' ')
+  return graphicName(id)
 }

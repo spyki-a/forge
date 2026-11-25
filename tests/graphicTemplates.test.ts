@@ -30,7 +30,7 @@ function row(id: GraphicTemplateId): TemplateDef {
 }
 
 describe('GRAPHIC_TEMPLATES (§6.2)', () => {
-  it('has a row for each of the nine drawn ids, each naming its own id', () => {
+  it('has a row for each drawn id, each naming its own id', () => {
     for (const id of DRAWN) expect(row(id).id).toBe(id)
   })
 

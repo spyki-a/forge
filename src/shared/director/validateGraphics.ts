@@ -36,6 +36,7 @@ import {
   GRAPHIC_SIDES,
   GRAPHIC_TEMPLATES,
   graphicFieldText,
+  graphicName,
   type GraphicCandidate,
   type GraphicData,
   type GraphicSpec,
@@ -266,7 +267,7 @@ function check(
       const v = record[side] as Record<string, unknown> | null | undefined
       return v === null || typeof v !== 'object' || typeof v.label !== 'string' || typeof v.value !== 'string'
     })
-    for (const side of missing) problems.push({ path: `$.${side}`, message: `a ${def.id.replace(/-/gu, ' ')} needs its ${side}: a label and a value` })
+    for (const side of missing) problems.push({ path: `$.${side}`, message: `a ${graphicName(def.id)} needs its ${side} side: a label and a value` })
     if (missing.length > 0) return out(stretch)
   }
   if (data.template === 'quote' && data.kind !== 'social' && wordsOf(data.text).length > QUOTE_MAX_WORDS) {

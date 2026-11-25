@@ -100,7 +100,7 @@ describe('the list is derived from what is drawn', () => {
     expect(both, 'templates listed and left out at once').toEqual([])
   })
 
-  it('leaves out the callout and the screen card by their reasons, and lists the seven others with their names', () => {
+  it('leaves out the callout and the screen card by their reasons, and lists every other drawn template with its name', () => {
     expect(LIBRARY_LEFT_OUT.callout).toBe(CALLOUT_LEFT_OUT)
     expect(LIBRARY_LEFT_OUT['screen-card']).toBe(SCREEN_CARD_LEFT_OUT)
     const byId = Object.fromEntries(LIBRARY_GRAPHICS.map((e) => [e.id, e.name]))

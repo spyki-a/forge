@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
+import { LIBRARY_GRAPHICS } from '@shared/graphics/library'
 
 /**
  * The UI census, checked against the source.
@@ -263,6 +264,21 @@ describe('the UI census fixture', () => {
     expect(hidden.length).toBeGreaterThan(0)
     const lost = hidden.filter((row) => writtenIn(row, sources.filter((s) => s.path === row.file)).length === 0)
     expect(lost.map(where)).toEqual([])
+  })
+
+  it('counts the Graphics drawer by its tiles, as many as LIBRARY_GRAPHICS lists', () => {
+    // Every tile carries GRAPHIC_TILE_TITLE once (Library.tsx) and its name once.
+    // Step 6 piece 1 added three tiles and left these rows at seven, which the
+    // harness would have reported as "ambiguous" with nothing here to catch it.
+    const library = readFileSync(resolve(root, 'src/renderer/src/components/Library.tsx'), 'utf8')
+    const written = [...library.matchAll(/export const GRAPHIC_TILE_TITLE = '([^']+)'/g)]
+    expect(written).toHaveLength(1)
+    const title = written[0][1]
+    const titled = rows.filter((row) => row.label === title)
+    expect(titled.map((row) => row.needs).sort()).toEqual(['library-graphics', 'library-graphics-loading'])
+    for (const row of titled) expect(row.count, where(row)).toBe(LIBRARY_GRAPHICS.length)
+    const named = rows.filter((row) => row.needs === 'library-graphics' && row.match === 'text').map((row) => row.label)
+    for (const tile of LIBRARY_GRAPHICS) expect(named, tile.id).toContain(tile.name)
   })
 })
 

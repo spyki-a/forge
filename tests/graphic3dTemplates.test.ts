@@ -5,7 +5,7 @@ import { beatFrame, graphicMovingFrames } from '@shared/graphics/frame'
 import { graphemesOf, itemBounds, type DrawItem, type DrawList, type ShapeItem, type StrokeItem, type TextItem, type TextMeasure } from '@shared/graphics/items'
 import { DURATIONS } from '@shared/graphics/motion'
 import { resolveGraphicStyle, type GraphicStyle } from '@shared/graphics/style'
-import { GRAPHIC_TEMPLATES, type GraphicData, type GraphicSpec } from '@shared/graphics/template'
+import { GRAPHIC_TEMPLATES, graphicName, type GraphicData, type GraphicSpec } from '@shared/graphics/template'
 import { DRAWERS } from '@shared/graphics/templates/index'
 import { LAYOUT_SIZES, contentRect } from '@shared/graphics/templates/layout'
 import { REVEAL_OPACITY } from '@shared/graphics/templates/beforeAfter'
@@ -483,6 +483,17 @@ function talk(sentences: string[]): Transcript {
   return { assetId: 'a', language: 'en', model: 'test', durationMs: index * 400, words, segments }
 }
 
+describe('graphicName, how the words on screen name a template', () => {
+  it('says a before-after as the Library tile does, and every other id with its dash read as a space', () => {
+    expect(graphicName('before-after')).toBe('before-and-after')
+    expect(graphicName('lower-third')).toBe('lower third')
+    expect(graphicName('screen-card')).toBe('screen card')
+    expect(graphicName('versus')).toBe('versus')
+    expect(graphicName('timeline')).toBe('timeline')
+    expect(graphicName('no-such-card')).toBe('no such card')
+  })
+})
+
 describe('checkGraphicData, the shape half for step 6’s three (§6.7 rule 9; the binding is the next piece’s)', () => {
   const t = talk(['Before we charged $1,500 and after the rebrand $4,000.', 'In 2019 we started and in 2021 we hired help.'])
   const at = (sentence: string) => ({ assetId: 'a', sentence, words: [] })
@@ -490,9 +501,9 @@ describe('checkGraphicData, the shape half for step 6’s three (§6.7 rule 9; t
 
   it('a two-sided template missing a side, or a side that is not a label and a value of strings, is refused with a plain note on that side, and nothing is bound', () => {
     const noAfter = { template: 'before-after', before: { label: 'before', value: '$1,500' } } as unknown as GraphicData
-    expect(checkGraphicData(noAfter, def('before-after'), at('s00'), t)).toEqual([{ path: '$.after', message: 'a before after needs its after: a label and a value' }])
+    expect(checkGraphicData(noAfter, def('before-after'), at('s00'), t)).toEqual([{ path: '$.after', message: 'a before-and-after needs its after side: a label and a value' }])
     const badLeft = { template: 'versus', left: { label: 'x', value: 3 }, right: { label: 'after', value: '$4,000' } } as unknown as GraphicData
-    expect(checkGraphicData(badLeft, def('versus'), at('s00'), t)).toEqual([{ path: '$.left', message: 'a versus needs its left: a label and a value' }])
+    expect(checkGraphicData(badLeft, def('versus'), at('s00'), t)).toEqual([{ path: '$.left', message: 'a versus needs its left side: a label and a value' }])
   })
 
   it('a timeline holds 2 to 5 rows, and each row’s label must say something', () => {

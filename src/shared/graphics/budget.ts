@@ -22,7 +22,7 @@ import { COPY_RULE, ENDING_RULE, GRAPHIC_RULE } from '../director/apply'
 import { normaliseKeys } from '../render/keyframes'
 import { clipEnd, framesToSeconds, projectDuration, type Clip, type Project } from '../timeline'
 import { NO_CLIP_NOTE } from './place'
-import { GRAPHIC_SPACING, roomRank, type GraphicSpec, type GraphicTemplateId } from './template'
+import { GRAPHIC_SPACING, graphicName, roomRank, type GraphicSpec, type GraphicTemplateId } from './template'
 
 /**
  * Rule 4's cap: no 60 s window of the timeline holds more graphics than this
@@ -48,7 +48,7 @@ export function zoomPunchReason(seconds: number): string {
 
 /** How a reason names a template: its id with the dash read as a space ("lower third"). */
 function templateName(template: string): string {
-  return template.replace(/-/gu, ' ')
+  return graphicName(template)
 }
 
 /**

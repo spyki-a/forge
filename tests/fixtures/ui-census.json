@@ -9506,11 +9506,11 @@
     "home": "library",
     "needs": "library-graphics",
     "part": true,
-    "count": 7,
+    "count": 10,
     "file": "src/renderer/src/components/Library.tsx",
     "line": 38,
     "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
-    "note": "Count 7: one per Graphics tile (LIBRARY_GRAPHICS: the eight drawn templates less the callout), with a catalogue of three sounds. Written as GRAPHIC_TILE_TITLE after the tile's name. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+    "note": "Count 10: one per Graphics tile (LIBRARY_GRAPHICS: the drawn templates less the callout and the screen card; seven at try-out 1 piece 6, ten since step 6 piece 1 added timeline, before-after and versus, 2026-11-25; tests/uiCensus.test.ts ties this count to LIBRARY_GRAPHICS), with a catalogue of three sounds. Written as GRAPHIC_TILE_TITLE after the tile's name. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
   },
   {
     "label": "— click to add at the playhead, or drag onto the timeline",
@@ -9518,11 +9518,11 @@
     "home": "library",
     "needs": "library-graphics-loading",
     "part": true,
-    "count": 7,
+    "count": 10,
     "file": "src/renderer/src/components/Library.tsx",
     "line": 38,
     "newHome": "Shelf tile Library (the Graphics drawer, try-out 1 piece 6)",
-    "note": "Count 7: one per Graphics tile (LIBRARY_GRAPHICS: the eight drawn templates less the callout), with no catalogue, still loading: the tiles show where \"Scanning the asset library…\" would. Written as GRAPHIC_TILE_TITLE after the tile's name. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
+    "note": "Count 10: one per Graphics tile (LIBRARY_GRAPHICS: the drawn templates less the callout and the screen card; seven at try-out 1 piece 6, ten since step 6 piece 1 added timeline, before-after and versus, 2026-11-25; tests/uiCensus.test.ts ties this count to LIBRARY_GRAPHICS), with no catalogue, still loading: the tiles show where \"Scanning the asset library…\" would. Written as GRAPHIC_TILE_TITLE after the tile's name. Count reasoned from the code by try-out 1 piece 6, 2026-11-15."
   },
   {
     "label": "Graphic",

@@ -9,7 +9,7 @@ import { drawnText, quoteSpeakerOf } from '@shared/graphics/apply'
 import { graphicSeconds } from '@shared/graphics/beats'
 import { placeGraphic } from '@shared/graphics/place'
 import { footageOf } from '@shared/graphics/sound'
-import { GRAPHIC_TEMPLATES, type FieldMode, type GraphicData, type GraphicSpec, type TemplateDef } from '@shared/graphics/template'
+import { GRAPHIC_TEMPLATES, graphicName, type FieldMode, type GraphicData, type GraphicSpec, type TemplateDef } from '@shared/graphics/template'
 import { useEditor } from '../store'
 // Through the namespace, so tests/renderer/graphicPanel.test.tsx can stand in for the preview's answer.
 import * as graphicCanvas from '../graphicCanvas'
@@ -173,11 +173,15 @@ export function modesOf(data: GraphicData, def: TemplateDef): Record<string, Fie
   return (kind && def.kindFields?.[kind]) || def.fields
 }
 
+/** The templates whose rows are shown row by row (a timeline's when beside its label); the others show every row of one field, then the next field's. */
+const BY_ROW: readonly string[] = ['timeline']
+
 /** Every field shown, in the template's order; an item field once per item. App fields that are not a Speaker are not here. */
 function fieldsOf(data: GraphicData, def: TemplateDef): Field[] {
   const modes = modesOf(data, def)
   const items = 'items' in data && Array.isArray(data.items) ? data.items : []
   const out: Field[] = []
+  const itemFields: [string, FieldMode][] = []
   for (const [key, mode] of Object.entries(modes)) {
     if (mode === 'fixed') continue
     if (def.appFields?.includes(key) && mode !== 'speaker') continue
@@ -185,9 +189,11 @@ function fieldsOf(data: GraphicData, def: TemplateDef): Field[] {
       out.push({ path: key, mode, label: mode === 'speaker' ? SPEAKER_FIELD : FIELD_LABELS[key] ?? key })
       continue
     }
-    const sub = key.slice('items.'.length)
-    items.forEach((_, j) => out.push({ path: `items[${j}].${sub}`, mode, label: `Row ${j + 1} ${(FIELD_LABELS[sub] ?? sub).toLowerCase()}` }))
+    itemFields.push([key.slice('items.'.length), mode])
   }
+  const row = (j: number, sub: string, mode: FieldMode): Field => ({ path: `items[${j}].${sub}`, mode, label: `Row ${j + 1} ${(FIELD_LABELS[sub] ?? sub).toLowerCase()}` })
+  if (BY_ROW.includes(data.template)) items.forEach((_, j) => itemFields.forEach(([sub, mode]) => out.push(row(j, sub, mode))))
+  else itemFields.forEach(([sub, mode]) => items.forEach((_, j) => out.push(row(j, sub, mode))))
   return out
 }
 
@@ -258,7 +264,7 @@ export function GraphicPanel({ clip }: { clip: Clip }): ReactNode {
   if (!spec) return null
   const data = spec.data
   const def = GRAPHIC_TEMPLATES[data.template]
-  const name = data.template.replace(/-/g, ' ')
+  const name = graphicName(data.template)
   const heading = (
     <div className="flex items-baseline justify-between">
       <span className="text-[10.5px] text-ink-400">{GRAPHIC_PANEL_HEADING}</span>

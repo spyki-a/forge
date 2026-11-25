@@ -212,6 +212,19 @@ describe('graphicSounds: placement (§6.14)', () => {
       expect(at(30, { template: 'quote', text: 'never again', speaker: 'Asha' }, [0.6, 0.8], 'energetic')).toEqual([])
       expect(at(30, { template: 'lower-third', name: 'Asha', role: 'Chef' }, [0.6], 'energetic')).toEqual([])
     })
+
+    it('step 6’s three are silent under every preset: §6.14 gives timeline, before-after and versus no row (a decision, not an accident)', () => {
+      const three: [GraphicData, number[]][] = [
+        [{ template: 'timeline', items: [{ when: '2019', label: 'started' }, { when: '2021', label: 'hired' }] }, [0.6, 1.0]],
+        [{ template: 'before-after', before: { label: 'before', value: '$1,500' }, after: { label: 'after', value: '$4,000' } }, [0.6, 1.4]],
+        [{ template: 'versus', left: { label: 'ours', value: '600' }, right: { label: 'theirs', value: '350' } }, [0.6, 1.4]]
+      ]
+      for (const [data, beats] of three) {
+        for (const style of [undefined, 'energetic', 'bold', 'editorial', 'neon', 'mono', 'accent']) {
+          expect(at(30, data, beats, style), `${data.template} ${style ?? 'clean'}`).toEqual([])
+        }
+      }
+    })
   })
 
   it('the cap: a footage clip keeps its first three sounds in onset order, and a second footage clip its own three, whatever order they are placed in', () => {

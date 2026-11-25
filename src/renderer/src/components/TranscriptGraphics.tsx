@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { timelineFrameAt, type Clip, type GraphicProposal, type MediaAsset } from '@shared/timeline'
 import { CHECK_THE_NUMBER, CLEAR_GRAPHICS_NOTE, CLIPS_GRAPHIC_RULE, drawnStrings } from '@shared/graphics/apply'
 import { footageOf } from '@shared/graphics/sound'
-import type { GraphicData } from '@shared/graphics/template'
+import { graphicName, type GraphicData } from '@shared/graphics/template'
 import { GRAPHICS_BUSY_NOTE, useEditor, wordsPickOf } from '../store'
 import { rowStamp } from './tools/TranscriptRows'
 
@@ -74,7 +74,7 @@ export const USE_CHANNEL_TITLE = 'A lower third shows the Speaker; a channel may
 export const NO_MODEL_LINE = 'No model’s answer was used in this run'
 
 /** A template as the list names it: "lower third", not "lower-third". */
-const templateName = (d: GraphicData): string => d.template.replace(/-/g, ' ')
+const templateName = (d: GraphicData): string => graphicName(d.template)
 
 /** The words a graphic draws, as one line. */
 const wordsOf = (d: GraphicData): string =>
@@ -218,7 +218,7 @@ export function TranscriptGraphics({ clip, hasTranscript }: { clip: Clip; hasTra
           {dropped.map(({ d, i }) => (
             <li key={i} data-graphic-drop={i} className="space-y-0.5 text-[10.5px] text-ink-400">
               <div className="flex items-center gap-2">
-                <span className="shrink-0 text-ink-500">{d.template.replace(/-/g, ' ')}</span>
+                <span className="shrink-0 text-ink-500">{graphicName(d.template)}</span>
                 <span className="min-w-0 flex-1 truncate">{d.text}</span>
                 {d.add !== undefined && (
                   <button
