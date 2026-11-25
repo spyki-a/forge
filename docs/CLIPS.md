@@ -543,6 +543,85 @@
 > you are still §16.89-97, all open; §16.98, the port, was added and
 > answered the same day.
 >
+> **Later on 2026-11-25: the paste fix.** At your ask ("when i try to
+> paste the links or use the right click in the mouse on the url section
+> it dont acpt it now can you fix that?"), the session's own `7553972`:
+> on macOS an editing key reaches a text box only through the Edit menu,
+> whose Cut, Copy, Paste and Select All went to the timeline whatever had
+> the keyboard; now, while a text box has it, Cut, Copy, Paste, Delete
+> and Select All are Electron's own roles and act on the box (Undo and
+> Redo stay the project's), and a right-click in a text box gives Cut,
+> Copy, Paste and Select All (`WINDOW.md`'s note of 2026-11-25,
+> `WHERE-THINGS-ARE.md`'s "The Edit menu and text boxes"). The session's
+> readings at `7553972`, on the Mac: typecheck 0, the suite 380 files and
+> 6275 tests passed, build 0; `tests/editMenuText.test.ts`, 10 cases, ten
+> mutations each caught; on the harness page a click in a text box
+> reported `textFocus: true` and a click on the viewer `false`. The
+> Electron half (the roles reaching the box, the menu popping up) cannot
+> run on the harness page; the session did not run it. **Your word, after
+> trying it in the development app on the Mac**: "perfect everything is
+> good landed well now lets continue the next and later ill do the fail
+> run myslef". So the fix works for you there (no figure; not read on the
+> Surface), and GitHub's cancelled macOS jobs are yours to re-run. **"lets
+> continue the next"**, by the session's reading: going on with what it
+> had recommended that day, step 6's three 3D templates next and
+> Florence-2 (1g) last. §16.96 is not answered in terms (its clause of
+> 2026-11-25).
+>
+> **Step 6's three 3D templates are built and pushed, 2026-11-25** (§9's
+> three Built notes of that date): `timeline`, `before-after` and
+> `versus`, in three pieces, each built by one agent, read by two critics
+> and fixed by one (workflow run `wf_fb4d4433-335`, twelve Opus agents,
+> about 3 h 5 min): piece 1, the three drawn flat, `8786882`, fix
+> `136a3d3`; piece 2, the model's side (the menu, the validator, the
+> prompt, the eval), `f1fa026`, fix `b70b0bf`; piece 3, depth and the
+> parity run, `9fbb0b9`, fix `f06d083`; then the session's `03937b4` (a
+> comment). Seven commits, pushed once with the paste fix,
+> `7553972..03937b4`; origin = main = `03937b4`. **The session's readings
+> at `f06d083`, on the Mac**: typecheck 0; the suite 384 files passed and
+> 6 skipped (390), 6364 tests passed and 67 skipped (6431), against 380
+> and 6275 at `7553972`; build 0 (after `03937b4`, a comment: typecheck 0
+> and the three depth test files, 84 tests, 0). On the harness page (the
+> development Mac, not the app): the graphic check's `find` option, three
+> cases each PASS, over the harness stub's talks and answers, not a
+> model's; §9's call, `{ parity: true, templates: ['timeline',
+> 'before-after', 'versus'] }`, `parity templates verdict: PASS` in 4683
+> ms (flat, six rows within 1/255; in depth, 24 readings, 3 fixtures × 2
+> shapes × 4 moves under `clean`, each PASS); the census missing [], 1029
+> checked, 12 skipped (1018 before the lane). **CI at `03937b4`** (run
+> 45712905904): job 139551562589 `windows-latest` and job 139551563092
+> `macos-15` success, no annotation; the installer job skipped: **green
+> on both runners.** It is the first macOS job to complete since
+> `e70c9e9`: GitHub cancelled the `macos-15` job for want of a runner at
+> `d6000ed` (step 4, run 45658046940) and at `7553972` (the paste fix, run
+> 45672761395), and the tree at `03937b4` holds both, so step 4's code and
+> the paste fix have now passed typecheck, the full suite, the build and
+> the AI helper's pack steps on macOS in CI, inside this run. The two
+> cancelled runs themselves were not re-run (yours, by your word).
+> Windows CI ran `graphic.int`'s step-6 cases on the 2018 ffmpeg: green,
+> no figure read (the job's log needs a sign-in). **Not read**: nothing
+> in the development app (the dock's fields and Depth row on the three
+> not driven by hand either) and nothing on the Surface; no real model has
+> been asked for one of the three (the eval block's three code-built talks
+> have never been sent); no Hindi or Telugu graphic of the three exists
+> (their `-hi` and `-te` fixtures are yours); M16, M18 and every look
+> rating not made. **§9's exit is not met**: what exists toward it and
+> what it still needs are §9's exit note of 2026-11-25; its readings in
+> the development app and on the Surface, and the look, are yours. The
+> decisions the lane left to you are §16.99-105, all open. **Not built**:
+> §9's other half, the retrieved-fact cards and the `source` template,
+> after the beta (§16.75).
+> **Next, by the session's list of 2026-11-25** (you have not
+> contradicted it): step 7's creator style (2 days) and saved template
+> (2.5, gated on `MARKET.md` Stage 0, §10), then Florence-2's caption
+> placement (1g, 3, gated by its own measurement, last), then `BETA.md`'s
+> R1–R12, R13 and R14. Captions on the timeline, and traditional
+> keyframing (the session's recommendation), come after the beta. Still
+> open beside them, yours: phase 2's and phase 3's exit readings (§6.12),
+> §7.8's and §9's. **The deadline is unchanged: 25 December 2026.** A
+> feature freeze about 10 December is the session's suggestion, not
+> confirmed by you.
+>
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
@@ -929,6 +1008,20 @@ this and will get back to the beta". **This plan comes first**, then
   phase 2's and phase 3's exit readings (§6.12) and §7.8's. **The
   deadline is unchanged: 25 December 2026.** A feature freeze
   about 10 December is the session's suggestion, not confirmed by you.
+- **2026-11-25, later: step 6's three 3D templates are built** (§9's
+  three Built notes, `8786882..03937b4`, pushed once on 2026-11-25 with
+  the paste fix `7553972`, green on both runners at `03937b4`; the status
+  block at the top). They went before 1g by the session's reading of your
+  "lets continue the next" (§16.96, not answered in terms). §9's exit is
+  open and yours (its note of 2026-11-25); the decisions the lane left are
+  §16.99-105. No day figure or total in this section changes: the 3D
+  half's 2 days stand as planned, and the cards' 3 stay after the beta.
+  **Next, by the session's list of 2026-11-25**: step 7's creator style
+  (2) and saved template (2.5, gated on `MARKET.md` Stage 0, below), then
+  1g (3, gated, last, as the slip clause allows), then `BETA.md` R1–R12 →
+  R13 → R14. Still open beside them, all yours: phase 2's and phase 3's
+  exit readings (§6.12), §7.8's and §9's. **The deadline is unchanged: 25
+  December 2026.**
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
   redistribution rights or the `filler-supplies` policy alone for paid
@@ -25782,6 +25875,16 @@ Census rows: every label above, plus the Settings rows and the switch.
 > (§6.16): they are built after phase 3 and step 4, with 1g and step 7
 > (§2's 2026-11-14 order). Before the beta this step is 2 days; the
 > section stays whole as the plan, its cards for after the beta.
+>
+> **The 3D half built, 2026-11-25** (the three Built notes below, pieces
+> 1 to 3, `8786882..03937b4`; the status block at the top). Planned at 2
+> days (the table under the exit: 1.5 for the three draw functions, their
+> pairs, menu, schema and fixtures, 0.5 for their depth variants and the
+> harness run); built in one working day of wall clock, about three hours
+> of a twelve-agent run, then the session's checks and the push. Its exit
+> is not met (the exit note below). **The cards half is not built**: the
+> retrieved-fact cards and the `source` template stay after the beta
+> (§16.75).
 
 **Retrieved-fact cards** (3 days) are the `source` template with `sources[]`:
 
@@ -26505,6 +26608,51 @@ note when WebGL is missing); the answer card never ships a sentence that is
 not a verbatim run of one fetched text (property test); no fetched number
 lands on a spoken beat (a test over every template's placement).
 
+**§9's exit, 2026-11-25, clause by clause** (the 3D half built, the three
+Built notes above; nothing here is marked met):
+
+- **The phase-2 bar, flat** (§6.12's phase 2, for the three).
+  - The property test over its text items: `tests/graphic3dTemplates.test.ts`'
+    text-item property at both shapes, for short, long and non-Latin
+    strings, green in the session's suite at `f06d083`; it reads `t.box`
+    under `clean` only, as its neighbours' do (piece 1's Built note and
+    "Left open").
+  - The render check frame-exact at both shapes on both builds:
+    `graphic.int`'s describe "step 6, piece 1", the three English fixtures
+    at 360×640 and 640×360, green in the session's suite on the Mac and in
+    CI at `03937b4` on `macos-15` and on `windows-latest`'s 2018 ffmpeg
+    (run 45712905904; no figure read).
+  - Preview equal to export within 1/255: read by the session on the Mac's
+    harness page at `f06d083` (§9's call): the six flat rows pass,
+    `timeline-en` 9:16 worst mean 0.064, the other five 0.
+  - What it still needs, by §6.12's own words: preview = export is "yours,
+    Mac and Surface", and the harness's export is its bridge's stand-in
+    files, as phase 3's note of 2026-11-20 reads the same kind of reading,
+    so it waits on the development app on the Mac and on the Surface; the
+    Indic render check over the three's Hindi and Telugu fixtures, which do
+    not exist (yours to write); the eval's truth hits and template fit with
+    a real model, never asked for the three; M14, the look rating, M16's
+    holds in Hindi and Telugu (English only, `timeline-en` 7.9 s of its 8)
+    and M18, none made for the three.
+- **The phase-3 bar, with each depth variant**: read by the session on the
+  Mac's harness page at `f06d083`, under `clean`, in English, 24 readings
+  (3 fixtures × 540×960 and 960×540 × tilt, parallax, dolly and focus),
+  each PASS: the settled frame against the flat twin max 0; the text items
+  against the flat twin's, 0 differ; with WebGL pretended missing, drawn
+  flat with the note `drawn flat: 3D needs WebGL, which did not start on
+  this computer`, the first inked frame against painter A max 0 and the
+  Preview marked drawn flat (also in the suite: `graphicCompositor`).
+  What it still needs: the same in the development app on the Mac and on
+  the Surface (§6.12's phase-3 items name both machines), the other styles
+  than `clean` on screen, Hindi and Telugu fixtures, and your eye on every
+  depth of the three (§16.102).
+- **The answer card's verbatim runs, and no fetched number on a spoken
+  beat**: the cards half, not built; after the beta (§16.75).
+
+So §9's 3D half has the phase-2 and phase-3 bars read on the Mac's harness
+page only, under `clean`, in English, and in CI; the development app, the
+Surface, the Hindi and Telugu fixtures and the look are yours. **Not met.**
+
 | item | days |
 |---|---|
 | the retrieved-fact cards (above) | 3 |
@@ -26936,7 +27084,14 @@ Each is named in its step, and each step's first task is its own row:
 20. three.js flat colour and edge alpha against the 2D painter (§9).
     **Re-planned 2026-10-21 as M6, row 44 (§6.15)**: its Indic and colour
     parts in phase 0, the whole of it at step 3's phase-3 exit, where the
-    2.5D counter and ring moved (§16.55).
+    2.5D counter and ring moved (§16.55). (2026-11-25: §9's own call, `{
+    parity: true, templates: ['timeline', 'before-after', 'versus'] }`,
+    printed phase 0's M6 rig unchanged on the Mac's harness page: colour
+    management on, frame mean 0.000 max 0, colour max 1 level; off, frame
+    mean 0.000 max 1, colour max 0 levels. The three's flat and depth
+    readings of that call are §9's piece 3 note. M6 whole stays open as
+    §6.12's phase 3 has it: the development app on the Mac and the
+    Surface.)
 21. pyautoflip on the ten clips, run once in a scratch venv on your Mac
     (Python 3.13 or older: it refuses 3.14), and rated beside ours at step
     1's exit (§4.1, §4.10).
@@ -27183,7 +27338,12 @@ H11, and H12 again, in phase 4.
   `seconds.max` in English, Hindi and Telugu, so nothing is raised or
   capped; the 0.6 s-a-word figure, printed and not enforced, is over the
   max for counter-en, bars-en, bars-hi, steps-en, quote-en, quote-hi,
-  ring-en and ring-hi. Enforcing it is yours.
+  ring-en and ring-hi. Enforcing it is yours. (2026-11-25: step 6's
+  three are not in that walk; their Hindi and Telugu fixtures do not
+  exist, yours. Their English hold is checked in
+  `tests/graphic3dTemplates.test.ts`, `timeline-en` needing 7.9 s of its
+  8 s max, so a Hindi or Telugu timeline may exceed it; their seconds
+  are proposals until M16 is read for them, §16.101.)
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
   waits on your Hindi clips. (2026-11-11: phase 2's counter was built
   ahead of it on 2026-11-07, since `inBetween` keeps the value's own
@@ -28823,6 +28983,15 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
     already allows, and puts the two pieces with no gate of their own
     first. No day figure changes either way. No recommendation.
 
+    (Later on 2026-11-25: after the paste fix you said "perfect everything
+    is good landed well now lets continue the next and later ill do the
+    fail run myslef". That day the session had put the three 3D templates
+    next and Florence-2 last as its recommendation; it read "lets continue
+    the next" as that order and built the three (§9, `8786882..03937b4`).
+    Its list after them: creator style, the saved template, then 1g. You
+    did not answer this entry in terms, so it stays open: whether 1g goes
+    last is still yours.)
+
     **Answer (2026-11-25): OPEN.** Yours.
 97. **What a model's title and why are held to.** The validator
     (`validate.ts` `ungroundedIn`, piece 2 and its fixer) holds every
@@ -28866,6 +29035,218 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
     nothing is built. Whether the app should ever look at 1235 by itself
     stays a possible later change nobody asked for. The harness's relay
     needs the same address in `FORGE_EVAL_SERVER` (§7.8's first item).
+
+**Added 2026-11-25 (later), from step 6's three 3D templates (§9,
+`8786882..03937b4`); OPEN.** Each is a rule, a constant or a look that
+the lane's builders, critics and fixers or the session chose and left to
+you (the twelve agents' reports and the session's record); you decided
+none. A recommendation is given only where a report or the session's
+record states one, and is written as theirs. What was read was read in the
+session's suite and on the harness page on the Mac, and in CI at
+`03937b4`; nothing in the development app or on the Surface, no real model
+has been asked for one of the three, and no Hindi or Telugu graphic of the
+three exists. Every figure below is a proposal, unrated and unmeasured on a
+model.
+
+99. **What a timeline's "when" may be.** As built (`b70b0bf`,
+    `validateGraphics.ts`): one YEAR said as a date. The answer's text four
+    digits of any script, 1000 to 2999 (`TIMELINE_YEARS`), with no unit or
+    currency (`notAYear`); the speaker's own token four digits as said
+    (`saidAsYear`, `notSaidAsAYear`); in English after one of
+    `YEAR_LEADS_EN` or at its clause's start, and not directly before a
+    plural (a word of four letters or more ending in s, less
+    `NOT_PLURAL_EN`); and the years must rise. So 'last year', 'March
+    2018', 'day 3', '15', 'two thousand fifteen', '1,500 guests' and '2015
+    photos' are refused, and 'from 2015 to 2018' gets the range note. The
+    English year test is a heuristic, said as one in the code; its known
+    refusals, both the safe direction (piece 2's fixer): 'In 2015, 2018 and
+    2021 we …' refuses 2021 (after 'and'), and 'In 2015 weddings were
+    cheaper' is refused as a count. In Hindi and Telugu a year is four
+    digits alone until you give year postpositions.
+
+    What widening costs: a row's when is its pair's VALUE (`pairs`
+    `[['items.label', 'items.when']]`), which `claimsOf` binds as one
+    number. A month, 'last year' or 'day 3' is not a number, so a wider
+    when must be bound as words, as a label is, and with it change: the
+    menu's year test (`stepSixOffered` offers a timeline on two years), the
+    date-order rule (months and relative dates need an order of their own),
+    the beat on the when's word, the prompt row ("value is its year as
+    said, four digits"), and the eval's matcher and generators in
+    `graphicsValidator.test.ts`. Adding 'and' or a list's comma to the
+    leads lets '2018 and 2021' through, and with it a count said after
+    'and'. Keeping it as built costs a timeline wherever a speaker dates by
+    month or by a relative phrase. No recommendation (piece 1's builder
+    flagged it; piece 2 chose the year, the safe direction, and left
+    widening open).
+
+    **Answer (2026-11-25): OPEN.** Yours.
+100. **The menu's conditions, and Hindi and Telugu.** As built
+    (`menuGraphics.ts` `stepSixOffered`, per 24-sentence window):
+    `before-after` and `versus` are offered on two different numbers in one
+    unit, neither a year nor a list's place (after `LIST_NOUNS_EN`), with a
+    word of `BEFORE_AFTER_CUES_EN` or `VERSUS_CUES_EN` in a sentence holding
+    one of them ('now' and 'today' were left out after they offered a
+    before-and-after on a plain talk); the two English lists are the
+    builder's, unrated. In Hindi and Telugu (`hi`, `te`) no cue word is
+    read, since no list here may hold a word of theirs: there any two
+    numbers in one unit offer both two-sided templates, until you give cue
+    words. The menu is also the only guard on what a before-and-after
+    MEANS: 'My camera cost $1,500. My lens cost $4,000.' would be kept if a
+    window offered it, since the validator cannot know that two prices are
+    one thing changing (piece 2's first critic). Yours as well: `specs.json`'s
+    `timeline-hi`, `timeline-te`, `before-after-hi`, `before-after-te`,
+    `versus-hi` and `versus-te`, and the Hindi and Telugu eval talks for the
+    three (`eval-*.json`, with truth naming them).
+
+    What it costs: each word in a cue list widens the offer, and every
+    offered template adds its prompt row to that window's request (the
+    three's rows are 158 of the worst menu's 4,875 tokens, the agents'
+    figures). Without Hindi and Telugu cue words those windows carry both
+    two-sided rows wherever two numbers in one unit are said, which no
+    model has been measured on. A critic and fixer of piece 2 called an
+    eval trap per talk (the camera and the lens) worth adding; nothing
+    else is recommended.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+101. **The look of the three, to rate.** Each a proposal of piece 1's,
+    one named constant each:
+    - `before-after`'s reveal: a rounded shape in the style's accent at
+      `REVEAL_OPACITY` 0.35, growing from the card's middle over the
+      after's half only (opacity 0 until it grows), where the plan's words
+      were "the after panel's box growing over the before"; the before
+      stays readable beside the after. A critic of piece 1: the lowest
+      contrast is under `mono` (ink and accent both white over a black
+      panel at 0.5), where a lower tint for presets whose accent equals
+      their text colour is the fix if wanted; the rounded reveal leaves
+      small notches at the seam (a plain rectangle would push past the
+      panel's rounded corners). The session saw it once by eye on the
+      harness page, an olive-yellow tint under the default style, and did
+      not rate it.
+    - The two-sided cards' size: the value 0.07 of the short side against
+      the counter's 0.11, the label 0.04 (`LAYOUT_SIZES`), each half as
+      wide as the wider side's text needs, so a short pair is a compact
+      card, not a band across 16:9.
+    - `versus`: a thin divider stroke and no "vs" glyph (the template adds
+      no word; a fixed glyph would be an app-written word to list).
+    - `timeline`: the when and its label in one look, 0.045 each, no accent
+      (a critic of piece 1: `lookOf` already takes an accent, as other
+      templates use for their value).
+    - The seconds: `timeline` 3 / 6 / 8, `before-after` and `versus` 2.5 /
+      4 / 6, proposals until M16 (`template.ts`); `timeline-en` already
+      needs 7.9 s of its 8, so a Hindi or Telugu timeline may exceed it.
+
+    What changing one costs: the constant, and the tests that read it
+    (`tests/graphic3dTemplates.test.ts`' geometry and holds). No
+    recommendation beyond the critic's lines quoted; your eye in the
+    development app settles them, with the look rating (§6.10).
+
+    **Answer (2026-11-25): OPEN.** Yours.
+102. **Depth on the three.** As built (`f06d083`, `templates/depth.ts`):
+    tilt, parallax and dolly move over the FIRST element's entrance only,
+    from its first beat less `DURATIONS.entrance` to the first beat, and
+    are flat from it; the focus blur falls over the same span to exactly 0
+    on the first beat. So on a timeline rows 2 to 5, and on a two-sided
+    card the second side, enter flat and sharp. Piece 3's builder: whether
+    the move should span the whole list "is the owner's call; it is one
+    argument in each drawer's depthOut call" (the `start`, and the span's
+    end). A focus blur held to the last beat was the builder's first
+    version (`lastBeat`), which blurred each later label while it was said;
+    a critic read that against §6.16's "as the value lands sharp", and the
+    fixer removed it, so putting it back is yours to ask for. The planes,
+    also proposals: parallax, every backing 0, labels 0.02, values (a
+    timeline row's when) 0.05; dolly, the values 0.05; focus, the values 0
+    and the labels with the panels and the reveal under them −0.02, the
+    rail, the dots and the divider 0. Never a hero: `HERO_TEMPLATES` stays
+    counter and ring, and the three have no `HERO_GLOW_ITEM` row. The bar
+    `DEPTH_TEMPLATES_BAR.moveLeftAtFirstInkMin` 0.5 is new (read 0.731
+    under `clean` on the Mac's harness page); a critic's stricter bar,
+    half the move left at the first word at opacity 0.5, was declined
+    because counter-en itself reads 0.27 there.
+
+    What a change costs: spanning the list changes the `start` and the
+    span in the three drawers' calls and the timing pinned by
+    `graphicDrawList` and `depthTemplatesMeasure` (15 frames off flat
+    today); a hero for the three means a `HERO_TEMPLATES` entry, a
+    `HERO_GLOW_ITEM` row and `graphicBudget`'s pin. No recommendation; your
+    eye on each depth of the three in the development app settles it (as
+    §16.82 for counter and ring).
+
+    **Answer (2026-11-25): OPEN.** Yours.
+103. **The sounds of the three.** §6.14's table had no row for them. Piece
+    1 left them silent and `136a3d3` pinned that; piece 2 changed it on
+    purpose (its task asked for them "as the list templates do"). As the
+    code has it at `03937b4` (`sound.ts` `graphicSoundCues`, pinned by
+    `tests/graphicSound.test.ts`): restrained styles, a tick on the first
+    element's beat, on its value; `energetic`, a tick on every beat and a
+    whoosh on each entrance and stroke (a timeline's row entrances and
+    edges, a versus' entrances and divider, a before-and-after's entrances
+    and reveal, one whoosh where the reveal shares the after's entrance).
+    No sound of the three has been heard: the harness page has no sound
+    library, so its `find` cases placed 0 sounds. The choices: as built;
+    piece 1's silence; or a tick alone. What a change costs: `sound.ts` and
+    its pin. No recommendation; M18, by your ear, judges it (piece 2's
+    builder: yours "after M18").
+
+    **Answer (2026-11-25): OPEN.** Yours.
+104. **Rules that drop a graphic a person might expect.** Each drops, and
+    none draws a guess (`validateGraphics.ts`, `claims.ts`, pieces 2's
+    builder and fixer):
+    - **Spoken order** (`pairsInOrder`): a before said after its after, or
+      a versus' right said before its left, is dropped ("'<text>' is not
+      said in the order the <graphicName> draws it in <sentence>"), not
+      redrawn the other way round; so 'now $4,000, I used to charge $1,500'
+      drops every time (a critic of piece 2).
+    - **One unit across the two sides**: "the two sides of the
+      <graphicName> are said in <sentence> in more than one unit".
+    - **One number said once is never both sides**, nor one year two rows;
+      a no-change before-and-after is kept only when the number is said
+      twice ('$1,500 … still $1,500'), and the menu never offers one,
+      since it asks for two different numbers.
+    - **Exactly two items** for a two-sided answer (`sideRowsNote`), and a
+      timeline's years rising.
+    - **The range-or-ratio note, for every template** (`b70b0bf`,
+      `numberSpansHeld`): a number said only inside a range or a ratio
+      ('from 10 to 20', '1 in 4') was and is refused, counter and bars
+      included; only the note changed, to "'<text>' is said as part of a
+      range or a ratio in <sentence>, not as one number". A qualified
+      number ('almost 40') and two adjacent numbers ('nineteen ninety
+      nine') still get "not said"; `numberSpansHeld` already tells them
+      apart, so a note for each is cheap later (piece 2's fixer).
+
+    What loosening costs: each rule is a mutation-checked test today
+    (`graphic3dModel`, `graphicsValidator`'s property), and each loosening
+    draws something the speaker did not say in that shape (a fall drawn as
+    a rise, a price against a share). No recommendation.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+105. **The rest the lane left to you.**
+    - Questions are not refused: 'Did I charge $1,500 before and $4,000
+      after?' gives a kept before-and-after (rule 7, every template;
+      pre-existing, made more visible by the three; declined in this lane).
+    - Drawn text follows the model's spelling of the same number: '$1500'
+      for the spoken '$1,500' is kept and drawn as written (rule 5: "as
+      said" means the same number, not the same characters; pre-existing).
+    - `strayFields`' repair note quotes an answer key ("'value' is not a
+      field of a versus — left out"), as every template's does; a critic
+      of piece 2 suggested "a versus holds its numbers in its rows; the
+      extra number is left out", declined for one template, to change in a
+      pass over all of them.
+    - The text-item property reads `t.box` under `clean` only: a critic's
+      scratch run over all seven presets found `neon` at 16:9's bottom
+      third passing the frame's bottom by more than 1 px during the rise
+      (the export crops it). Extending it to every preset and to
+      `itemBounds` is open.
+    - Counter and ring unchanged by piece 3 is the agents' kept hash rig
+      (756 cases, 49,518 lists, byte-equal), outside the repo's tracked
+      files, not a committed test.
+    - The paste fix (`7553972`, the session's): in a text box Undo and Redo
+      stay the project's (a number box in the Trimmer keeps the keyboard
+      after a drag), so by the code Cmd+Z in a text box undoes the project,
+      not the typing; not read in the app.
+
+    No recommendation for any of them.
+
+    **Answer (2026-11-25): OPEN.** Yours.
 
 ---
 
@@ -28941,7 +29322,11 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
   session with its social quote card, §0's licence-and-credit bar, step
   5's exit and the fact cards' half of step 6's, with the rows of §14 and
   §15 and `LLM.md`'s `broll@1` record that belong to them, come after
-  the beta.)
+  the beta.) (2026-11-25: step 6's 3D half, the three templates, is built
+  and pushed, `8786882..03937b4`; its part of §9's exit is read on the
+  Mac's harness page and in CI only, not met, its readings in the
+  development app and on the Surface and its look yours, §9's exit note.
+  The cards' half of the exit stays after the beta.)
 - Every row of §14 has a rendered output in `tests/output/` and a test.
 - Every "dated" row of §13 has become "in CI" on the Windows build.
 - Every regression test above has had its bug put back and failed.
