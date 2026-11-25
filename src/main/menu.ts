@@ -48,6 +48,8 @@ export interface MenuState {
   dirty: boolean
   /** A voice-over is counting in, recording, or being saved. */
   recording: boolean
+  /** The keyboard is in a text box (`shared/textEntry.ts`): Cut, Copy, Paste and Select All are the text's. */
+  textFocus: boolean
 }
 
 export const EMPTY_MENU_STATE: MenuState = {
@@ -55,7 +57,8 @@ export const EMPTY_MENU_STATE: MenuState = {
   canRedo: false,
   hasSelection: false,
   dirty: false,
-  recording: false
+  recording: false,
+  textFocus: false
 }
 
 /**
@@ -73,6 +76,130 @@ export const EMPTY_MENU_STATE: MenuState = {
  */
 export function mustAskBeforeClosing(state: MenuState): boolean {
   return state.recording || state.dirty
+}
+
+/**
+ * The Edit menu's items.
+ *
+ * Cut, Copy, Paste, Delete and Select All have TWO meanings, and the keyboard's
+ * owner decides which:
+ *
+ * - the timeline (`textFocus` false): the store's. Pressing Copy with a clip
+ *   selected has to copy the CLIP, and only the store knows what is selected,
+ *   so these are plain items that send a command.
+ * - a text box (`textFocus` true): the text's, by Electron's ROLES, which act
+ *   on the focused field and enable themselves from it.
+ *
+ * They used to be the first kind always, on the reasoning that "the store
+ * decides which is meant". The store never did: it has no idea a text box
+ * exists. So Cmd+V in the URL box asked the timeline to paste its clips, and
+ * the link on the clipboard went nowhere; on macOS that was every paste,
+ * because an editing key reaches a text box only through this menu. The same
+ * for Cmd+A (it selected every clip while a link was half typed) and for the
+ * forward Delete key (it deleted the selected clips from inside a text box).
+ *
+ * Undo and Redo stay the project's in both cases: a number box in the Trimmer
+ * keeps the keyboard after a drag, and Cmd+Z there has to undo the edit.
+ *
+ * Pure (no `Menu`), so a test can read it.
+ */
+export function editSubmenu(
+  state: MenuState,
+  send: (command: MenuCommand) => () => void
+): MenuItemConstructorOptions[] {
+  const text = state.textFocus
+  return [
+    {
+      label: 'Undo',
+      accelerator: 'CmdOrCtrl+Z',
+      enabled: state.canUndo,
+      click: send('undo')
+    },
+    {
+      label: 'Redo',
+      accelerator: 'CmdOrCtrl+Shift+Z',
+      enabled: state.canRedo,
+      click: send('redo')
+    },
+    { type: 'separator' },
+    text
+      ? { role: 'cut' }
+      : {
+          label: 'Cut',
+          accelerator: 'CmdOrCtrl+X',
+          enabled: state.hasSelection,
+          click: send('cut')
+        },
+    text
+      ? { role: 'copy' }
+      : {
+          label: 'Copy',
+          accelerator: 'CmdOrCtrl+C',
+          enabled: state.hasSelection,
+          click: send('copy')
+        },
+    text ? { role: 'paste' } : { label: 'Paste', accelerator: 'CmdOrCtrl+V', click: send('paste') },
+    {
+      label: 'Duplicate',
+      accelerator: 'CmdOrCtrl+D',
+      enabled: state.hasSelection,
+      click: send('duplicate')
+    },
+    // No accelerator on the text's: the key itself already deletes in a text box.
+    text
+      ? { role: 'delete' }
+      : {
+          label: 'Delete',
+          accelerator: 'Delete',
+          enabled: state.hasSelection,
+          click: send('delete')
+        },
+    { type: 'separator' },
+    text ? { role: 'selectAll' } : { label: 'Select All', accelerator: 'CmdOrCtrl+A', click: send('selectAll') }
+  ]
+}
+
+/** What a right-click told us about the spot (Electron's `context-menu` params, the part read here). */
+export interface TextContextParams {
+  isEditable: boolean
+  selectionText: string
+  editFlags: { canCut: boolean; canCopy: boolean; canPaste: boolean; canSelectAll: boolean }
+}
+
+/**
+ * The right-click menu for text: Cut, Copy, Paste and Select All in a text
+ * box, Copy alone on selected text elsewhere, and null (no menu) anywhere
+ * else. There was none at all: Electron shows no menu of its own, so a
+ * right-click in the URL box did nothing and a link could not be pasted with
+ * the mouse.
+ *
+ * The app's own right-click menus (a tile in the Upload tile, a clip on the
+ * timeline) are drawn by the page and cancel the event, so this is never
+ * asked about them.
+ *
+ * Pure, so a test can read it.
+ */
+export function textContextMenu(params: TextContextParams): MenuItemConstructorOptions[] | null {
+  const flags = params.editFlags
+  if (params.isEditable) {
+    return [
+      { role: 'cut', enabled: flags.canCut },
+      { role: 'copy', enabled: flags.canCopy },
+      { role: 'paste', enabled: flags.canPaste },
+      { type: 'separator' },
+      { role: 'selectAll', enabled: flags.canSelectAll }
+    ]
+  }
+  if (params.selectionText.trim().length > 0) return [{ role: 'copy', enabled: flags.canCopy }]
+  return null
+}
+
+/** Show `textContextMenu` on a right-click in `window`. */
+export function installTextContextMenu(window: BrowserWindow): void {
+  window.webContents.on('context-menu', (_event, params) => {
+    const items = textContextMenu(params)
+    if (items) Menu.buildFromTemplate(items).popup({ window })
+  })
 }
 
 export function buildMenu(
@@ -137,59 +264,7 @@ export function buildMenu(
         isMac ? { role: 'close' } : { role: 'quit' }
       ]
     },
-    {
-      label: 'Edit',
-      submenu: [
-        {
-          label: 'Undo',
-          accelerator: 'CmdOrCtrl+Z',
-          enabled: state.canUndo,
-          click: send('undo')
-        },
-        {
-          label: 'Redo',
-          accelerator: 'CmdOrCtrl+Shift+Z',
-          enabled: state.canRedo,
-          click: send('redo')
-        },
-        { type: 'separator' },
-        /*
-         * Not `role: 'cut'` and friends.
-         *
-         * The roles operate on the focused text field, which is right for a
-         * text field and wrong for a timeline: pressing Copy with a clip
-         * selected has to copy the CLIP. The store decides which is meant,
-         * because only the store knows what is selected.
-         */
-        {
-          label: 'Cut',
-          accelerator: 'CmdOrCtrl+X',
-          enabled: state.hasSelection,
-          click: send('cut')
-        },
-        {
-          label: 'Copy',
-          accelerator: 'CmdOrCtrl+C',
-          enabled: state.hasSelection,
-          click: send('copy')
-        },
-        { label: 'Paste', accelerator: 'CmdOrCtrl+V', click: send('paste') },
-        {
-          label: 'Duplicate',
-          accelerator: 'CmdOrCtrl+D',
-          enabled: state.hasSelection,
-          click: send('duplicate')
-        },
-        {
-          label: 'Delete',
-          accelerator: 'Delete',
-          enabled: state.hasSelection,
-          click: send('delete')
-        },
-        { type: 'separator' },
-        { label: 'Select All', accelerator: 'CmdOrCtrl+A', click: send('selectAll') }
-      ]
-    },
+    { label: 'Edit', submenu: editSubmenu(state, send) },
     {
       label: 'View',
       submenu: [

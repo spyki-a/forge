@@ -25,6 +25,7 @@ import { CurveTray, useTrayPanel } from './components/CurveTray'
 import { SettingsPanel, dotClass, useHelperRow } from './components/SettingsPanel'
 import { OutputStrip } from './components/OutputStrip'
 import { ExportStrip } from './components/ExportStrip'
+import { isTextEntry } from '@shared/textEntry'
 
 function Divider({ vertical = false }: { vertical?: boolean }): ReactNode {
   return (
@@ -359,11 +360,21 @@ export default function App(): ReactNode {
         hasSelection: s.selectedClipIds.length > 0,
         dirty: s.dirty,
         // Closing mid-take asks first; see mustAskBeforeClosing in main/menu.ts.
-        recording: s.recording !== null
+        recording: s.recording !== null,
+        // In a text box, Cut, Copy, Paste and Select All are the text's (main/menu.ts editSubmenu).
+        textFocus: isTextEntry(document.activeElement)
       })
     }
     report()
-    return useEditor.subscribe(report)
+    // The keyboard moving into or out of a text box changes no store state, so it is listened for.
+    document.addEventListener('focusin', report)
+    document.addEventListener('focusout', report)
+    const off = useEditor.subscribe(report)
+    return () => {
+      off()
+      document.removeEventListener('focusin', report)
+      document.removeEventListener('focusout', report)
+    }
   }, [])
 
   /** The menu is a remote control; the store is where the editor lives. */

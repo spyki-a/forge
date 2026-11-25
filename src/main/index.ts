@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, protocol, shell } from 'electron'
 import { join } from 'node:path'
 import { abortLinkRuns, cancelAnalyses, quitHelperJobs, registerIpc } from './ipc'
-import { applyMenu, EMPTY_MENU_STATE, mustAskBeforeClosing, type MenuState } from './menu'
+import { applyMenu, EMPTY_MENU_STATE, installTextContextMenu, mustAskBeforeClosing, type MenuState } from './menu'
 import { registerMediaProtocol } from './mediaProtocol'
 import { assertBinaries } from './ffmpeg/paths'
 import { runLaunchSweep, startSidecar, stopSidecar, type SidecarStatus } from './sidecar/service'
@@ -217,6 +217,9 @@ function createWindow(): void {
   if (process.env.ELECTRON_RENDERER_URL) {
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
+
+  // Right-click in a text box: Cut, Copy, Paste, Select All (there was no menu at all).
+  installTextContextMenu(mainWindow)
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url)

@@ -173,6 +173,7 @@ const api = {
     hasSelection: boolean
     dirty: boolean
     recording: boolean
+    textFocus: boolean
   }): void => {
     ipcRenderer.send('menu:state', state)
   },
