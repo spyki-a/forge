@@ -342,6 +342,20 @@ room, Indic token density (33 tokens spare at one character a token) and
 the 180 s timeout are all unmeasured. The detail, every choice and every
 open item: CLIPS §7.4's and §7.5's Built notes.
 
+**Later, 25 November 2026: answered.** On Gemma 4 E2B in Bionic (LM Studio
+under a new name, by the user's word; its server on `127.0.0.1:1235`, not
+1234), through the harness relay: the eval's three made-up fixtures all
+parsed on the first ask, no prose, no fallback, `finish_reason: stop`;
+English 2.94 and 3.08 characters a token (so `CHARS_PER_TOKEN` 3.0
+undercounted one of them by 22 tokens, 2 %, and prompt.ts's "never
+undercounts English" is not true as measured), made-up Georgian 1.76;
+204 to 256 output tokens of 950; 5.3 to 7.1 s an answer against 180 s.
+The ten-links recorder ran once against YouTube on two English links the
+session picked (not the ten, nothing rated): 1,578 and 1,731 prompt
+tokens, 185 and 205 out, 4.5 and 4.9 s, parsed first time, no fallback.
+Devanagari and Telugu are still unmeasured. CLIPS §7.7's note "Read on a
+real model, 2026-11-25" has the tables and the cards.
+
 ---
 
 ## Built — `graphics@1`, 11 November 2026

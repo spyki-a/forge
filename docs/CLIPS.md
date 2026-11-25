@@ -486,7 +486,9 @@
 > check's generated ramp stand in); the ten-links recorder has run only
 > against the fake yt-dlp, never against YouTube; nothing was read in the
 > development app or on the Surface. **§7.8's exit is not met**, and
-> every item still open on it is yours (§7.8, item by item). The
+> every item still open on it is yours (§7.8, item by item). (Later on
+> 2026-11-25: answered, a real model, two real links and two real exact
+> downloads, outside Analyse and a card: the later note below.) The
 > decisions step 4 left to you are §16.89-97.
 > **Next, by §2's order** (2026-11-14, standing on 2026-11-18): 1g,
 > Florence-2's caption placement (3 days, gated by its own measurement and
@@ -500,6 +502,43 @@
 > §7.8's.
 > **The deadline is unchanged: 25 December 2026.** A feature freeze about
 > 10 December is the session's suggestion, not confirmed by you.
+>
+> **Later on 2026-11-25: a real model, two real links.** At your ask
+> ("can you check with the real model and also pick some random 2 long
+> videos and try clippping them"), the session ran, on the Mac at
+> `d6000ed`, through the harness relay and node (not Analyse in the
+> development app): the eval's three made-up fixtures on Gemma 4 E2B, all
+> three answered and parsed first time, no fallback, English 2.94 and 3.08
+> characters a token (so 3.0 undercounted one of the two by 22 tokens,
+> 2 %), made-up Georgian 1.76, 204 to 256 output tokens of 950, 5.3 to 7.1 s
+> an answer; the ten-links recorder's first run against YouTube, both
+> passes with the model, on two links the session picked (Randy Pausch's
+> last lecture at 1 min, Joe Rogan #1309 with Naval Ravikant at 2 min:
+> three signals cards and three model cards each, no shared window); and
+> the model's first card of each downloaded as an exact range through
+> main's `downloadMedia`, the two clips sent to you, raw and landscape,
+> never through the renderer. All of it is §7.7's note "Read on a real
+> model, 2026-11-25". **Your model server**: the app you opened is
+> Bionic, LM Studio under a new name by your word, and its server now
+> answers on `127.0.0.1:1235`, while the app looks at `DEFAULT_OPENAI`'s
+> `http://127.0.0.1:1234/v1` (`src/shared/director/provider.ts`) and the
+> Settings field's placeholder is `http://127.0.0.1:1234/v1`
+> (`SettingsPanel.tsx`): in the app, type `http://127.0.0.1:1235/v1` in
+> Settings' Server field, or set the port back to 1234 in Bionic (the
+> harness's relay the same: §7.8's first item). **Your words after
+> seeing the two clips and the cards**: "i appetite your work, everything
+> is perfect. 1) on the model correction ill change the host in settings
+> 2)both videos landed perfect 3) ill try the telugu and hindi and then
+> later also clip it and graphics when the records are done". So you will
+> change the host in Settings (§16.98, answered; nothing built); the two
+> clips landed well by your word, which rates no card, not card by card,
+> and is not part of §7.8's ten; Telugu and Hindi links and Clip it with
+> the graphics in the development app are yours and come next, after
+> this record. **Still not read**: the ten links, Hindi and Telugu
+> (characters a token included), Analyse and Clip it from a card in the
+> development app, a card's chain with a real reframe and graphics, the
+> Surface, YouTube's ASR against Whisper. The decisions step 4 left to
+> you are now §16.89-98.
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
@@ -24038,7 +24077,11 @@ shared with the eval, as the Director's is.
 >   with an empty error, LM Studio not running on the Mac. So the parse,
 >   prose and unusable rates, the title and why fallback rates, the prompt
 >   tokens against the 3,353, the answer room and Indic token density are
->   all unmeasured.
+>   all unmeasured. (Later on 2026-11-25: answered, on Gemma 4 E2B in
+>   Bionic, LM Studio renamed, on port 1235: three of three parsed, no
+>   fallback, English 2.94 and 3.08 characters a token, so the comment's
+>   "never undercounts English" is not true as measured; §7.7's note "Read
+>   on a real model, 2026-11-25". Indic token density stays unmeasured.)
 > - **Departures from the plan's words**: (1) with fewer than three
 >   candidates the schema asks for exactly that many (`minItems` =
 >   `maxItems` = `picksWanted`), not always 3; (2) the validator checks the
@@ -24070,7 +24113,12 @@ shared with the eval, as the Director's is.
 >   Telugu talk) makes a window mixed; a caseless-script why can name
 >   anyone; the timeout races the ask but never cancels it; the weights,
 >   `maxTokensForBestClips`, the decode limits, best-first listing and the
->   timeout's value are unmeasured.
+>   timeout's value are unmeasured. (Later on 2026-11-25: the model path
+>   read on a real model through the eval and the recorder, not through
+>   Analyse: answers of 185 to 256 output tokens against 950, 4.5 to 7.1 s
+>   against 180 s; §7.7's note "Read on a real model, 2026-11-25". The
+>   weights, the decode limits, best-first listing, Indic density and the
+>   fixtures' fallback rates as a measure of quality stay as above.)
 
 ### 7.5 Three cards, and Clip it
 
@@ -24469,7 +24517,11 @@ another, with the helper or without it: piece 3's note below.)
 >   Settings; a cancelled reframe's own line; changing the shape line after
 >   the 9:16 change is undone; a button for the face finder on the card.
 > - **Left open**: no real model, real link, real download, real reframe
->   or real graphics run has gone through Analyse or a card's chain; §7.8's
+>   or real graphics run has gone through Analyse or a card's chain
+>   (later on 2026-11-25 a real model, two real links and two real exact
+>   downloads were read outside them, through the eval, the recorder and
+>   main's `downloadMedia`: §7.7's note "Read on a real model,
+>   2026-11-25"; Analyse and a card's chain are still unrun); §7.8's
 >   Surface run is yours. Step 6 is not built: it waits for §8.7, after the
 >   beta (§16.75), so Clip it from a card ends at step 5. Not looked at on
 >   screen yet (the session read only the English harness cards, at 240 px
@@ -24769,7 +24821,10 @@ rows.
 >   prefixed `_` with or without an extension, empty → `link`. **It has
 >   only ever run against the fake yt-dlp**, dry, by its builder and its
 >   fixer (both passes, made-up answers, a stale file, a changed link); never
->   against YouTube, and nothing of §7.8 has been read.
+>   against YouTube, and nothing of §7.8 has been read. (Later on
+>   2026-11-25: run against YouTube, both passes, with the model, on two
+>   links the session picked, not part of the ten, nothing rated: the note
+>   "Read on a real model, 2026-11-25" below.)
 > - **Mutations**, all by the agents' reports, each failing and restored:
 >   piece 1, 61; piece 2, 48, and the session's one at `cf35644`; piece 3,
 >   33; piece 4, 31 by the reports' counts (the builder's lists 17 where it
@@ -24806,6 +24861,144 @@ rows.
 >   Whisper on three videos, which no piece built or addressed): all yours.
 >   macOS CI at `d6000ed` waits for a re-run or the next code push.
 
+> **Read on a real model, 2026-11-25** (later that day, after the push; run
+> by the session on the development Mac at `d6000ed`, at your ask: "can you
+> check with the real model and also pick some random 2 long videos and try
+> clippping them"). Everything below went through the harness relay and
+> node, not through Analyse in the development app; nothing of it was read
+> on the Surface.
+> - **The model server.** The app you opened is `/Applications/Bionic.app`
+>   (`ai.elementlabs.bionic`, 1.2.2+3); your word is that it is LM Studio,
+>   updated under a new name. Its server answered on **127.0.0.1:1235**, not
+>   1234: 1234 refused the connection ("connect ECONNREFUSED
+>   127.0.0.1:1234" in the harness server's log) before and after the model
+>   was loaded and the server switched on, and the session found 1235 by
+>   probing local ports from the harness page. `GET /v1/models` listed
+>   phonon-40m-multilingual, google/gemma-4-e2b and
+>   text-embedding-nomic-embed-text-v1.5. The harness's `/__lm` proxy was
+>   pointed there with `FORGE_EVAL_SERVER=http://127.0.0.1:1235`
+>   (`tests/eval/relay.ts` `MODEL_SERVER`, default
+>   `http://127.0.0.1:1234`), through a temporary launch entry removed
+>   afterwards; nothing in the repo changed. A wart, not fixed: the score
+>   step's `results-bestclips.json` prints `"server":
+>   "http://127.0.0.1:1234"`, node's default; the relay went to 1235. The
+>   app itself looks at `DEFAULT_OPENAI`'s `http://127.0.0.1:1234/v1`
+>   (§16.98).
+> - **The eval's three fixtures** (run `bestclips-a1`, `FORGE_EVAL=openai
+>   FORGE_EVAL_MODEL=google/gemma-4-e2b FORGE_EVAL_BESTCLIPS=on`; prepared
+>   2026-11-23, relayed and scored 2026-11-25). The fixtures are built in
+>   code from made-up words (`bc-caseless` in made-up Georgian-script
+>   words), so they measure the plumbing and the token counts, not whether
+>   a pick is good. Printed figures: fixtures 3, answered 3, parsed 3,
+>   prose 0, truncated 0, wrongShape 0, unusable 0, modelCards 9,
+>   filledCards 0, titleFallbacks 0, whyFallbacks 0, droppedPicks 0,
+>   agreeWithSignals 4. Every answer finished `finish_reason: stop`,
+>   `reasoning_tokens: 0`, parsed on the first ask (no retry).
+>
+>   | fixture | candidates | request characters (system + user) | prompt tokens (the server's count) | characters a token | output tokens | time |
+>   |---|---|---|---|---|---|---|
+>   | bc-en-heat (1 min) | 12 | 3,191 | 1,086 | 2.94 | 204 | 7,095 ms |
+>   | bc-en-plain (2 min) | 7 | 2,738 | 889 | 3.08 | 256 | 5,531 ms |
+>   | bc-caseless (1 min, Georgian script) | 11 | 3,559 | 2,017 | 1.76 | 218 | 5,345 ms |
+>
+> - **Against `prompt.ts`'s arithmetic.** English read 2.94 and 3.08
+>   characters a token. The file's comment says `promptTokensAtMost`
+>   counts at 3.0 "so it never undercounts English": on `bc-en-heat` the
+>   server's 1,086 is above 3,191 / 3.0 = 1,064 by 22 tokens (2 %), so 3.0
+>   undercounts one of the two English readings, and the comment is not
+>   true as measured (left in the code as it is). With 24 candidates the
+>   estimate is 3,353 against the 4,096 budget, so a 2 % miss does not
+>   matter there. 1.76 characters a token on made-up Georgian is the only
+>   non-Latin reading, inside the "worst plausible one character a token"
+>   the budget was checked against; Devanagari and Telugu are still
+>   unmeasured. The answers took 204 to 256 output tokens for three picks,
+>   against `maxTokensForBestClips(3)` = 950; none was cut. 5.3 to 7.1 s an
+>   answer on this Mac, against the 180 s timeout. The session's
+>   observation, not a measured rate: on made-up words the whys invent a
+>   meaning ("a deep emotional connection and conflict", "a clear
+>   percentage claim") and none fell back, since the validator holds a
+>   why's numbers and names to the words said, not its meaning (§7.4's
+>   design); the fixtures have no meaning to be faithful to.
+> - **The ten-links recorder's first run against YouTube**, on two links
+>   the session picked (not two of §7.8's ten): pass 1
+>   (`FORGE_BESTCLIPS_EXIT=1 npx vitest run
+>   tests/integration/bestClipsExit.int.test.ts`),
+>   `window.__forgeEvalRelay('bestclips-exit')` on the harness page, pass 2
+>   with `FORGE_BESTCLIPS_EXIT_STEP=score`; both exit 0. yt-dlp 2026.08.19,
+>   already on the Mac's PATH (nothing fetched into userData); details and
+>   captions only, no media.
+>   1. https://www.youtube.com/watch?v=ji5_MqicxSo, "Randy Pausch's Last
+>      Lecture: Achieving Your Childhood Dreams", 4,587 s, language en-US,
+>      asked at 1 min. Signals alone ("Picked without a model, from the
+>      talk's own signals."): 0:09:35–0:10:37 "You've got to get the
+>      fundamentals…" (replayed more than most of the video); 1:13:25–1:14:25
+>      "When people give you feedback, cherish…" (replayed more than most of
+>      the video); 1:14:02–1:15:02 "I got tenure a year earlier as Steve…"
+>      (replayed more than most of the video); the second and third share
+>      23 s (0.38 of a card; the rule allows up to 0.5). The model (prompt
+>      tokens 1,578, output 185, 4,518 ms, parsed first time, no fallback,
+>      nothing filled): 0:10:14–0:11:13 "your critics are telling you" /
+>      "This connects criticism to genuine care, providing a meaningful
+>      perspective on how others view you."; 1:12:51–1:13:49 "when you do
+>      the right thing" / "This explains how good things happen when you do
+>      the right thing, offering a surprising insight into timing.";
+>      1:14:52–1:15:44 "fake it's not about dreams" / "It offers a strong
+>      opinion on leading your life correctly and how karma works for you."
+>   2. https://www.youtube.com/watch?v=3qHkcs3kG44, "Joe Rogan Experience
+>      #1309 - Naval Ravikant", 7,916 s, language en, asked at 2 min; its
+>      captions are lower case with no sentence marks. Signals alone:
+>      1:23:44–1:25:42 "um where you really and i'm not…" (replayed more than
+>      most of the video); 1:56:57–1:58:52 "reality has no judgments to a
+>      tree…" (the most replayed part); 1:59:42–2:01:28 "i tried meditation
+>      i tried witnessing…" (replayed more than most of the video). The model
+>      (prompt tokens 1,731, output 205, 4,906 ms, parsed first time, no
+>      fallback, nothing filled): 0:21:31–0:23:32 "the right way to work is
+>      like a lion" / "This provides a clear, memorable metaphor for how one
+>      should approach life and work."; 1:47:37–1:49:34 "if you're smart
+>      you're not happy" / "This is a strong, provocative statement about the
+>      pitfalls of being self-justifying."; 2:00:38–2:02:35 "there are a few
+>      things that are like high suffering" / "This shows the process of
+>      working through negative judgments until a realization is achieved."
+>
+>   On both videos the model's three and the signals' three share no
+>   window.
+> - **Two ranges downloaded**, the model's first card of each video in
+>   time order, through main's own `downloadMedia`
+>   (`src/main/ingest/download.ts`) with the real yt-dlp and the bundled
+>   ffmpeg, `{ kind: 'video', quality: '720p', exact: true, range }`, by a
+>   temporary test file deleted afterwards (never committed); lengths read
+>   with the bundled ffmpeg:
+>
+>   | range asked | file | length read | asked | picture | size |
+>   |---|---|---|---|---|---|
+>   | ji5_MqicxSo 614,079–673,079 ms | ji5_MqicxSo.video-720p.r614079-673079.mp4 | 59.03 s | 59.000 s | 480×360, 29.97 fps (the source has no 720p) | 2,535,619 bytes |
+>   | 3qHkcs3kG44 1,291,760–1,412,399 ms | 3qHkcs3kG44.video-720p.r1291760-1412399.mp4 | 120.67 s | 120.639 s | 1280×720, 59.94 fps | 9,520,982 bytes |
+>
+>   Both were sent to you: the raw exact cuts, landscape as the sources
+>   are. They did not go through the renderer: no project, no 9:16, no
+>   reframe, no captions, no graphics. Clip it from a card in the
+>   development app is still unrun, on either machine.
+> - **The session's reading of the twelve cards** (the session's, not your
+>   rating): the model's titles are words the clip says, and its picks on
+>   the second video are recognisable points of the talk; one model title
+>   starts mid-phrase ("fake it's not about dreams": the talk says "head
+>   fake"). The signals' titles are a window's first words, so on captions
+>   with no sentence marks a card can open on "um where you really and i'm
+>   not…" (§16.89); with a heatmap present, all six signals whys were the
+>   replay line.
+> - **Where the output went**: the session moved it out of your exit
+>   paths, to `tests/output/bestclips-tryout/`,
+>   `tests/output/eval/bestclips-tryout-2026-11-25/` and
+>   `tests/output/_session-keep/bestclips-tryout-links-2026-11-25.txt`
+>   (all gitignored), so your ten-links run starts clean.
+> - **Still not read**: the ten links (§7.8's first item), Hindi and
+>   Telugu (characters a token and cards), Analyse and Clip it from a card
+>   in the development app, a card's chain with a real reframe and
+>   graphics, the Surface, YouTube's ASR timing against Whisper; the
+>   weights and thresholds are still unmeasured against a talk you rated.
+>   Your word after seeing the two clips is in the status block's later
+>   note of 2026-11-25.
+
 ### 7.8 Exit
 
 - Ten real links chosen by the user (talks and podcasts; two in Hindi or
@@ -24834,6 +25027,15 @@ rows.
   only over the links it answered. It has run only against the fake
   yt-dlp, by its builder and fixer, never against YouTube; no link is
   chosen and nothing is rated. **Open, yours.**)
+  (Later on 2026-11-25: the recorder ran against YouTube for the first
+  time, both passes, with the model, on two links of the session's
+  choosing (§7.7's note "Read on a real model, 2026-11-25"). They are not
+  part of the ten and nothing is rated, so the item stays open and yours.
+  Your model server now answers on port 1235, and the relay goes to
+  `tests/eval/relay.ts`'s `MODEL_SERVER`, `FORGE_EVAL_SERVER` or else
+  `http://127.0.0.1:1234`: start the harness with
+  `FORGE_EVAL_SERVER=http://127.0.0.1:1235` in its environment, as the
+  session did, or set the port back to 1234 in Bionic.)
 - Every window on sentence boundaries, by property.
   (2026-11-25: held by `tests/bestClips.test.ts`, "windowsFor: boundaries,
   band and stride (§7.3)" › "every window starts at a capped segment start
@@ -24877,6 +25079,12 @@ rows.
   the local model loads, a real graphics pass, and a reading of swap, for
   which nothing is built and no way is stated (`vm_stat` on the Mac, Task
   Manager on the Surface). **Open, yours.**)
+  (Later on 2026-11-25: two exact ranges, the model's first card of each
+  of the session's two links, were downloaded through main's own
+  `downloadMedia` with the real yt-dlp on the Mac, outside the renderer:
+  59.03 s read of 59.000 s asked, 120.67 s of 120.639 s (§7.7's note "Read
+  on a real model, 2026-11-25"). No project, 9:16, reframe, captions or
+  graphics; the Surface and a card's chain stay open.)
 - YouTube ASR timing against Whisper measured on three videos and written
   into `EFFECTS.md`.
   (2026-11-25: not measured; no piece of step 4 built or addressed it. It
@@ -24888,7 +25096,9 @@ with M0; none other is. The second is held by a property the session
 read green, which is §7.3's rule and not a sentence mark at both ends
 (§16.90); the first, fourth and fifth are your runs, and none has been
 made. Nothing of the exit was read in the development app or on the
-Surface.
+Surface. (Later on 2026-11-25: the session's run of the recorder on two
+links and two exact downloads, under the first and fourth items, are not
+your runs and meet neither; the state above stands.)
 
 ---
 
@@ -27601,7 +27811,11 @@ critic's or a fixer's suggestion is quoted as theirs. What was read was
 read in the session's suite and on the harness page on the Mac, and in
 Windows CI at `d6000ed`; several entries rest on the code as read, not on
 a run. Nothing was read in the development app or on the Surface, and no
-real model, link, download or reframe has gone through Best clips.
+real model, link, download or reframe has gone through Best clips. (Later
+on 2026-11-25: a real model answered the eval's and the recorder's
+requests, two real links were fetched and two exact ranges downloaded,
+outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
+2026-11-25". §16.98 was added and answered that day.)
 
 89. **The words on the cards.** On-screen words no one has chosen for you:
     - "signals" and "talk" in `SCORED_BY_LABEL`'s "Picked from the talk's
@@ -27631,6 +27845,16 @@ real model, link, download or reframe has gone through Best clips.
       and the link’s credit") and the recorder's page use the curly one.
     - A why that falls back to the signals' reason line is English even on
       a Telugu or Hindi card (piece 2's builder).
+    - (Later on 2026-11-25, the session's reading of the recorder's two
+      real links, §7.7's note "Read on a real model, 2026-11-25"; not your
+      rating.) The signals' titles are a window's first words, so on
+      captions with no sentence marks a card opened on "um where you
+      really and i'm not…"; with a heatmap present, all six signals whys
+      were the replay line ("replayed more than most of the video", once
+      "the most replayed part"); two signals cards of the first link
+      shared 23 s (0.38 of a card; the rule allows up to 0.5). One model
+      title started mid-phrase ("fake it's not about dreams": the talk
+      says "head fake").
 
     What a rewording costs: each string is one shared constant
     (`SCORED_BY_LABEL` in `session.ts`; `NO_MODEL_NOTE`, the three
@@ -27784,6 +28008,14 @@ real model, link, download or reframe has gone through Best clips.
     signals alone (§7.8's first item), and a real model answering the eval
     block's requests (run `bestclips-a1`, prepared, never answered: LM
     Studio was not running). No recommendation until those are read.
+    (Later on 2026-11-25, §7.7's note "Read on a real model, 2026-11-25":
+    now measured on Gemma 4 E2B, English 2.94 and 3.08 characters a token,
+    so 3.0 undercounted one English reading by 22 tokens, 2 %; made-up
+    Georgian 1.76, the only non-Latin reading; output 204 to 256 tokens
+    of 950 on the fixtures, 185 and 205 on the two links; 4.5 to 7.1 s an
+    answer against the 180 s deadline, on the Mac. Still unmeasured:
+    Devanagari and Telugu, the weights and thresholds, and the ten links.
+    The entry stays open.)
 
     **Answer (2026-11-25): OPEN.** Yours.
 96. **Where 1g goes: before step 6 or after step 7.** §2's order of
@@ -27815,9 +28047,30 @@ real model, link, download or reframe has gone through Best clips.
     or "It". What judges it is the eval's `titleFallbacks` and
     `whyFallbacks` with a real model, unread: no real model has answered,
     and the eval's fixtures are nonsense words, so their rates would not
-    measure quality. No recommendation.
+    measure quality. No recommendation. (Later on 2026-11-25: answered,
+    `titleFallbacks` 0 and `whyFallbacks` 0 on the three fixtures, and no
+    fallback on the six model cards of the recorder's two real links;
+    §7.7's note "Read on a real model, 2026-11-25". The fixtures still
+    measure no quality, and two English links are not the ten.)
 
     **Answer (2026-11-25): OPEN.** Yours.
+98. **The model server's port.** On 2026-11-25 your model server, Bionic
+    (LM Studio under a new name, by your word), answered on
+    `127.0.0.1:1235`; 1234 refused the connection. The app looks at
+    `DEFAULT_OPENAI`'s `http://127.0.0.1:1234/v1`
+    (`src/shared/director/provider.ts`), and Settings' Server field shows
+    the same as its placeholder (`SettingsPanel.tsx`), so the app finds no
+    model there until the address is changed (§7.7's note "Read on a real
+    model, 2026-11-25"). The choices: (a) leave it to you to type
+    `http://127.0.0.1:1235/v1` in Settings, or set the port back in
+    Bionic; (b) have the app also look at 1235; (c) say so in the Settings
+    hint. No recommendation.
+
+    **Answer (2026-11-25): (a)**, in your words: "on the model correction
+    ill change the host in settings". You change the host in Settings;
+    nothing is built. Whether the app should ever look at 1235 by itself
+    stays a possible later change nobody asked for. The harness's relay
+    needs the same address in `FORGE_EVAL_SERVER` (§7.8's first item).
 
 ---
 

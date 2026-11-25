@@ -760,6 +760,9 @@ stacked in the 240 px column, each with a 9:16 face, not side by side; with no
 model the signals pick the three. The 3D toggle, B-roll images and transitions
 are not built. Built on the build side only: its exit is open
 (`docs/CLIPS.md` §7.8), and no real model or link has gone through it.
+(Later on 2026-11-25: a real model and two real links went through the
+eval and the ten-links recorder, outside the panel; the exit stays open:
+`docs/CLIPS.md` §7.7's note "Read on a real model, 2026-11-25".)
 
 ---
 
