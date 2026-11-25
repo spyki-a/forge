@@ -11727,3 +11727,32 @@ tests passed and 66 skipped (5931). CI green on `windows-latest` and
   registered scheme. No app fix was made and none is owed. The leads the
   agents listed, `Preview.tsx`'s `planeFor` and `threeShared.ts`'s
   `textureFor` with an empty path, were NOT what fired.
+
+## 62. Reading luma as gray stretches the limited range, and so does a PNG between (2026-11-25)
+
+For `docs/CLIPS.md` §7.7 (step 4's render check,
+`tests/integration/bestClipsCard.int.test.ts`, piece 5, `131cefe`).
+Measured by piece 5's builder on the development Mac's bundled ffmpeg (the
+4.1.5 darwin-arm64 package, reporting 4.4), while building the check;
+written here from its report and the test's own comments.
+
+- **`-pix_fmt gray` on a yuv420p file stretches Y's 16..235 to 0..255.**
+  The check's source draws a ramp in Y with `geq` (`lum=16+(X-160)*219/320`
+  between columns 160 and 480, `cb=128:cr=128`), encoded lossless
+  (`libx264 -qp 0`, yuv420p), and every reading decodes to raw `gray`. Y
+  43, 70, 125 and 180, at columns 200, 240, 320 and 400, read **31, 63,
+  127 and 191**: (Y − 16) × 255 / 219, the limited range taken as video
+  range and expanded. So a level read as gray is not the Y that was
+  written: the check turns a reading back into a column with
+  `columnOf(gray) = 160 + gray × 320 / 255`, the stretch undone, and the
+  centred crop's left edge, middle and right edge then read within its 4
+  columns (the builder's worst left edge: 2.2).
+- **A PNG between stretches the levels the same way.** The draft drew the
+  ramp to a PNG and fed that in; the round trip through RGB carried the
+  levels to full range: at column 200, **30 read for the 43 expected**.
+  So the check draws the ramp in Y by `geq` on every frame, as it draws the
+  frame-index bars, with no PNG.
+- **The Windows build**: not measured by hand. CI's windows-latest job
+  passed at `d6000ed` (run 45658046940) with this check in its suite, on
+  the 2018 ffmpeg; its readings are in the job's log, which needs a sign-in
+  and was not read. That is all that is known of it there.

@@ -383,8 +383,60 @@ the chosen speech model is here — transcribing a link's sound is not built yet
 offline, say — **Could not get the transcript.** with the reason, and From
 and To stay typed fields.
 
-**Not yet:** Listen to it and Best clips (sheet 27). Picking rows of a clip
-already on the timeline is the Transcript tile's (below).
+**Best clips** (sheet 27; `tools/BestClips.tsx`, `docs/CLIPS.md` §7.5,
+built 2026-11-23 to 25) sits under the link's rows and Clip download, above
+From and To, and is there whenever the box holds a link. **1 min · 2 min · 3
+min · 4 min** (one choice, greyed while it looks) and **Analyse** ("Find the
+stretches of this video most worth posting, from its captions — nothing is
+downloaded"); at the Shelf's narrowest, Analyse wraps to a second row,
+right-aligned. Analyse reads the transcript Get transcript fetched and
+downloads nothing; with no words yet it is greyed under **Best clips reads
+the video’s captions: press Get transcript first.**, and a video with no
+captions says **This video has no captions, and Best clips cannot listen to
+a video yet.**, with the AI helper or without it. While it looks: **Looking
+for the best stretches…** with a spinner in Analyse, or **Best clips is
+still looking at another video.** when the run is another link's (one
+Analyse at a time: Analyse stays greyed until it ends, at most three
+minutes, after which the talk's own signals pick). Then **Make it vertical** (on by default; its
+tooltip says what it does) and up to three cards, stacked, in the video's
+order. Each card: a tall 9:16 face with the stretch's length on it (no
+thumbnail), the title, the why, the range ("0:01.0 – 1:04.6") and the word
+count, who picked it (**Picked by the model** or **Picked from the talk's own
+signals**), a note when the model's pick, title or reason was not used, and
+**Clip it** ("Download just this stretch and put it on the timeline, with its
+words and the link’s credit"). Under the cards, why there are fewer than
+three, and how the model did (with no model: **Picked without a model, from
+the talk's own signals.**). A model is the one set up in Settings; with none,
+the talk's own signals pick.
+
+**Clip it on a card** downloads exactly the card's stretch (an exact cut)
+with its words and credit, as Clip download does. With Make it vertical on
+and nothing on the timeline, this project is set to 9:16; with clips already
+there, the card asks in place: **This project already has clips on its
+timeline.**, **Start a new 9:16 project for this clip** (under it **Saves
+this project first, then opens a new 9:16 project with just this clip.**, or
+**This project is saved and stays as it is; a new 9:16 project opens with
+just this clip.**; greyed with **Waits until the clip downloading now has
+landed in this project.** while another card's clip is on its way into it),
+**Add it to this project** (under it **Adds it to this timeline as it is.
+The project keeps its shape, so nothing is reframed.**, or on a portrait
+canvas **Adds it to this timeline and follows faces. The project keeps its
+shape.**) and **Not now**. With Make it vertical off it never asks and
+never changes the shape. Once sent, the card lists in place of Clip it what
+ran and what was skipped, and why, under **Download**, **Shape**, **Follow
+the subject**, **Captions** and **Graphics** (for example "on the timeline.",
+"this project set to 9:16.", "skipped: the AI helper is not installed, so
+the crop is centred.", "on.", "none found in this stretch."); a failed line
+is red. Captions are turned on only in a new project or on an empty
+timeline; graphics wait until no face finding is running. The other cards
+stay pressable: three separate shorts. A card whose clip was undone or
+removed offers Clip it again.
+
+**Not there:** no thumbnail on a card; nothing listens to a video without
+captions (Listen to it is not built); no button for the face finder on a
+card: a missing one is a line pointing at the Trimmer's **Follow the
+subject**, which fetches it. Picking rows of a clip already on the timeline
+is the Transcript tile's (below).
 
 ### Narration
 

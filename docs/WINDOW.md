@@ -267,6 +267,32 @@ items keep the double-click hole `swallowSecondClick` closes for the pool.)
 | Get metadata, chapters, several ranges, Get transcript | none (sheet 07) | Shelf tile URL | build | phase 2 |
 | Best clips | none (sheet 09) | Shelf tile URL | build | phase 3 |
 
+(2026-11-23/25, after the 14 steps: step 4 of `docs/CLIPS.md`, §7.3–§7.7,
+`e354cd8` … `d6000ed`, eleven commits pushed together on 2026-11-25; the map
+of the result is `WHERE-THINGS-ARE.md`'s URL. **Best clips is built in the
+URL tile**: `src/renderer/src/components/tools/BestClips.tsx`, mounted in
+`IngestPanel.tsx` right after `<LinkTranscript />` (the rows and Clip
+download) and above From and To, on screen whenever the box holds a link.
+The lengths 1/2/3/4 min in a `role="group"` labelled "Clip length",
+**Analyse**, the pointer and running lines, **Make it vertical** above the
+cards, and up to three cards, each with **Clip it** at the foot of its text
+column, the step 0 question in place on the asking card (Start new greyed
+with its wait line while a card's clip is still downloading into the
+project), and a clipped card's five step lines. **Sheet 27 drew the cards
+side by side; they are built stacked** for the 240 px column (three across
+would leave about 68 px each), each with a 48 px wide 9:16 face holding the
+stretch's length in place of a thumbnail. Read by the session on the
+harness page, on the Mac, 2026-11-25 (Analyse at 1 min on the harness's
+twelve-row talk, no model): three stacked cards, each 216 × 142 px in the
+240 px column, the face 48 × 85 px reading "1:03.6", "1:03.8" and "0:51.8";
+the four lengths and Analyse do not fit one row at 240 px, so Analyse wraps
+to a second row, right-aligned (the lengths' top at y 728, Analyse's at y
+757); at a 620 px wide window the column is narrower still and the cards
+hold: text wraps, nothing is cut, the face keeps its ratio. Not read in the
+development app or on the Surface; a Devanagari, Telugu or emoji title, the
+question's buttons and the step lines at the narrowest have not been looked
+at. The store state is §3.22's note.)
+
 ### 3.5 Narration tile
 
 | control | today | new home | how | note |
@@ -671,6 +697,19 @@ no undo step), `folderEdit` + `startNewFolder(moving?)`, `startRenameFolder`,
 (`Project.folders`, `MediaAsset.folder`, both absent when unused, made sound
 on open by `folders.ts` `repairFolders`, called from `src/shared/project.ts`),
 so they are in the undo history.)
+
+(2026-11-23/25, the store state Best clips added (§3.4's note), by
+`store.ts` at `d6000ed`: `bestClips` (`BestClipsState`, `{ targetMs,
+running, last }`, `src/shared/bestclips/session.ts`) with
+`setBestClipsLength` and `analyseBestClips`; `bestClipsVertical` (Make it
+vertical, on by default) with `setBestClipsVertical`; `bestClipsQuestion`
+(step 0's question, one at a time, or null); `bestClipsClipped` (each
+clipped card's record by link and stretch, `src/shared/bestclips/cardClip.ts`);
+and the actions `clipItFromCard` and `answerBestClipsQuestion`. All four are
+session state, like `urlSource`: none is saved in the project file, and
+newProject and loadProject leave them alone. Beside them `PendingIngest`
+gained `projectId`, recorded for every download, which `collectIngest`
+compares to tell projects apart.)
 
 ---
 

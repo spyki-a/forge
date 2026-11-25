@@ -306,6 +306,41 @@ three months.
 
 ---
 
+## Built — `bestclips@1`, 23 November 2026
+
+Best clips in the URL tile (docs/CLIPS.md §7.4; step 4, piece 2, `a1085a0`,
+`6d46ee7`, `cf35644`, pushed with the step as `d6000ed` on 25 November): the
+stretches of a link's talk most worth posting on their own. **One
+comparative call** over at most 24 candidates the signals chose (each an id
+and about 80 tokens of its sentences, best first, no time, length or score);
+a 2B compares well and rates on an absolute scale badly, so it is never asked
+to score a window. The model picks ids and writes a title and a why for
+each; it never gives a time, a length or a range: every card's start, end
+and word count come from the window its id names.
+
+| file | what |
+|---|---|
+| `src/shared/bestclips/schema.ts` | `bestClipsSchema(ids, { constrained })`, flat, `{ reasoning, picks: [{ id, title, why }] }`, `reasoning` first; constrained for the decoder (`id` an enum, decode limits of three code points a kept grapheme, exactly `min(3, candidates)` picks), unconstrained for the validator's shape check |
+| `src/shared/bestclips/prompt.ts` | one constant system prompt (sentence-case titles from the candidate's own words, an English why opening "This" or "It", no time or number or name the candidate does not say); the CANDIDATES table, the pick line and the language line last; `maxTokensForBestClips` 200 + 250 a pick (950 for three); 3,353 tokens in all at 3.0 characters a token |
+| `src/shared/bestclips/validate.ts` | `validateBestClips`: rejects only an answer of the wrong shape (extra fields included); then drops an off-menu id, a repeat, an overlap of more than half and a pick beyond the count, one pick at a time; a title or why that is empty or says a number, quantity word or name the window does not falls back (the title to the window's first sentence, the why to the signals' line) |
+| `src/shared/bestclips/run.ts` | `bestClips`, shared by Analyse and the eval: no model, a failed or slow ask, or an unusable answer gives the signals' three with a fixed line that never carries an error's text; fewer usable picks are filled from the signals; the cards in time order |
+
+The title is shown on the card only, never drawn into a frame. The store's
+Analyse (`analyseBestClips`) asks only when `chooseProvider` finds a model,
+through the same `window.forge.directorComplete` route as the spine, with
+one three-minute deadline for the whole press; one Analyse at a time. There
+is no `DecisionRecord` for it: the cards are session state.
+
+**No real model has answered it.** The eval block (`FORGE_EVAL_BESTCLIPS`,
+`tests/eval/bestClipsEval.ts`) was prepared and relayed on 23 and 25
+November, and every request came back status 500 in milliseconds, LM Studio
+not running. So the parse and fallback rates, the prompt tokens, the answer
+room, Indic token density (33 tokens spare at one character a token) and
+the 180 s timeout are all unmeasured. The detail, every choice and every
+open item: CLIPS §7.4's and §7.5's Built notes.
+
+---
+
 ## Built — `graphics@1`, 11 November 2026
 
 The third pass: which moments of a talk a simple graphic would help, and

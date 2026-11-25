@@ -5087,7 +5087,9 @@ captions a chip sets the start and end fields instead
   project's captions on over it in the current style.
 - **No reframe and no graphics in M0.** They attach to Clip it as steps 1–3
   land (§7.5 steps 3–5), and Best clips' cards (step 4) clip through this
-  same path.
+  same path. (2026-11-25: as built, step 4 chains the follow, captions and
+  graphics after a CARD's clip only; M0's Clip download from picked rows
+  still chains nothing, §7.5's piece 4 note.)
 
 ### 3b.6 (h) The timeline half — §7.6, moved here
 
@@ -5157,8 +5159,10 @@ captions a chip sets the start and end fields instead
 > than drawing the cut over Listen for, as the first version did (the
 > review's 240 px column: 137.5 px given of 176 needed);
 > `placeAssetRange` has no button yet — it is the store action step 4's
-> cards will call. At 1× and 2× every kept frame shows exactly the footage it
-> showed; at 0.5× and through a ramp within one source frame, because an
+> cards will call. (2026-11-25: they do not; a card's Clip it goes through
+> `startIngest` and `collectIngest` as M0's does, §7.5's piece 4 note, and
+> `placeAssetRange` still has no caller in the window.) At 1× and 2× every
+> kept frame shows exactly the footage it showed; at 0.5× and through a ramp within one source frame, because an
 > in-point is a whole frame (a split has the same property). Tests:
 > `tests/timelineFrameAt.test.ts` (11: the round trip over 200 random frames
 > at 1×, 2×, 0.5× and two ramps, the first frame showing a source, 29.97 fps,
@@ -5245,7 +5249,8 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
   `tests/integration/ingestCaptions.int.test.ts`,
   `tests/integration/exactCut.int.test.ts` (the real yt-dlp),
   `tests/clipIt.test.ts` (its `clipToRange` and `placeAssetRange` cases;
-  the project-question case comes with step 4), and the render check
+  the project-question case comes with step 4: seven cases since
+  2026-11-23/24, §7.5's piece 4 note), and the render check
   `tests/integration/clipIt.int.test.ts`.
 - `tests/wordRun.test.ts`:
   - **click and shift-click, and the handles, over the same words give the
@@ -12431,7 +12436,11 @@ type the app defined.
   tile only, and builds everything Clip it's graphics step will call
   (`findGraphics`, `applyGraphics`, `CLIPS_GRAPHIC_RULE`); step 4 calls it
   as its fifth step, after the analysis job has released its sessions. Its
-  graphics carry `CLIPS_GRAPHIC_RULE`.
+  graphics carry `CLIPS_GRAPHIC_RULE`. (2026-11-23/25: built for a Best
+  clips card's clip, `findGraphics(clipId)` unchanged, started only once no
+  reframe analysis is pending or being started; its line counts what is
+  placed and what waits for Keep: §7.5's piece 4 note. M0's Clip download
+  from picked rows still has no graphics step.)
 - **By hand**, from the Transcript tile's **Graphics** section
   (`src/renderer/src/components/TranscriptGraphics.tsx`, mounted in
   `TranscriptPanel.tsx` between `TranscriptBody` at `:105` and `Vocabulary`
@@ -12738,7 +12747,9 @@ baseline }]`; `model` = `{ id: model.id, runtime: model.runtime }`, or `{
 id: 'baseline', runtime: 'none' }` when no model answered (no model, or a
 rejected pass whose baseline ran); `createdAt` from `options.now`. It is
 saved in the project file's `decisions` (`project.ts:45`). There is one
-record per Find or Direct run (and, from step 4, per Clip it run).
+record per Find or Direct run (and, from step 4, per Clip it run; 2026-11-25:
+a card's step 5 calls `findGraphics` unchanged, so its record is a Find
+run's, §7.5's piece 4 note).
 (2026-11-11, lane T2b, `0f28dfa`, `db4b46d`: built as worded, with a
 fourth key in the op, `drops`; a Find or Direct that asks nothing, a clip
 whose span shows no speech, writes no record, and a run of no windows
@@ -18069,8 +18080,9 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   screen: "check the number" once in each of the three source states
   (YouTube ASR, YouTube uploader, an unsure Whisper word) and "Keep".
   Those are the item's own words. Clip it's route (step 4) does not exist
-  yet, the harness states stub the answer rather than call
-  `findGraphics`, and no real model's answer has gone through it. The
+  yet (2026-11-25: it does since step 4, §7.5's piece 4 note, but the Keep
+  wait is not tested on a card's clip), the harness states stub the
+  answer rather than call `findGraphics`, and no real model's answer has gone through it. The
   rest of the bar stands as the T3 paragraph above says (the property
   item is still not met: Find and Direct now ship through the validator,
   so the T2a paragraph's first reason, "nothing in the app ships through
@@ -23461,6 +23473,12 @@ stays here:
 | tests, the harness's cards half, census, the ten-links eval (§7.7, §7.8) | 1 |
 | **step 4** | **3.5** |
 
+(2026-11-25: built 2026-11-23 to 25 in five pieces, `e354cd8` … `d6000ed`,
+each piece's Built note under §7.3, §7.4, §7.5 and §7.7. Two things above
+did not hold: steps 3–5 were NOT already on M0's path, so step 4 wired them
+for a card's clip only, and the three cards are stacked, not tall cards side
+by side; §7.5's piece 4 note lists every departure.)
+
 ### 7.1 Metadata and the transcript from a link — measured with yt-dlp 2026.08.19
 
 Built in M0 (§3b.1); Best clips reads what M0 fetched.
@@ -23582,6 +23600,52 @@ export function windowsFor(t: Transcript, targetMs: number, tolerance = 0.2): Cl
 - **No time from the model.** The model picks ids; code turns ids into ms
   (`DIRECTOR.md` §1).
 
+> **Built 2026-11-23 (piece 1, the windows half).** `e354cd8`, then
+> `b0ab09a` after two critics (run A: an Opus 5.5 builder, two critics with
+> different lenses and a fixer per piece); held unpushed at your word ("do
+> the push after the full"), pushed with the whole step as `d6000ed` on
+> 2026-11-25. Described from the code at `d6000ed`.
+> - **`src/shared/bestclips/windows.ts`** (new, pure): `CAP_WORDS` 30,
+>   `CAP_MS` 15_000, `DEFAULT_TOLERANCE` 0.2, `PUNCTUATED_SHARE` 0.2,
+>   `SHORTEST_TARGET_MS` 60_000; `ClipWindow` `{ id, segFrom, segTo,
+>   startMs, endMs, words }`; `clipSegments(t)` (= `capSegments(t, 30,
+>   15000)`), `segmentEndsSentence`, `segmentsPunctuated`, `wordPositions`,
+>   `lengthBand(targetMs, tolerance)` (`{ lo: target × (1 − tol), hi:
+>   target × (1 + tol) }`), `windowsFor(t, targetMs, tolerance = 0.2)`,
+>   `windowsOver(segs, positions, targetMs, tolerance)` (the same over
+>   segments already capped) and `shortfallNote(t, targetMs, found)`.
+>   `src/shared/transcript.ts` now exports `endsSentence` (a one-line change,
+>   no behaviour change), so a segment's end is judged by the segmenter's own
+>   rule: the danda, `…`, abbreviations and initials alike.
+> - **The rule as built.** A window starts at a capped segment's start and
+>   ends at a capped segment's end; its length (first segment's start to last
+>   segment's end) must fall inside `lengthBand`, and a start with no end
+>   inside the band gives NO window (the nearest end outside it is not
+>   taken: a single segment longer than the upper bound starts none, and a
+>   talk shorter than the lower bound has none). **In a punctuated transcript
+>   (at least `PUNCTUATED_SHARE` of its capped segments end on a sentence
+>   mark) a window may start only on the first segment or on one whose
+>   previous segment ends a sentence** (`b0ab09a`: the cap splits a long
+>   sentence, and a piece after the first starts mid-sentence); an
+>   unpunctuated transcript keeps every segment start. Of the ends in the
+>   band: one on a sentence mark beats any without, then the one nearest the
+>   target, then the earlier. Stride one segment; ids `w1`… in start order;
+>   `words` counted by array position (`wordPositions`), so a hand edit's
+>   gaps in `Word.index` do not change it. Nothing reads a locale, the clock
+>   or a random source.
+> - **`shortfallNote`**, the plain line when there are fewer than three
+>   (`found` is the prefilter's count, at most 3): "This video's transcript
+>   has no words to pick a clip from."; "The talk here runs about <N s or N
+>   min>, shorter than the <N min> asked for." then "1 min is the shortest
+>   length there is." at 1 min, else "Try a shorter length." (a talk under a
+>   minute in whole seconds, at least 1 s; longer in half minutes); "No
+>   stretch of about <N min> here starts and ends at a break in the talk.
+>   Try another length."; "Only one stretch of about <N min> fits here
+>   without repeating another." / "Only <K> stretches of about <N min> fit
+>   here without repeating each other."
+> - Tests, figures and the lists of departures and open items: §7.4's
+>   piece 1 note below, which covers both halves of the piece.
+
 ### 7.4 Scoring — signals, then the model
 
 **Signals**, `bestclips/signals.ts`, pure, always computed. Each gives its
@@ -23625,6 +23689,296 @@ shown on each card.
 
 The files are `bestclips/{schema,prompt,validate,run}.ts`, with `run.ts`
 shared with the eval, as the Director's is.
+
+> **Built 2026-11-23 (piece 1, the signals half: the six signals, the
+> prefilter, the condensed text and the no-model three).** `e354cd8`, then
+> `b0ab09a` (§7.3's note). Described from the code at `d6000ed`.
+> - **`src/shared/bestclips/signals.ts`** (new, pure): `SignalName` (`'heat'
+>   | 'density' | 'ending' | 'opening' | 'hook' | 'quiet'`), `SIGNAL_ORDER`
+>   in that order, `SIGNAL_WEIGHTS` `{ heat 3, density 1.5, ending 1,
+>   opening 1, hook 1, quiet 1.5 }`; `ENGLISH_MIN_SHARE` 0.01,
+>   `ENGLISH_MIN_COUNT` 3, `CONNECTIVES` (and, so, but, or, because),
+>   `ADDRESS` (you, you're, your, yours, you've, you'll, you'd, yourself),
+>   `QUIET_GAP_MS` 2000, `QUIET_ZERO_SHARE` 0.5, `HEAT_MIN_COVER` 0.5,
+>   `HEAT_FLAT_SPREAD` 0.05, `MOST_REPLAYED`, `TALKING_THROUGH`,
+>   `FALLBACK_WHY`, `MAX_CANDIDATES` 24, `MAX_OVERLAP` 0.5,
+>   `CONDENSED_MAX_CHARS` 240, `TITLE_MAX_GRAPHEMES` 40, and
+>   `PUNCTUATED_SHARE` re-exported; the types `Signal` (`{ value, reason,
+>   standout }`), `Signals`, `TranscriptTraits`, `ScoredWindow`,
+>   `ClipCandidate`, `Candidates`, `SignalsPick`, `Sentence`; `bareWord`,
+>   `transcriptTraits`, `windowText(t, window)` (the window's whole text, for
+>   piece 2's grounding), `heatOver`, `scoreOf`, `strongestReason`,
+>   `scoreWindows`, `overlapShare`, `prefilter`, `graphemes` (`Intl.Segmenter`
+>   with the fixed locale `'und'`, code points without it), `cutText`,
+>   `titleOf`, `condense`, `candidatesFor(t, targetMs, heatmap, max = 24)`
+>   (the one entry point) and `signalsPicks`.
+> - **Which signals apply is decided once per transcript**
+>   (`transcriptTraits`): punctuated as §7.3's note says; "has English" when
+>   at least 3 words and at least 1 % of the words are a connective or an
+>   address word (lower-cased locale-free, curly apostrophe made straight,
+>   outer punctuation stripped). **A signal the input or the script lacks is
+>   ABSENT (null), not zero**, and a window's score is **the weighted mean
+>   over the PRESENT signals only** (`scoreOf`: an absent signal's weight is
+>   in neither the sum nor the divisor). The one per-window absence is the
+>   heatmap, null for a window its buckets cover less than `HEAT_MIN_COVER`
+>   of.
+> - **The six, as built.** *heat*: the time-weighted mean of the bucket
+>   values (each clamped to 0..1) over the window; absent with no heatmap.
+>   Its line: "replayed about as much as the rest" when every window's heat
+>   lies within `HEAT_FLAT_SPREAD`; "the most replayed part" for ONE window,
+>   the best-scoring at the top heat, ties to the earlier (the plateau rule,
+>   `b0ab09a`; the others read "replayed more than most of the video");
+>   above the median "replayed more than most of the video"; else "replayed
+>   less than other parts". *density*: words a minute against the MEDIAN
+>   WINDOW's at the same length, value = clamp(ratio − 0.5, 0, 1); "dense:
+>   more words a minute than most of the video" at a ratio of 1.15 or more,
+>   "slower than most of the video" at 0.85 or less, else "talked at the
+>   usual pace". *ending* (punctuated only): 1 on a sentence mark, "ends on a
+>   question", "ends on a full stop" or "ends at the end of a sentence"; 0,
+>   "stops in the middle of a sentence". *opening* (English only): 0 on a
+>   connective, `starts on "<word>", in the middle of a thought`; else 1,
+>   "starts at the beginning of a thought". *hook* (always present), over
+>   the window's first sentence: a question (punctuated only) "opens with a
+>   question"; any `\p{Nd}` digit "has a number in its first sentence";
+>   direct address (English only) "speaks straight to the viewer from the
+>   start"; else 0, "no hook in the first sentence". No rule reads a capital.
+>   *quiet* (always present): the share of the window in gaps of 2 s or more
+>   between words (json3's `[Music]` tags are dropped at parse, so music is a
+>   gap), value = clamp(1 − share / 0.5, 0, 1); "has long stretches with no
+>   talking" at a share of 0.15 or more, else "talking nearly all the way
+>   through".
+> - **The why (`strongestReason`, `b0ab09a`)**: of the lines that STAND
+>   OUT (`standout`: the most replayed, replayed more, dense, any ending on a
+>   mark, the three hooks) with a value above 0, the largest weight × value,
+>   ties to the earlier in `SIGNAL_ORDER`; reason lines are never combined.
+>   When none stands out: "talking nearly all the way through" when that is
+>   quiet's line, else "one of the strongest stretches in this video".
+> - **The prefilter** (`prefilter`): best score first, ties by the earlier
+>   start then the input order; at most 24; a window is kept only if it
+>   shares no more than half of the SHORTER window's time with every one
+>   kept before it (exactly half is allowed).
+> - **The condensed text** (`condense`, at most 240 UTF-16 characters, 80
+>   tokens at the low end, 3.0, of the measured 3.0–3.55): the first two
+>   sentences, then " … " and the densest of the REST (words a second, a
+>   sentence under a second counted as a second); the budget shared out
+>   evenly in order, what one part leaves passed to the next. A punctuated
+>   window's sentences are its words split after each sentence mark; an
+>   unpunctuated window's are its capped segments.
+> - **The title** (`titleOf`): the first sentence cut to 40 graphemes,
+>   `…` counted inside, at the last space that fits; only a first word
+>   longer than the whole budget is cut, and then between graphemes (an
+>   accepted exception to "never mid-word", kept so a spaceless script's
+>   window has text for the model at all).
+> - **The no-model three** (`signalsPicks`): the top three candidates, each
+>   with its title and its why, and `candidatesFor`'s note.
+> - **Tests**: `tests/bestClips.test.ts`, 36 cases at `d6000ed` (19 by
+>   `e354cd8`, 17 more by `b0ab09a`): the window property over random
+>   transcripts (even seeds with `Word.index` in steps of 3) with the band
+>   on literal numbers (`lengthBand(60_000)` ≈ 48 000–72 000, a one-word
+>   segment ending at 47 s or 73 s giving no window, at 48 s or 72 s one),
+>   the sentence-start rule over 45-word sentences the cap splits, every
+>   signal's rule and line, both trait thresholds at their edges, absent
+>   against flat heat (the other five deep-equal, the same prefilter order)
+>   and a window outside a half-video heatmap scored exactly the mean of its
+>   present signals, the plateau, every shortfall branch, the why on a
+>   caseless talk under varied then flat heat, and a timed hour. Mutations:
+>   61 by the fixer's script, the builder's 26 (two re-anchored) and 35 of
+>   its own, each anchor matched once, each failing, each restored and
+>   checked with `cmp` (the script is kept outside the repo). The fixer's
+>   timed hours: a punctuated 10,800 words, 986 segments, 3,807 windows over
+>   the four lengths in about 253–275 ms; an unpunctuated caseless 10,800
+>   words in 40–60-word lines, 434 segments, 1,677 windows, 95 ms; the bound
+>   1,500 ms. Suite, the fixer's readings: 6053 tests passed after
+>   `e354cd8`, 6070 after `b0ab09a`.
+> - **Departures from the plan's words**: (1) §7.3's "sentence boundaries
+>   only" is a requirement for a window's START in a punctuated transcript
+>   and a preference for its END, as §7.3 says of ends; (2) words and
+>   density are counted by word position, not by `wordsInRange` per window;
+>   (3) density is measured against the median WINDOW's words a minute, not
+>   "the video's median"; (4) two connectives added to the plan's three ("or",
+>   "because"); (5) the why is one line, never the plan's joined "dense, ends
+>   on a full stop", and only a line that stands out may be it; (6) the
+>   number hook's line reads "has a number in its first sentence", since it
+>   matches anywhere in that sentence; (7) the condensed text's densest
+>   sentence is the densest of those after the first two; (8) the title's
+>   over-long first word, cut between graphemes.
+> - **Left open**: the weights, the thresholds and the standout split are
+>   the builders' choices, unmeasured against a real talk (the ten links,
+>   §7.8, judge them); there is no connective or address list for Hindi or
+>   Telugu, so those talks have no opening signal and no address hook (the
+>   owner's to give); in a code-mixed video that clears the English gate,
+>   other-script windows get opening 1 and no address hook (unmeasured,
+>   likely rare: YouTube's Hindi ASR writes English in Devanagari); a
+>   partial heatmap favours its uncovered tail (it follows from "absent, not
+>   zero"; judged with `HEAT_MIN_COVER` at the exit); the sentence-start
+>   rule leans on `PUNCTUATED_SHARE`, and whether a sparsely punctuated
+>   Hindi track just above it keeps enough windows is unmeasured; the 240
+>   characters' tokens in Devanagari and Telugu on Gemma 4 E2B are
+>   unmeasured; Georgian Mkhedruli, used for the "caseless" fixtures, has
+>   Mtavruli capitals (left: no rule reads case).
+
+> **Built 2026-11-23 (piece 2: the model's pick of three, its fallback,
+> the eval block).** `a1085a0`, then `6d46ee7` after two critics, then
+> `cf35644` (the session's: six lines of `tests/bestClipsModel.test.ts`
+> held literal invisible characters and Georgian runs where the fixer's
+> report said escapes; rewritten as `\u` escapes and mutation-checked by
+> removing `validate.ts`' `\p{Cf}` strip, which fails the empty-title
+> case). Described from the code at `d6000ed`.
+> - **`src/shared/bestclips/schema.ts`**: `BEST_CLIPS_PASS` `'bestclips@1'`,
+>   `PICKS` 3, `TITLE_KEPT_GRAPHEMES` 60, `WHY_KEPT_GRAPHEMES` 120,
+>   `DECODE_POINTS_PER_GRAPHEME` 3, `BEST_CLIPS_DECODE_CHARS` `{ reasoning
+>   300 (MAX_REASONING_CHARS), title 180, why 360 }` (code points: an Indic
+>   grapheme is often two or three, so a 60-grapheme Telugu title is never
+>   cut by the grammar), `picksWanted(n)` = min(3, n), `ClipPickAnswer`,
+>   `BestClipsAnswer`, `bestClipsSchema(ids, { constrained })`: flat,
+>   `{ reasoning, picks: [{ id, title, why }] }`, every object closed,
+>   `reasoning` first; constrained (the decoder's) with `id` an enum of the
+>   ids, the decode lengths and `minItems` = `maxItems` = `picksWanted`;
+>   unconstrained (the validator's shape check) with none of them. With no
+>   candidate the constrained schema throws and nothing is asked.
+> - **`src/shared/bestclips/prompt.ts`**: `NUM_CTX` 8192 (pinned against
+>   `provider.ts`' `num_ctx` by a test), `PROMPT_BUDGET_TOKENS` 4096,
+>   `CHARS_PER_TOKEN` 3.0, `promptTokensAtMost`, `BEST_CLIPS_SYSTEM` (one
+>   constant; since `6d46ee7` it tells the model to write the title "in
+>   sentence case from the candidate's own words: start with a word the
+>   candidate says, and capitalise only a name the candidate says", and the
+>   why "In English, start it with "This" or "It"."), `pickLine`,
+>   `bestClipsPrompt(candidates, lang)` (the CANDIDATES table, one row an
+>   id and `JSON.stringify(condensed)`, no time, length or score, **best
+>   first, in the prefilter's order**; the pick line; `graphicsLanguageLine`
+>   LAST), `maxTokensForBestClips(wanted)` = 200 + 250 × wanted (950 for
+>   three), `requestTokensAtMost`. **The budget, as the file's comment
+>   states it**: at 3.0 characters a token, 24 candidates of 240 characters
+>   and their framing are 2,071 tokens, the system text 332, the answer 950:
+>   3,353 in all (measured 2026-11-23 after the critics' rule lines, on 24
+>   rows of 240 characters and the Telugu language line), inside 4,096, and
+>   with the thinking retry (`THINKING_EXTRA_TOKENS`, 800) inside 8,192; at
+>   one character a token the prompts are 7,209 and the answer 950, 8,159,
+>   inside 8,192 with 33 to spare but not the retry's; every line added to
+>   the system text comes out of those 33.
+> - **`src/shared/bestclips/validate.ts`**: `ungroundedIn(text, said, mode)`,
+>   `validateBestClips(answer, c, t)`, `ValidPick` (with `titleFrom`,
+>   `whyFrom`, `titleFallback` and `whyFallback`, each `'empty' |
+>   'ungrounded' | null`), `BestClipsVerdict`. **In order**: the answer must
+>   have the unconstrained schema's shape, else it is REJECTED whole (an
+>   answer carrying `startMs`, `endMs` or any extra key included); then per
+>   pick, an id not on the menu is dropped, an id already kept is dropped, a
+>   pick sharing more than half of the shorter with an earlier kept pick is
+>   dropped (it cannot fire on `candidatesFor`'s menu; kept for any other
+>   menu), picks beyond `picksWanted` are dropped. A kept pick's title is
+>   cleaned (`\p{Cf}` removed except U+200C and U+200D, white space
+>   collapsed), cut to 60 graphemes, and falls back to the candidate's
+>   no-model title when it is EMPTY (no letter and no digit left) or not
+>   grounded in `windowText`; the why likewise, cut to 120, falling back to
+>   the candidate's signals line. **Grounding** (`ungroundedIn`): every
+>   number `numberSpans` reads must be said as the same value, and the same
+>   unit and currency unless written bare; a word with a digit (`\p{Nd}`,
+>   `\p{Nl}`, `\p{No}`) not read as one number must be said token for token;
+>   a quantity word (`claims.ts`' new `isQuantityWord`: number words,
+>   multipliers, scale words, fractions) outside a grounded number must be
+>   said as itself or as the same value ("nine" by a "9"); a word with a
+>   capital in a Latin, Greek, Cyrillic or Armenian letter, **the first word
+>   included**, must be said, case-blind after `claimTokens`, a possessive
+>   "'s" allowed, except, in a why, a function word (`FUNCTION_WORDS_EN`)
+>   opening one of its sentences; in a title, a word with a letter outside
+>   those scripts must be said word for word, and over a window with no
+>   capitalising letter at all every lettered title word is (a Hinglish
+>   window gets both rules word by word); words of a grounded number are not
+>   checked again.
+> - **`src/shared/bestclips/run.ts`**: `BestClipsAsk` (GraphicsAsk's shape
+>   without the menu), `BestClipCard` `{ windowId, startMs, endMs, words,
+>   title, why, scoredBy: 'model' | 'signals', note? }`, `BestClipsResult`
+>   `{ targetMs, cards, note, modelNote, model, askNotes, problems,
+>   fallback, candidates }`, `bestClipsRequest(candidates, lang)` and
+>   `bestClips(t, meta, targetMs, ask?, { timeoutMs? })`, which never
+>   throws for a failed ask. **One comparative ask**; the language is
+>   `meta.language`, else `t.language`, else none. **Time only from the
+>   windows**: a card's `startMs`, `endMs` and `words` are the window's the
+>   id names. **The fallbacks**, each the signals' three with a fixed line,
+>   `model` null and a `fallback` code: no candidate, no ask and no cards,
+>   piece 1's note, `modelNote` null; no ask, "Picked without a model, from
+>   the talk's own signals." (`NO_MODEL_NOTE`); an ask that throws, "The
+>   model did not answer, so these are picked from the talk's own signals."
+>   (`MODEL_FAILED_NOTE`); no answer within `timeoutMs` (a race, its timer
+>   cleared in `finally`; no default here), "The model took too long, so
+>   these are picked from the talk's own signals." (`MODEL_SLOW_NOTE`); an
+>   answer that is not JSON or not the shape, "The model's answer could not
+>   be used, so these are picked from the talk's own signals."
+>   (`MODEL_UNUSABLE_NOTE`). Fewer usable picks than asked are filled from
+>   the candidates best first, none sharing more than half with a kept pick,
+>   each `scoredBy: 'signals'` with "Picked from the talk's own signals: the
+>   model's pick in its place could not be used." (`FILLED_NOTE`), and the
+>   model note `filledNote(k, n)`: "The model gave 1 usable pick of 3; the
+>   rest are picked from the talk's own signals.", or with none "None of the
+>   model's picks could be used, so these are picked from the talk's own
+>   signals." A model card whose title or why fell back keeps `scoredBy:
+>   'model'` with "The title is the clip's first sentence: the model's title
+>   said something the clip does not." (`TITLE_FALLBACK_NOTE`), "The title
+>   is the clip's first sentence: the model gave no title."
+>   (`TITLE_EMPTY_NOTE`), "The reason is the talk's own signal: the model's
+>   reason said something the clip does not." (`WHY_FALLBACK_NOTE`) or "The
+>   reason is the talk's own signal: the model gave no reason."
+>   (`WHY_EMPTY_NOTE`), two joined by a space. **The cards are in time
+>   order** (start, then end, then id), model and filled alike. **No error
+>   text is kept** anywhere in the result; `problems` and `askNotes` may
+>   quote the model and are for the eval only.
+> - **Tests**: `tests/bestClipsModel.test.ts`, 35 cases at `d6000ed` (25 by
+>   `a1085a0`, 10 by `6d46ee7`); with piece 1's file, 71, green with
+>   typecheck at `cf35644` (the session's reading). Mutations: 33 by the
+>   builder (34 runs), 15 by the fixer, one by the session; each failed and
+>   was restored. Suite, the agents' readings: 6095 after `a1085a0`, 6105
+>   after `6d46ee7`; the session's at `6d46ee7`: typecheck, suite and build
+>   exit 0, Test Files 371 passed, 5 skipped; Tests 6105 passed, 66 skipped.
+> - **The eval block**: `tests/eval/bestClipsEval.ts` (the request a
+>   fixture sends and its saved answer settled through the app's own
+>   `bestClips` and `askStructured`), `tests/eval/bestClipsFixtures.ts`
+>   (three made up in code: `bc-en-heat` punctuated with a heatmap,
+>   `bc-en-plain` unpunctuated with none at 2 min, `bc-caseless`), and the
+>   `FORGE_EVAL_BESTCLIPS` block in `tests/eval/director.eval.test.ts`. It
+>   writes `results-bestclips.json` in its run folder, never into
+>   `eval/runs/`. Three steps: (1) `FORGE_EVAL=openai
+>   FORGE_EVAL_MODEL=google/gemma-4-e2b FORGE_EVAL_BESTCLIPS=on
+>   FORGE_EVAL_STEP=prepare FORGE_EVAL_RUN=bestclips-<name> npm run eval --
+>   -t "best clips"` writes the requests; (2) on the harness page,
+>   `window.__forgeEvalRelay('bestclips-<name>')`; (3) the same command with
+>   `FORGE_EVAL_STEP=score`. A prose answer adds its retry: relay and score
+>   again. **No real model has ever answered it**: run `bestclips-a1`'s
+>   requests were prepared and relayed on 2026-11-23 and again on
+>   2026-11-25, and every request came back status 500 within 2 to 31 ms
+>   with an empty error, LM Studio not running on the Mac. So the parse,
+>   prose and unusable rates, the title and why fallback rates, the prompt
+>   tokens against the 3,353, the answer room and Indic token density are
+>   all unmeasured.
+> - **Departures from the plan's words**: (1) with fewer than three
+>   candidates the schema asks for exactly that many (`minItems` =
+>   `maxItems` = `picksWanted`), not always 3; (2) the validator checks the
+>   unconstrained shape, so an off-menu id, a repeat, a fourth pick or a
+>   long title is handled one pick at a time, and an answer with extra
+>   fields is rejected whole; (3) "every capitalised token" is applied by
+>   script: scripts without capitals are held word for word; (4) the why's
+>   numbers, quantity words and capitals are held to the window too, its
+>   other words not; (5) the candidates are listed best first, not by time;
+>   (6) a model card whose title or why fell back keeps `scoredBy: 'model'`
+>   with a note; (7) no title on any card is drawn into a frame, as §7.4
+>   says.
+> - **Declined**: an English list to exempt a capitalised first title word
+>   the window says only in lower case ("Why", "How"; the prompt's rule
+>   addresses it, and the eval's title fallbacks judge it); exempting a bare
+>   pronoun "one" from the number rule; an `AbortSignal` on `BestClipsAsk`
+>   (a shape change; still open after piece 3, below); a longest-row test
+>   with quotes (the test's row is 240 plain "x").
+> - **Left open**: everything of the model path on a real model (above);
+>   the 33 tokens spare at one character a token: any system line added, or
+>   a condensed row full of quotes or backslashes, goes over, and if Indic is
+>   denser than about 2 characters a token, `CONDENSED_MAX_CHARS` or
+>   `MAX_CANDIDATES` must vary by script; the stricter grounding raises
+>   fallback rates (a "Why …" title, a why opening "Funny …", a pronoun "one"
+>   as a number); over a mixed window a lower-case Latin word is unchecked
+>   (romanised Hindi, a name in lower case), and one Latin letter ("OK" in a
+>   Telugu talk) makes a window mixed; a caseless-script why can name
+>   anyone; the timeout races the ask but never cancels it; the weights,
+>   `maxTokensForBestClips`, the decode limits, best-first listing and the
+>   timeout's value are unmeasured.
 
 ### 7.5 Three cards, and Clip it
 
@@ -23695,7 +24049,360 @@ transcribed by path (the reel's `lyrics:` precedent, `store.ts:2112`).
 Without the Python helper, Best clips adds: "This video has no captions;
 Best clips needs the AI helper to listen to it." Census rows: "Start a new
 9:16 project for this clip", "Add it to this project" ("Listen to it" is
-M0's).
+M0's). (2026-11-25: Listen to it is still not built, so the line as built is
+another, with the helper or without it: piece 3's note below.)
+
+> **Built 2026-11-23 (piece 3: Analyse and the three cards in the URL
+> tile).** `46f21b6`, then `dc489d4` after two critics (run B, the same
+> four agents a piece; pushed with the step as `d6000ed`). Described from
+> the code at `d6000ed`, where piece 5's fixer changed one line (below).
+> - **`src/shared/bestclips/session.ts`** (new, pure): `BEST_CLIPS_LENGTHS`
+>   (60_000 "1 min", 120_000 "2 min", 180_000 "3 min", 240_000 "4 min"),
+>   `DEFAULT_BEST_CLIPS_MS` 60_000, **`BEST_CLIPS_TIMEOUT_MS` 180_000** (the
+>   session's choice: room for a CPU model's first load and a 3.3k-token
+>   prompt, not so long a hung server holds the panel; unmeasured),
+>   `SCORED_BY_LABEL` (`model` "Picked by the model", `signals` "Picked from
+>   the talk's own signals"), the fixed lines `BEST_CLIPS_CANNOT_LISTEN`
+>   "This video has no captions, and Best clips cannot listen to a video
+>   yet.", `BEST_CLIPS_NEEDS_TRANSCRIPT` "Best clips reads the video’s
+>   captions: press Get transcript first.", `BEST_CLIPS_RUNNING` "Looking
+>   for the best stretches…", `BEST_CLIPS_RUNNING_ELSEWHERE` "Best clips is
+>   still looking at another video.", `BEST_CLIPS_BUSY` "Best clips is
+>   already looking: one Analyse at a time." and `BEST_CLIPS_FAILED` "Best
+>   clips could not finish. Press Analyse to try again."; the types
+>   `BestClipsAsked` `{ linkKey, targetMs, transcript }`, `BestClipsState`
+>   `{ targetMs, running: BestClipsAsked | null, last: (BestClipsAsked & {
+>   result }) | null }` and `BestClipsNow`; `initialBestClips`,
+>   `bestClipsBelongs` (the same link, the same length, and the SAME
+>   transcript object: Get transcript always builds a new one, so a
+>   re-fetch is a change), `shownBestClips`, `runningHere` (link and
+>   transcript, any length), `analyseRefusal` (`'running'`, then
+>   `'no-transcript'`), `withLength` (a different length clears `last`; the
+>   one shown keeps it), `modelReady(status, choice)` (main's own
+>   `chooseProvider`, so "no model" is exactly when `complete` would throw
+>   "No model available"), `bestClipsAskOver(complete)` (`askStructured`
+>   over the bridge's complete, shaped as the graphics ask: a non-JSON
+>   answer becomes `{ error }`, a complete that THROWS is left to throw, so
+>   `bestClips` says "did not answer" and keeps no text), `cardRange`
+>   (`formatMark(start) + ' – ' + formatMark(end)`, the tile's own marks)
+>   and `cardWords` ("N words", "1 word").
+> - **`src/renderer/src/components/tools/BestClips.tsx`** (new), mounted
+>   in `IngestPanel.tsx` right after `<LinkTranscript />` (the link's rows
+>   and Clip download) and above the From and To fields: it reads what Get
+>   transcript fetched, and is on screen whenever the box holds a parseable
+>   link, so it can be found before there are words. "Best clips", the four
+>   lengths in a `role="group"` `aria-label="Clip length"` (`aria-pressed`
+>   on the picked one, all four greyed while any Analyse runs), and
+>   **Analyse**, titled `ANALYSE_TITLE` "Find the stretches of this video
+>   most worth posting, from its captions — nothing is downloaded", greyed
+>   while one runs or with no words, a spinner in it while one runs for this
+>   link. **Analyse fetches nothing**: with no words it is greyed under
+>   `BEST_CLIPS_NEEDS_TRANSCRIPT` (not while the captions are being
+>   fetched); a video with no caption track reads
+>   `BEST_CLIPS_CANNOT_LISTEN`. While a run goes on, `BEST_CLIPS_RUNNING`
+>   for this link and these captions, else `BEST_CLIPS_RUNNING_ELSEWHERE`
+>   with no spinner. **The cards are stacked**, not side by side as sheet 27
+>   drew them (three across the 240 px column would leave about 68 px each):
+>   each a 48 px wide 9:16 face (`self-start`, so a tall text column cannot
+>   stretch it) with the stretch's length (`formatMark(end − start)`) in
+>   place of a thumbnail, and beside it the title and the why (wrapping
+>   anywhere, never cut, clamped or truncated), the range and the word
+>   count, the `SCORED_BY_LABEL` line and the card's note; under the cards
+>   the result's `note` and `modelNote`. The pointer, the running line and
+>   the result sit in `aria-live="polite"` regions. **Never on screen**:
+>   `problems`, `askNotes` or any error's text.
+> - **The store** (`store.ts`): `bestClips` (session state, like
+>   `urlSource`: newProject and loadProject leave it alone; not saved),
+>   `setBestClipsLength` (`withLength`) and `analyseBestClips`. **Its
+>   order**: refused while one runs, with `BEST_CLIPS_BUSY` as a notice; no
+>   words, nothing (the panel points); `running` set synchronously before
+>   the first await, so **one Analyse at a time** holds from the press
+>   (§12.1: two prompts on one local model); **one deadline** of
+>   `BEST_CLIPS_TIMEOUT_MS` for the whole press (`dc489d4`): `directorStatus`
+>   and `directorSettings` race it, `modelReady` decides whether to ask (a
+>   status that cannot be read asks anyway), a status check that runs out
+>   the clock sends no ask (the result is `MODEL_SLOW_NOTE`), and the ask
+>   gets what is left; **the no-model test** asks nothing and shows
+>   `NO_MODEL_NOTE`; **the stale-answer rule**: the answer is kept only if
+>   its link key, its length and its transcript object are still the
+>   store's `urlSource`'s and the picked length (typing in the box does not
+>   drop it; Get transcript of another link, or of the same one again,
+>   does), else dropped without a word; anything thrown outside `bestClips`
+>   is the fixed `BEST_CLIPS_FAILED`, never an error's text; `running` is
+>   cleared in `finally`. A late answer after the timeout is ignored by
+>   `bestClips`' own race.
+> - **Tests** (counts at `dc489d4`): `tests/bestClipsSession.test.ts` 16,
+>   `tests/renderer/bestClipsStore.test.ts` 16 (among them a double press
+>   while `directorStatus` is held, the outer catch with an address and an
+>   `sk-` key, `loadProject` leaving the cards, a status check cut by the
+>   deadline), `tests/renderer/bestClipsPanel.test.tsx` 17 (among them a
+>   pairing test that parses `LinkTranscript.tsx` and, while its Listen to it
+>   is a bare `disabled`, forbids the pointer naming it). Mutations: 23 by
+>   the builder (21 behaviour, two census source checks), 10 by the fixer,
+>   each anchor matched once, each failing, each restored and checked with
+>   `cmp`. Suite, the agents' readings: 6105 → 6147 tests (files 371 → 374)
+>   → 6154.
+> - **Census**: 13 rows, 15 carriers: in `link-transcript` "Best clips",
+>   "1 min", "2 min", "3 min", "4 min", "Analyse" and the Analyse title; in
+>   `link-failed` the Get transcript pointer; in `link-no-captions` and
+>   `link-no-captions-helper` the cannot-listen line; two new recipes,
+>   `link-best-clips-running` (a run held in flight through the store)
+>   with "Looking for the best stretches…", and `link-best-clips` (Analyse
+>   at 1 min with no model on the bridge's twelve-row talk; it throws
+>   unless 3 cards) with "Picked from the talk's own signals" ×3 and "Picked
+>   without a model, from the talk's own signals."
+> - **Changed since `dc489d4`**: `d6000ed` removed the no-helper line
+>   (`BEST_CLIPS_NO_CAPTIONS`, the plan's "…needs the AI helper to listen to
+>   it."): installing the helper would only have led to the cannot-listen
+>   line, Listen to it being greyed, so a captionless video reads
+>   `BEST_CLIPS_CANNOT_LISTEN` with the helper or without it, and the panel
+>   no longer reads `transcribeGate`, `helperStatus` or `speechModel`.
+
+> **Built 2026-11-23/24 (piece 4: Clip it from a card, step 0's question,
+> steps 3 to 5 after it).** `4d898b0`, then `08875ea` after two critics.
+> Described from the code at `d6000ed`, where piece 5's fixer changed step
+> 5's line (below).
+> - **`src/shared/bestclips/cardClip.ts`** (new, pure). `cardRun(t,
+>   window)`: the window's `segFrom` and `segTo` over the same
+>   `clipSegments`, as array positions, the first segment's first word to
+>   the last segment's last (M0's runs are positions too, and the download's
+>   range is `runRange(t, run)`, as M0's is). **Step 0,
+>   `cardClipPlan(project, vertical, choice, pendingHere = 0)`**, returns
+>   `{ kind: 'ask' }` or `{ kind: 'go', newProject, aspect, reframe,
+>   captions, shape }`: Make it vertical off, go, no aspect, reframe only on
+>   a portrait canvas, captions only with no clip on the timeline, shape
+>   `'kept-off'`; on, with no clip on the timeline AND no card download on
+>   its way into this project, go, `'9:16'` unless already 9:16
+>   (`isNineBySixteen`), reframe, captions; else ask, and `'new'` gives a
+>   new project, reframe and captions, `'add'` the aspect unchanged, reframe
+>   only on a portrait canvas (`isPortrait`), captions only with no clip.
+>   Any clip on the timeline, sound included, is an edit. `unsavedWork({
+>   dirty, projectPath })` = dirty or no path; `cardDownloadsIn(records,
+>   projectId)`. **The on-screen words**: `MAKE_IT_VERTICAL` "Make it
+>   vertical", its title "Clip it makes each card a 9:16 short: on an empty
+>   timeline it sets this project to 9:16; with clips already there, it
+>   asks first. Off, the clip is added as it is."; `CLIP_IT_CARD` "Clip it",
+>   its title "Download just this stretch and put it on the timeline, with
+>   its words and the link’s credit"; `QUESTION_HEAD` "This project already
+>   has clips on its timeline."; `START_NEW_PROJECT` "Start a new 9:16
+>   project for this clip" over `START_NEW_SAVES` "Saves this project first,
+>   then opens a new 9:16 project with just this clip.", `START_NEW_SAVED`
+>   "This project is saved and stays as it is; a new 9:16 project opens with
+>   just this clip." or `START_NEW_WAITS` "Waits until the clip downloading
+>   now has landed in this project."; `ADD_TO_PROJECT` "Add it to this
+>   project" over `ADD_PORTRAIT` "Adds it to this timeline and follows
+>   faces. The project keeps its shape." or `ADD_KEEPS_SHAPE` "Adds it to
+>   this timeline as it is. The project keeps its shape, so nothing is
+>   reframed."; `NOT_NOW` "Not now"; the notices `NOT_SAVED_NOTE` "This
+>   project was not saved, so no new project was started.",
+>   `SAVE_FAILED_NOTE` "This project could not be saved, so no new project
+>   was started.", `CARD_GONE_NOTE` "Those cards are gone: press Analyse
+>   again." and `QUESTION_OPEN_NOTE` "Answer the question on the card
+>   first." **The record**, `CardClipRecord` `{ key, windowId, linkKey,
+>   startMs, endMs, jobId, clipId, projectId, reframe, captions,
+>   reframeJobId, steps }`, keyed by `cardKey` (`<linkKey>|<startMs>-<endMs>`),
+>   its steps always `download`, `shape`, `reframe`, `captions`, `graphics`,
+>   each `{ name, state: 'waiting' | 'running' | 'done' | 'skipped' |
+>   'failed', text }` with the text always one of `STEP_TEXT`; `STEP_LABEL`
+>   "Download", "Shape", "Follow the subject", "Captions", "Graphics";
+>   `newCardRecord`, `withStep`, `notLanded` (download failed, every waiting
+>   step "skipped: the clip did not land."), `stepOf`, `stepEnded`,
+>   `cardClipGone` and `cardClippable(record, clips)` (never clipped, its
+>   download failed, or its landed clip no longer on this timeline),
+>   `captionsStep`, and the order rules `graphicsMayStart(record, world)`
+>   (the clip landed, graphics still waiting, this clip's follow and
+>   captions steps ended, NO reframe analysis running or being started for
+>   any clip, no Find graphics out) and `reframeMayStart(world)` (no
+>   graphics run out).
+> - **The store**: `bestClipsVertical` (on by default), `setBestClipsVertical`,
+>   `bestClipsQuestion` (`{ key, card, linkKey, transcript }`, one at a
+>   time), `bestClipsClipped`, `clipItFromCard(card)` and
+>   `answerBestClipsQuestion('new' | 'add' | null)`; all four session state,
+>   left alone by newProject and loadProject, not saved. `clipItFromCard`:
+>   a card not among those on screen says `CARD_GONE_NOTE`; a card already
+>   clipped and still on the timeline does nothing; an open question says
+>   `QUESTION_OPEN_NOTE`; a download being asked for, nothing; then step 0,
+>   and an ask opens the question on that card (every other card's Clip it
+>   greyed while it is open). Before an answer nothing is touched: no crop,
+>   aspect, playhead or undo entry. `sendCard` writes the record, asks
+>   `startIngest` for the card's range, exact, with the run's words and the
+>   link's credit (M0's path, §3b.4), and **sets 9:16 only after a job id
+>   comes back, and only on the still-empty timeline of the project it was
+>   asked in**; a refused download removes the record and changes nothing.
+>   **The download's end**: `collectIngest` calls `settleCardDownload` for
+>   a placed clip (the asset's last clip) or a download that finished under
+>   another project, `setJobs` for a failed or cancelled ingest job; it does
+>   nothing unless a card's record holds that job with its download running,
+>   so M0's Clip it and a plain Get chain nothing. Under another project
+>   the download line reads "it finished under another project, so it was
+>   not placed there." and the card offers Clip it again.
+> - **Steps 3 to 5, strictly in turn per clip** (`runCardSteps`), each its
+>   own undo step, each caught so the next still runs, each line a fixed
+>   one. **Step 3** (`cardReframeStep`) needs, in order, the clip still
+>   there ("skipped: the clip is no longer on the timeline."), the plan's
+>   reframe and a portrait canvas ("skipped: the project is not portrait, so
+>   the clip keeps its frame."), a landscape clip to follow ("skipped: the
+>   clip is not a landscape video, so there is nothing to follow."), the AI
+>   helper present ("skipped: the AI helper is not installed, so the crop is
+>   centred.") and ready ("skipped: the AI helper was still starting, so the
+>   crop is centred."); it waits while a graphics run is out ("waits for
+>   other work to finish first."), then **claims the reframe in the same
+>   synchronous turn** (`cardReframesStarting`, counted as a running reframe
+>   by `cardWorld`, held until the job ends: `08875ea`), reads "finding the
+>   faces…", and asks main whether the face finder is on disk with
+>   `faceModel({})`, which never downloads: a missing one is "skipped: the
+>   face finder is not downloaded, so the crop is centred. Follow the
+>   subject, in the Trimmer, gets it."; it waits again for a Find graphics
+>   the user pressed meanwhile, then `startReframe`, which now returns
+>   `{ kind: 'job', jobId } | { kind: 'landed' } | { kind: 'refused' }`
+>   (Reframe's other callers ignore it). **How the store learns a job
+>   ended**: `collectReframe` calls `reframeSettledAs(jobId, 'landed' |
+>   'failed' | 'elsewhere')` on every exit, a collect that throws included,
+>   and `reframeSettled(jobId)` resolves every waiter: "the crop follows the
+>   faces." (or the clip-gone line), "skipped: another project was opened
+>   before the faces were found.", or "the faces could not be found, so the
+>   crop is centred." The track's landing is its undo step. **Step 4**
+>   (`cardCaptionsStep`, `captionsStep`) needs the clip's words ("skipped:
+>   the clip landed without its words."); into a new project or onto an
+>   empty timeline it turns captions on, with Smart placement when a subject
+>   track exists, in ONE `update()` (one undo step; none when already so),
+>   reading "on." or "on, kept off the faces."; **into an existing edit it
+>   changes nothing** (`08875ea`): "already on in this project, left as they
+>   are." or "skipped: this project has captions off, and they are left
+>   off." **Step 5** (`cardGraphicsStep`) waits while `graphicsMayStart`
+>   does not hold ("waits for other work to finish first."), re-reading the
+>   rule in the very turn it calls `findGraphics(clipId)` (`08875ea`: every
+>   waiting chain is released by one store change, and only the first may
+>   go); a clip with no speech reads "skipped: the clip has no words to
+>   read."; a run is "finding graphics…", then done when `lastGraphics`
+>   moved to this clip, else "could not be found." Its undo step is
+>   `findGraphics`' own. Before graphics' turn its line reads "waits for the
+>   one before.", and "waits for the faces to be found." once a follow is
+>   claimed. **The §12.1 claim**: across every card's chain, graphics never
+>   starts while any reframe analysis is pending or being started, and no
+>   reframe starts while graphics runs; it rests on the analysis job ending
+>   only after the AI helper releases its sessions (§12.1's "As built"),
+>   which is main's order and was not measured here. **Chains are bound to
+>   their job id** (`CardChain`), so a card clipped again after an undo gets
+>   a new record the old chain never writes into.
+> - **`collectIngest` now tells projects apart by id** (`08875ea`):
+>   `PendingIngest` gains `projectId`, recorded for EVERY download, and a
+>   download is placed only if that id is the open project's (by path only
+>   for a record without one). Untitled projects all have a null path, so
+>   before this a download asked in one untitled project landed in another;
+>   now it is refused with the "different project" notice. **This changes
+>   M0's Clip it and plain Get downloads as well**, not only Best clips' (one
+>   M0 fixture, `clipItCollect`'s 'elsewhere', now sets `projectId`).
+> - **"Start a new 9:16 project for this clip"** (`answerBestClipsQuestion`):
+>   one answer at a time; greyed with `START_NEW_WAITS` while a card's clip is
+>   still downloading into this project; with unsaved work (`unsavedWork`:
+>   changed, OR never written to a file of its own, as a project recovered
+>   from autosave opens clean with no path, `08875ea`) it saves first through
+>   `window.forge.saveProject`, as Save does (`markSaved`, `rememberRecent`,
+>   `clearAutosave`); a closed dialog says `NOT_SAVED_NOTE` and keeps the
+>   question, a thrown save says `SAVE_FAILED_NOTE`, never its text; only
+>   then `newProject({ name: NEW_PROJECT_DEFAULT.name, aspect: '9:16', fps })`
+>   and the card's download. "Add it to this project" sends with the aspect
+>   unchanged. The three choices are greyed while a download is being asked
+>   for.
+> - **The panel** (`BestClips.tsx`): Make it vertical (`aria-pressed`, its
+>   title) above the cards, only with cards; Clip it at the foot of each
+>   card's text column; the question in place of the asking card's foot; a
+>   clipped card's steps (label, then line; a failed line in the theme's
+>   red) in place of Clip it, unless its clip has gone, when Clip it is back.
+> - **Tests** (counts at `d6000ed`): `tests/bestClipsCardClip.test.ts` 20
+>   (one case over three made-up talks), `tests/clipIt.test.ts`' seven
+>   project-question cases (5 by `4d898b0`, 2 by `08875ea`; its assertions on
+>   existing crops cannot fail in a pure test, and say the store test is the
+>   real guard), `tests/renderer/bestClipsClipIt.test.ts` 21 (through the
+>   store and the harness bridge: the plan's `setAspect` mutation, the
+>   question untouched before an answer, both answers, the save-first path
+>   with a recovered project, a face finder never fetched, §12.1 watched both
+>   ways with `faceModel` delayed 30 ms, three chains released together, an
+>   undo then Clip it again, M0's collect chaining nothing), and 8 more in
+>   `tests/renderer/bestClipsPanel.test.tsx` (25 there). Mutations: the
+>   builder's report gives 15 and lists 17 (among them the plan's own,
+>   `setAspect('9:16')` at the top of `clipItFromCard`, failing 4 store
+>   tests), the fixer 16; each failed and was restored. Suite, the agents'
+>   readings: 6154 → 6189 tests (files 374 → 376) → 6210.
+> - **Census**: 20 rows, 26 carriers: in `link-best-clips` "Make it
+>   vertical" and its title, "Clip it" ×3 and its title ×3; a new recipe
+>   `link-best-clips-question` (Analyse, then the question on card 0 with
+>   the project marked unsaved, set through the store) with the head, both
+>   choices and their two lines, and "Not now"; a new recipe
+>   `link-best-clips-clipped` (the census video placed, then a record
+>   written for card 0) with the five labels and "on the timeline.", "this
+>   project set to 9:16.", "skipped: the AI helper is not installed, so the
+>   crop is centred.", "on." and, since `d6000ed`, "none found in this
+>   stretch."
+> - **Changed since `08875ea`**: `d6000ed` made step 5's line say what is
+>   THERE (`cardGraphicsCount`, counted as `clearClipGraphics` counts:
+>   graphic clips under `CLIPS_GRAPHIC_RULE` over the clip, and its
+>   proposals; `graphicsResultText(placed, waiting)`): "none found in this
+>   stretch.", "N placed: listed in the Transcript tile.", "N waiting for
+>   Keep: listed in the Transcript tile." or "N placed and M waiting for
+>   Keep: listed in the Transcript tile." It was "listed in the Transcript
+>   tile, each with Drop." whatever the run found, untrue for a run that
+>   placed nothing and for a card clip's numbers, which come from a YouTube
+>   track and wait for Keep (§6.6).
+> - **Departures from the plan** (each checked against the code): (1) §7.5
+>   and §7's table say steps 3–5 are "already on that path"; they were not
+>   (`collectIngest` chained no reframe, captions or graphics): step 4 wires
+>   them for a card's clip only, and M0's Clip download from picked rows is
+>   unchanged; (2) the cards are stacked, each with a 9:16 face, not three
+>   tall cards side by side; (3) no thumbnail (the plan's own "left out of
+>   v1"); (4) Make it vertical is a toggle above the cards, on by default (the
+>   plan left its place open; sheet 27 does not draw it); (5) a missing face
+>   finder is a line pointing at the Trimmer's Follow the subject, not "a
+>   button with its size" on the card (one home for that press); (6) Analyse
+>   never fetches captions: with no transcript it is greyed and points at Get
+>   transcript; (7) the no-captions line is "This video has no captions, and
+>   Best clips cannot listen to a video yet." with or without the helper, not
+>   "…needs the AI helper to listen to it": listening is not built; (8) step
+>   4 turns captions on only in a new project or on an empty timeline, not
+>   into an existing edit; (9) a timeline a card's clip is still downloading
+>   into counts as not empty, and Start new waits for it; (10) every
+>   graphic is not "listed with Drop": step 5's line counts what is placed
+>   and what waits for Keep; (11) `collectIngest` tells projects apart by
+>   id, for every download; (12) "saves or asks first" is built as save
+>   first, a closed Save dialog keeping the question; (13) one Analyse at a
+>   time, refused, not queued; the 180 s timeout is the session's choice.
+> - **Declined**: a `radiogroup` for the lengths (`role="group"` with a
+>   label instead); a line after a mid-run length change (the lengths are
+>   greyed while running); rewording "press Get transcript first" for the
+>   failed and language states; a pointer from the no-model note to
+>   Settings; a cancelled reframe's own line; changing the shape line after
+>   the 9:16 change is undone; a button for the face finder on the card.
+> - **Left open**: no real model, real link, real download, real reframe
+>   or real graphics run has gone through Analyse or a card's chain; §7.8's
+>   Surface run is yours. The timeout does not cancel the request in main or
+>   at the local server (`directorComplete` has no `AbortSignal`); a late
+>   answer is dropped in the app, but the server stays busy. A status check
+>   out of time is reported as "The model took too long", untested against
+>   a real server. Find graphics or Direct can run beside an Analyse, and a
+>   Find graphics or Follow the subject you press while a card's chain runs
+>   is not held back: only the card chains obey §12.1 among themselves. A
+>   cancelled reframe reads "the faces could not be found, so the crop is
+>   centred."; a reframe job that never ends holds every card's graphics
+>   until it is cancelled in the jobs list. After undoing the 9:16 change
+>   (its own undo step) the card still reads "this project set to 9:16.". A
+>   card collect that throws leaves the line "downloading this stretch…"
+>   until M0's retry lands it, with no timeout. A reload mid-download loses
+>   the records: the clip lands as M0's does, and no step runs.
+>   `startReframe` refusing a second start for the same file reads "could
+>   not be found" though the follow lands (untested); the several-waiters
+>   change to `reframeSettled` is defensive and untested. Steps that run
+>   while you undo something else can clear the redo stack. The Keep wait for
+>   a number from a YouTube track is not tested on the card path. Listen to
+>   it is not built, so Best clips does nothing for a captionless video.
+>   Wording that is yours: "signals" and "talk" (a wedding film is not a
+>   talk) in "Picked from the talk's own signals" and every note sharing it,
+>   "Shape", "Follow the subject" as a step label, "press Get transcript
+>   first" after a failed fetch, the straight apostrophes of the notes beside
+>   the curly ones of other lines. And the session's own observation, not yet
+>   put to you: with no model, the why on all three harness cards read "ends
+>   on a full stop" (`endingReason`, a line that stands out): true and plain,
+>   but a weak reason to post.
 
 ### 7.6 Transcript → Clip it (sheet 26) — now M0, §3b
 
@@ -23706,7 +24413,8 @@ as the URL transcript → Clip it flow plus this timeline half, 7.5 days,
 moved from this step. The whole of it is §3b; the timeline half as written
 here (row selection in the Transcript tile, `clipToRange`,
 `placeAssetRange`, `timelineFrameAt`) is §3b.6, moved there unchanged.
-Best clips reuses it.
+Best clips reuses it. (2026-11-25: a card's Clip it reuses §3b.4's ranged
+download and collect, not the timeline half: §7.5's piece 4 note.)
 
 ### 7.7 Tests, render check, harness, census
 
@@ -23784,6 +24492,210 @@ rows.
   "4 min", "Analyse", "Make it vertical"; "Get transcript", "Clip it",
   chapter chips and the Transcript tile's row selection hint are M0's
   (§3b.8).
+
+> **Built 2026-11-25 (piece 5: the checks).** `131cefe`, then `d6000ed`
+> after two critics (run B; the builder of 2026-11-24 night was stopped at
+> your word to hold, and a new builder on 2026-11-25 took its four
+> uncommitted draft files as an unverified draft, kept the split and fixed
+> its wrong assertions). Described from the code at `d6000ed`.
+> - **Step 4's test files, as they exist** (the bullets above are the
+>   plan's): `tests/bestClips.test.ts` (36) and `tests/bestClipsModel.test.ts`
+>   (35), pieces 1 and 2 (§7.4's notes); `tests/bestClipsSession.test.ts`
+>   (16), `tests/renderer/bestClipsStore.test.ts` (16),
+>   `tests/renderer/bestClipsPanel.test.tsx` (25), pieces 3 and 4;
+>   `tests/bestClipsCardClip.test.ts` (20), `tests/renderer/bestClipsClipIt.test.ts`
+>   (21) and seven project-question cases in `tests/clipIt.test.ts`, piece 4
+>   (§7.5's notes; `tests/renderer/clipItCollect.test.ts`' 'elsewhere'
+>   fixture changed); and piece 5's: `tests/renderer/bestClipsStub.test.ts`
+>   (33), `tests/bestClipsExit.test.ts` (18), two cases in
+>   `tests/graphicApply.test.ts` (step 5's line), the render check
+>   `tests/integration/bestClipsCard.int.test.ts` (2) and the gated recorder
+>   `tests/integration/bestClipsExit.int.test.ts` (1, skipped in the suite).
+>   The eval block is §7.4's piece 2 note.
+> - **The model stub** (`src/renderer/src/harness/bestClipsStub.ts`, pure):
+>   a `complete` answering as `askStructured` hands an answer over; it reads
+>   of the request ONLY its schema, the ids from
+>   `picks.items.properties.id.enum` (the candidates, best first) and how many
+>   from `picks.minItems`, so a request the app shapes differently shows.
+>   Its titles are the picked window's own words, or a deliberately bad one
+>   by mode; a "throws" mode carries an address and an `sk-` key
+>   (`STUB_SECRET_URL`, `STUB_SECRET_KEY`). The words are made up: Latin
+>   nonsense and Mkhedruli built from code points, never written as text.
+>   `STUB_READY` lists both providers ready, so `modelReady` holds for
+>   `'auto'`, `'ollama'` and `'openai'` (`d6000ed`). `BEST_CLIPS_STUB_CASES`
+>   holds the 29 card cases, `CLIP_IT_CASE_NAMES` the seven Clip it cases,
+>   `BEST_CLIPS_CHECK_CASES` = 36.
+> - **The harness check**, `await window.__forgeBestClipsCheck()`
+>   (`src/renderer/src/harness/bestClipsCheck.ts`, installed in `main.tsx`):
+>   never throws; run it in the fronted tab on a freshly loaded page. **The
+>   29 card cases**, named by run A's rule numbers: "1, 6, 17" at each of
+>   1, 2, 3 and 4 min (no model: cards on the rows within ±20 %, picked from
+>   the signals, the no-model note); "2" with no heatmap and with one peak;
+>   "3" a caseless, unpunctuated track; "4, 11" a 2 s talk; "11" a talk under
+>   a minute at 2 min; "4" a talk of about 100 s; "7" Analyse pressed twice;
+>   "8" under a flat and under varied heat; "9" a plateau (values 1 and
+>   0.5, exact in binary: at the draft's 0.95 some windows meant
+>   0.9499999999999998 and the plateau mutation survived); "10" sentences
+>   longer than a row; then 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 23, 24,
+>   25 and 26 (the model's picks, fallbacks and notes). Each puts the case's
+>   words in the URL tile, PRESSES its length and Analyse with the stub in
+>   place of `directorStatus` and `directorComplete`, and reads the cards off
+>   the screen against the store's result; case 18 holds the stub's address
+>   and key to the WHOLE page's markup (`document.documentElement.outerHTML`,
+>   attributes, hidden parts and head included, `d6000ed`) and every notice;
+>   case 19 alone is not pressed: it calls `bestClips` with a 300 ms timeout
+>   and writes the result as Analyse would (the real deadline is three
+>   minutes). **The seven Clip it cases**, on the bridge's twelve-row talk
+>   with no model, a download landing when the check collects it through a
+>   stand-in `collectIngest` returning an offline asset: an empty timeline
+>   (this project 9:16, one exact download of the card's range); landed
+>   without the AI helper (the crop centred and said, captions turned on in
+>   one undo step, graphics after, its line equal to `graphicsResultText` of
+>   what is on the timeline); landed with the helper and the face finder (the
+>   bridge's reframe stub: followed, captions kept off the faces, graphics
+>   only after the analysis ended, §12.1 watched both ways); the helper there
+>   but no face finder on disk (named, never fetched: no progress, no
+>   analysis); a 16:9 edit (the question, Not now sending nothing, Add
+>   keeping the aspect and every crop); unsaved work (Start new saves first
+>   through the bridge's Save, then a 9:16 project and the download); and
+>   M0's Clip download from picked rows (one undo step on landing, nothing
+>   after it, captions left off). Every landed case turns the new project's
+>   captions OFF first (`d6000ed`: a new project's are on already, so step 4
+>   was never seen to act) and counts undo steps per step as each line ends.
+> - **The session's reading, the harness page, the Mac, 2026-11-25, at
+>   `d6000ed`**: `ok: true`, 36 cases, every one `ok: true`, 10,221 ms. The
+>   landed cases' undo steps read download 1, reframe 0, captions 1,
+>   graphics 0 without the helper; download 1, reframe 1, captions 1,
+>   graphics 0 with it; download 1, reframe 0, captions 1, graphics 0 with
+>   the helper and no face finder. (Piece 5's builder expected captions 0;
+>   the figure read is the fixed check's 1.) Nothing of it was read in the
+>   development app or on the Surface.
+> - **The node mirror**: `tests/renderer/bestClipsStub.test.ts` runs the
+>   29 card cases through `bestClips` itself with the stub (so a case
+>   failing on the page is the store's or the panel's, never a case that
+>   could not pass), the stub's reading of the schema, the "throws" case
+>   keeping neither secret, the count pinned at 29 + 7 = 36 with unique
+>   names, and `STUB_READY` for all three provider choices.
+> - **The census**: piece 5 adds the recipe `link-best-clips-model` (the
+>   stub in place of status and complete for one Analyse; it throws unless
+>   three model cards) and its row "Picked by the model" ×3. Best clips in
+>   all: 34 rows, 42 carriers, in the recipes `link-transcript`,
+>   `link-failed`, `link-no-captions`, `link-no-captions-helper`,
+>   `link-best-clips`, `link-best-clips-model`, `link-best-clips-running`,
+>   `link-best-clips-question` and `link-best-clips-clipped` (piece 4's
+>   report counted 41; the fixture gives 39 before piece 5 and 42 after).
+>   **The session's reading, the harness page, the Mac, 2026-11-25**:
+>   `__forgeCensus()` missing [], 1018 checked, 12 skipped, 67,483 ms; the
+>   last reading before step 4 was 984 checked, 12 skipped, missing []
+>   (2026-11-20).
+> - **The render check as built** (`tests/integration/bestClipsCard.int.test.ts`,
+>   into `tests/output/bestclips-card/`): a made-up 140 s talk at 640×360,
+>   30 fps (words every 15 to 25 frames, sentences of 6 to 11 words, no
+>   digit, so the baseline has no number), served through the fake yt-dlp;
+>   the source's top 48 rows hold thirteen 14 px bars inside the middle 182
+>   px (x 229 to 410, inside a centred 9:16 crop's 202.5 px) writing each
+>   frame's index bit by bit, and under them a ramp (rows 48 to 111) whose
+>   level is its own source column between 160 and 480, drawn in Y by `geq`
+>   on every frame (not through a PNG, which stretched the levels:
+>   `EFFECTS.md` §62). Through the REAL store: Analyse at 1 min with no
+>   model, Clip it on **the card that starts latest** (79.5 s, so a shift
+>   cannot hide at 0) on an empty timeline with captions turned off first;
+>   then it asserts one exact download of the card's range, 9:16 set, the
+>   card's words on the file's clock, each step's line (landed, set, the
+>   no-helper skip, captions "on.", graphics equal to `graphicsResultText`
+>   of what it counts itself: the baseline placed two keywords on this talk,
+>   measured), step 4's own undo step (1) and the skipped follow's (0).
+>   Exported by the app's own plan at the project's shape scaled to 512
+>   rows, **288×512**, with and without libass captions; **the first 12 s
+>   read**: portrait and 9:16 off the file; the crop's left edge, middle and
+>   right edge read off the ramp as columns (`columnOf`, the gray stretch of
+>   `EFFECTS.md` §62 undone) within 4 of the centred crop's; the first frame the card's
+>   first word's, frame for frame after; the first caption line and every
+>   word lit in those seconds within one frame of its word's frame (the
+>   first line compares frame 0 with frame 0; the per-word onsets catch a
+>   shift). **Left out**: the graphic clips the baseline placed (their
+>   pictures are the renderer's canvas; `graphic.int` is their render
+>   check). Built for the 2018 Windows ffmpeg: `color`, `geq` (N, X, if,
+>   lt, gt, mod, floor, pow), `pad`, `overlay`, every path through argv. On
+>   the Mac the builder read the worst left edge 2.2 columns off, against a
+>   slack of 4.
+> - **The ten-links recorder** (§7.8's first bullet):
+>   `tests/integration/bestClipsExit.int.test.ts`, its pure parts in
+>   `tests/fixtures/bestClipsExit.ts`, node-tested in
+>   `tests/bestClipsExit.test.ts`. Gated: `FORGE_BESTCLIPS_EXIT=1`, never
+>   under CI. **The links file** is
+>   `tests/output/_session-keep/bestclips-exit-links.txt` (gitignored): one
+>   link a line, then the length in minutes (1, 2, 3 or 4, written `2`,
+>   `2min`, `2 min` or `2 mins`), then optionally the captions' language
+>   (any case, lower-cased); `#` lines and blank lines skipped; a link twice
+>   at one length is a problem; any problem stops the run before anything is
+>   fetched. **Pass 1** (`FORGE_BESTCLIPS_EXIT_STEP=prepare`, the default)
+>   first clears `tests/output/bestclips-exit/links/` and
+>   `tests/output/eval/bestclips-exit/` (`d6000ed`), then for each link
+>   main's own meta and captions handlers, as Get transcript calls them
+>   (metadata and captions only, no media; yt-dlp may be fetched into
+>   `bestclips-exit/userData/tools`), `bestClips` with the signals alone,
+>   and writes `bestclips-exit/index.html` (the page), `summary.json`,
+>   `links/<nn>-<title>.json` (the saved words) and the model's requests,
+>   built by the eval block, for `FORGE_EVAL` (default openai) and
+>   `FORGE_EVAL_MODEL` (default google/gemma-4-e2b); every JSON written is
+>   checked by `credentialsIn`, and a link whose words trip it fails on its
+>   own. **Between the passes**, on the harness page:
+>   `window.__forgeEvalRelay('bestclips-exit')`. **Pass 2**
+>   (`FORGE_BESTCLIPS_EXIT_STEP=score`, no network) requires exactly one
+>   `links/<nn>-*.json` per line, and that line's link and length to equal
+>   the saved record's; it settles the saved answers as Analyse would, names
+>   any saved answer whose status is not 200 (to delete before relaying
+>   again), and writes the page again with the model's cards beside the
+>   signals'. **A model side is rated only where the model answered**
+>   (status 200 and parsed, `d6000ed`): otherwise "The model did not answer
+>   for this link, so there is nothing of its to rate."; a card the signals
+>   filled is shown on the model's side unrated; the header says for how
+>   many links the model picked cards. **The page**: one self-contained
+>   file, everything fetched escaped, links only for http(s), ratings kept
+>   per run in the browser's `localStorage` (wrapped in try/catch), "Copy the
+>   ratings" as JSON, a tally per side against 7 of 10. **File names**
+>   (`exitFileName`): `< > : " / \ | ? *` and controls become `-`, white
+>   space runs one space, no leading or trailing dot or space (before and
+>   after the cut), at most 60 graphemes AND `MAX_NAME_UNITS` 80 UTF-16
+>   units (whole graphemes dropped: a critic measured this Mac refusing a
+>   name of 266 units and taking one of 248), a reserved device name
+>   prefixed `_` with or without an extension, empty → `link`. **It has
+>   only ever run against the fake yt-dlp**, dry, by its builder and its
+>   fixer (both passes, made-up answers, a stale file, a changed link); never
+>   against YouTube, and nothing of §7.8 has been read.
+> - **Mutations**, all by the agents' reports, each failing and restored:
+>   piece 1, 61; piece 2, 48, and the session's one at `cf35644`; piece 3,
+>   33; piece 4, 31 by the reports' counts (the builder's lists 17 where it
+>   says 15); piece 5, 19 by the builder (six caught by the stub cases, eight on
+>   the recorder's pure parts, one census, four on the render check: the
+>   card's run a segment early, the range 3 s early with the words kept, the
+>   empty timeline left 16:9, no crop on placing) and 13 by the fixer (step
+>   4 removed now failing the render check; step 5's line; the helper-dependent
+>   no-captions line; the count pin; `STUB_READY`; the recorder's answered
+>   rule, name units, "mins" and the language case).
+> - **The suite**: the agents' readings 6210 → 6257 → 6265 tests across
+>   piece 5. **The session's, at `d6000ed`, 2026-11-25, on the Mac**:
+>   `npm run typecheck` exit 0; `npx vitest run` exit 0, Test Files 379
+>   passed, 6 skipped (385); Tests 6265 passed, 67 skipped (6332), the new
+>   skipped file the gated recorder; `npm run build` exit 0. **CI at
+>   `d6000ed`** (run 45658046940, read by the session from the API on
+>   2026-11-25): windows-latest SUCCESS, so the full suite, the render check
+>   on the 2018 Windows ffmpeg included, and the AI helper's pack steps
+>   passed there; macos-15 CANCELLED before any step ran ("The job was not
+>   acquired by Runner of type hosted even after multiple attempts", GitHub's
+>   capacity notice for macOS arm64), so macOS CI is NOT read at `d6000ed`;
+>   the Mac's figures are the session's local ones above.
+> - **Declined**: an `ask` pass letting the recorder call the model from
+>   node (a new network path); page cases for the steps after Add and after
+>   Start new, a second card during a download, a download under another
+>   project and a second Analyse while one runs (covered in node only).
+> - **Left open**: §7.8's exit is not met and nothing of it is read (the
+>   ten links, two of them Hindi or Telugu, with the model and with the
+>   signals alone; Clip it from a card on the Surface without swapping;
+>   YouTube's ASR timing against Whisper on three videos, which no piece
+>   built or addressed): all yours. macOS CI at `d6000ed` waits for a re-run
+>   or the next code push.
 
 ### 7.8 Exit
 
@@ -24578,7 +25490,15 @@ the analysis loaded stays resident while the model runs.
 - **Serialise Clip it.** The model pass starts only after the analysis job
   has finished and released (§7.5 step 5); Whisper releases before the
   analysis starts. The analysis queue's concurrency 1 (§4.7) already keeps
-  two analyses from overlapping.
+  two analyses from overlapping. (2026-11-23/24, step 4, `4d898b0` and
+  `08875ea`: built for Clip it from a card as an order rule across every
+  card's chain: graphics starts only when no reframe analysis is pending or
+  being started for any clip (a card claims its reframe before its first
+  await), and no card's reframe starts while a graphics run is out; one
+  Analyse at a time. It rests on the job ending only after the release,
+  main's order, not measured; a Find graphics or Follow the subject you
+  press yourself is not held back. §7.5's piece 4 note. The bar below is
+  not read.)
 - **The bar** (§0): Clip it end to end on the Surface, on a 10-minute 1080p
   source, without swapping. Over it, Florence runs only for a typed phrase,
   then the analysis drops to 3 fps and 480 px.
@@ -24646,7 +25566,7 @@ with a window, so `-ss` and `-t` are scanned too. So have 1f's shapes since
 | no Pexels key | the source greyed: "add a key in Settings" | panel test |
 | offline | each source's search says so; nothing half-written (staging then rename); Get transcript says so and the start and end fields stay | `webFetch` test; `ingestPanel` component test |
 | a number from a YouTube track | the graphic is a proposal, "check the number", until Keep | `directorGraphics` test (built 2026-11-11 by lane T2b, with `graphicActions`' and `transcriptGraphics`' proposal cases and the census's three source states, read on screen) |
-| a link with no captions and no Python | M0: "This video has no captions", the start and end fields as today, Listen to it greyed with "needs the AI helper"; Best clips adds "Best clips needs the AI helper to listen to it" | `ingestPanel` component test (§3b.8); panel test |
+| a link with no captions and no Python | M0: "This video has no captions", the start and end fields as today, Listen to it greyed with "needs the AI helper"; Best clips adds "Best clips needs the AI helper to listen to it" (2026-11-25, step 4, `d6000ed`: as built it says "This video has no captions, and Best clips cannot listen to a video yet." with the helper or without it, Listen to it being greyed, §7.5's piece 3 note) | `ingestPanel` component test (§3b.8); panel test (`tests/renderer/bestClipsPanel.test.tsx`: the one line with the helper's status absent, ready or null, and the pairing test with Listen to it) |
 | the AI helper's pack, on an installed app (Step P, §3a) | nothing spawned at any caller; a grey "Not installed" with the sized Install; every Python control greyed "needs the AI helper", each a pointer to Settings; the local voice says why; stems split by mid/side | `sidecarService` (spawn never called); the harness check; census rows |
 | a pack install stopped part-way (cancel, quit, offline) | verified downloads kept, no receipt, the folder ignored by the order and swept at launch; the next press says "· N MB left" and fetches only that | `helperPackJob`; `fetchFile` |
 | a module degraded inside the pack (most likely the Visual C++ runtime) | the pack kept; its controls greyed by method; the row grey, "N of 9 helper features" (the count is `expects.length`, `selftest.ts:119-130`: 9 since pack 2, 10 with phase 4's hand finder, §6.18), naming what is missing, with Check again | `helperPackJob`; `test_selftest`; §15 row 30's run |
