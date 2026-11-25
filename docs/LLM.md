@@ -427,6 +427,28 @@ and the eval lands each run as Find does and counts only what lands
 (§6.7's, `187de3e`). The prompt, the schema and the ask are unchanged.
 Still no real model has been asked.
 
+**25 November 2026, step 6's three 3D templates** (`8786882` …
+`03937b4`, CLIPS §9's three Built notes). Three more templates are on the
+pass's menu, `timeline`, `before-after` and `versus`, each offered only
+for a window whose sentences hold what it needs
+(`src/shared/director/menuGraphics.ts` `stepSixOffered`, called from
+`graphicsMenuFor`: two years said as dates; two numbers in one unit with,
+except in Hindi and Telugu, an English cue word beside one of them), and
+listed in the prompt's TEMPLATES only then. **No schema key was added**:
+they fill the existing `items` (a timeline row's `value` is its year; the
+two sides are two items in drawn order), because every key is required
+and each would cost every answer's tokens under `maxTokensForGraphics`'
+850. The validator's new rules, by name (CLIPS §6.7's note of that date):
+`TemplateDef.pairsInOrder` (drawn order), `TIMELINE_YEARS` and `notAYear`,
+`saidAsYear` with `YEAR_LEADS_EN` and the plural rule (`notSaidAsAYear`),
+years in date order, one unit across the two sides, `SIDE_ROWS` and
+`sideRowsNote`, and, for every template, the range-or-ratio note
+(`claims.ts` `numberSpansHeld`). The baseline makes none of the three;
+the eval asks three code-built English talks for them
+(`tests/eval/stepSixFixtures.ts`). Worst menu 4,875 tokens at 3.0
+characters a token, 5,675 with the thinking retry, of `num_ctx` 8,192 (the
+agents' figures). **No real model has been asked for one of the three.**
+
 ---
 
 ## Built — `spine@2`, 24–25 September 2026

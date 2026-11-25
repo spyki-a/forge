@@ -73,6 +73,22 @@ The **shortcuts sheet** is Help → Keyboard Shortcuts, or ⌘/ (`Shortcuts.tsx`
 **File → New Project…** (⌘N; Ctrl+N on Windows) opens the New project screen:
 name, shape, frame rate, **Start** or **Cancel**. Nothing else opens it.
 
+**The Edit menu and text boxes** (since 2026-11-25, `7553972`;
+`src/main/menu.ts` `editSubmenu`, `src/shared/textEntry.ts`). With a text
+box focused (a text, link, search or number box, a multi-line box, anything
+editable in place; not a checkbox, a slider or a button, nor a greyed box),
+the menu's **Cut**, **Copy**, **Paste**, **Delete** and **Select All** act on
+the box's text, as Electron's own roles, so ⌘V / Ctrl+V pastes a link into
+the URL box; anywhere else they act on the clips, as before. **Undo** and
+**Redo** are always the project's. **Right-click** in a text box opens
+**Cut**, **Copy**, **Paste** and **Select All**, each greyed as the box
+allows; on selected text that cannot be edited, **Copy** alone; anywhere
+else no text menu, so the page's own menus (a tile, a clip) are unchanged.
+Read on the harness page on the Mac (a click in the link box reports the
+text box focused, a click on the viewer not); the menu itself was tried by
+the user in the development app on the Mac ("perfect everything is good
+landed well"); not read on the Surface.
+
 ---
 
 ## The left column
@@ -327,7 +343,9 @@ stores, or mp3). **Just a part of it** opens **From** and **To** — typed, not
 dragged, because the video's length is unknown until it is fetched — with
 **Fast cut** or **Exact cut — slower**. While downloads run, a line says how
 many and that the progress is under EXPORT, at the bottom left. The first
-download fetches yt-dlp (about 30 MB) and says so beforehand.
+download fetches yt-dlp (about 30 MB) and says so beforehand. A link pastes
+into the box with ⌘V / Ctrl+V, Edit → Paste, or a right-click's **Paste**
+(since 2026-11-25; the header's note above).
 
 **Get transcript** sits under Video / Audio and the quality, greyed until the
 box holds a link (`tools/LinkTranscript.tsx`; `docs/CLIPS.md` §3b). It reads
@@ -476,8 +494,10 @@ in the editor needs a pack; they add choices.
 
 **Graphics** (since 2026-11-15, try-out 1's piece 6; `docs/CLIPS.md` §6.6's
 try-out note, `graphics/library.ts`) is the last chip, after SFX, with its
-count: the graphics engine's templates as seven tiles in two columns,
-**Counter, Bars, Steps, Quote, Ring, Keyword, Lower third**, each a face drawn
+count: the graphics engine's templates as ten tiles in two columns,
+**Counter, Bars, Steps, Quote, Ring, Keyword, Lower third, Timeline, Before
+and after, Versus** (the last three since 2026-11-25, step 6's 3D templates,
+`docs/CLIPS.md` §9), each a face drawn
 in the project's look (OUTPUT's Graphics section) with its name under it; a
 look or accent change redraws them, and the search filters them by name. A
 tile's tooltip is its name and "— click to add at the playhead, or drag onto
@@ -489,7 +509,9 @@ lands as one undo step, selected, with the dock open on its **Graphic**
 panel, in placeholder words to type over ("100" and "Your label here",
 "Compared", "Step by step", "Your quote here", "75%", "Your words here",
 "Speaker name" and "Their role"; a lower third over a file with a Speaker
-takes that name). It is refused, with a notice, where another graphic or a
+takes that name; a timeline "2020" "First moment", "2022" "Second moment",
+"2024" "Third moment"; a before-and-after "Before" "10" and "After" "100"; a
+versus "This one" "40" and "That one" "60"). It is refused, with a notice, where another graphic or a
 Director card is on screen ("another graphic is on screen then"), over a
 zoom punch, where no third is free of the captions, and where every video
 track is busy then ("No free video track at that time"). It is yours: Clear
@@ -604,7 +626,16 @@ baseline is built (§6.10). (2026-11-14: it is built, lane T4. With no
 model set up, or for a window whose answer is rejected, Find graphics
 lands the baseline's graphics, rings, counters, steps and short English
 keywords, beside that lower third, and the note reads "the baseline's
-graphics are used for sentences …: <why>".)
+graphics are used for sentences …: <why>".) Since 2026-11-25 (step 6's 3D
+templates, `docs/CLIPS.md` §9) the model may also be offered a **timeline**,
+a **before-and-after** or a **versus**, each only for a stretch of the clip
+whose words hold what it needs (two years said as dates; two numbers in one
+unit with, except in Hindi and Telugu, a word such as "before", "used" or
+"than" in a sentence that holds one of them), so most clips are offered none; the baseline makes none of them. The
+lists and notes name them "timeline", "before-and-after" and "versus", and
+their notes say why one was dropped ("… is not said in the order the
+before-and-after draws it in s01", "the timeline's years are not said in
+date order in s00"). No model has yet been asked for one.
 
 Since 2026-11-15 (try-out 1, pieces 4 and 5; `docs/CLIPS.md` §6.6's try-out
 note): under **Find graphics in this clip**, **Add graphic from these
@@ -895,10 +926,16 @@ page**, and **Customise** for the rest.
 Roll, and whether the cards face the camera.
 
 **Graphic** (a graphic clip: a counter, bars, steps, a quote, a callout, a
-ring, a keyword or a lower third; `GraphicPanel.tsx`, `docs/CLIPS.md` §6.6,
-built 2026-11-11) — the heading with the kind beside it, then its words by
+ring, a keyword, a lower third, and since 2026-11-25 a timeline, a
+before-and-after or a versus; `GraphicPanel.tsx`, `docs/CLIPS.md` §6.6 and
+§9, built 2026-11-11) — the heading with the kind beside it ("before-and-after"
+for that one), then its words by
 field: **Value**, **Label**, **Title**, **Quote**, **Words**, **Lit word**,
-**Row 1 label** / **Row 1 value** and on down, a quote's or lower third's
+**Row 1 label** / **Row 1 value** and on down, a timeline's row by row
+(**Row 1 when**, **Row 1 label**, **Row 2 when** …), a before-and-after's
+**Before label**, **Before value**, **After label**, **After value**, a
+versus' **Left label**, **Left value**, **Right label**, **Right value**,
+a quote's or lower third's
 **Speaker** (the file's Speaker, as in the Transcript tile: changing it
 here renames every graphic that drew it), a lower third's **Role**
 (filled in from that file's last lower third), and a social card's
@@ -906,7 +943,8 @@ here renames every graphic that drew it), a lower third's **Role**
 leave it (Enter leaves it) as one undo step; the Connector and Shape
 buttons and Back to auto save on press. A word typed that the transcript does
 not say gets an amber warning under the field ("'45' is not said in
-s00") and is saved anyway; a graphic whose transcript is gone says "Its
+s00") and is saved anyway (a timeline's when that is not a year: "'45' is
+not a year: a timeline's when is one year as said, such as 2019"); a graphic whose transcript is gone says "Its
 transcript is not in the project, so these words are not checked", one
 tied to nothing said "It is not tied to anything said, so these words
 are not checked" (since 2026-11-15, every graphic placed from the
@@ -922,10 +960,15 @@ of the captions ("No third is free of the captions here") or no footage
 is under it ("No footage is under it to place it over"). After an aspect
 change or a reframe, an auto graphic with no free third left keeps its
 place, with the notice "<graphic> keeps its old place — no free third".
-On a counter or a ring, **Depth** (built 2026-11-18/19, §6.16): **Flat**,
+On a counter or a ring, and since 2026-11-25 on a timeline, a
+before-and-after or a versus, **Depth** (built 2026-11-18/19, §6.16; the
+three §9): **Flat**,
 **Tilt**, **Parallax**, **Dolly**, **Focus**, the move it arrives with,
-settling flat on its beat (Flat pressed when none is set). One press, one
-undo step; the choice is kept as yours. The first counter or ring that
+settling flat on its beat (Flat pressed when none is set); on the three the
+move plays over their first element's entrance and is flat from its beat,
+so later rows and the second side enter flat (and sharp under Focus). One press, one
+undo step; the choice is kept as yours. The first counter or ring (never one of
+those three) that
 Direct or Find graphics lands on a footage clip (not one you Keep or Add)
 is that clip's hero, unless that clip already has one or you set its
 Depth: it shows Tilt pressed and,

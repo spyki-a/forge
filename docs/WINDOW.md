@@ -145,6 +145,40 @@ is lost by it); *coming-soon* = shown, disabled, labelled.
 | Source row (Upload / YouTube / Narration) | `App.tsx:497`, `SourceBar.tsx:68` | Shelf tiles Upload / URL / Narration | move | the row goes; its MODES copy goes to the tile registry |
 | Crash screen | `ErrorBoundary.tsx:41` | unchanged, plus one boundary per tool panel inside the Shelf | restyle | today one throw in any of ~19 panels replaces the whole window (`main.tsx:67`) |
 
+(2026-11-25, after the 14 steps: **the Edit menu and text boxes**, the
+paste fix, `7553972`, the session's. On macOS an editing key reaches a text
+box only through the application menu, and the Edit menu's Cut, Copy,
+Paste and Select All were custom items acting on clips, with the
+accelerators CmdOrCtrl+X/C/V/A: they swallowed the key, so ⌘V in the URL
+box went to the timeline's clipboard and pasted nothing, and there was no
+right-click menu on a text box at all (Electron shows none of its own). Now
+`src/shared/textEntry.ts` `isTextEntry` (new) says what a text box is (an
+INPUT of type '', text, search, url, email, tel, password or number, a
+TEXTAREA, anything editable in place; not a disabled box; a read-only one
+counts); `App.tsx` reports `textFocus: isTextEntry(document.activeElement)`
+with the menu's state and again on `focusin` and `focusout` (the type in
+`src/preload/index.ts` `reportMenuState`); `src/main/menu.ts`
+`MenuState.textFocus` and the pure `editSubmenu(state, send)`: with
+`textFocus`, Cut, Copy, Paste, Delete and Select All are Electron's roles
+(`cut`, `copy`, `paste`, `delete`, `selectAll`), otherwise the clip items
+as before; Undo and Redo always the project's; Duplicate unchanged. The
+pure `textContextMenu(params)` and `installTextContextMenu(window)` (called
+from `src/main/index.ts`): right-click in a text box gives Cut, Copy,
+Paste, a separator and Select All, each enabled from Electron's
+`editFlags`; on selected text that is not editable, Copy; anywhere else
+nothing. `tests/editMenuText.test.ts` (new), 10 cases; the session's ten
+mutations each caught (the bug itself put back fails "gives Cut, Copy,
+Paste, Delete and Select All to the text…"). Read by the session on the
+harness page, on the Mac: a click in the link box made the report carry
+`textFocus: true`, a click on the viewer `false`; the Electron half cannot
+run there and was not run by the session. **The user tried it in the
+development app on the Mac**: "perfect everything is good landed well"
+(their word; no figure). Not read on the Surface. CI at `7553972` (run
+45672761395): Windows green; the `macos-15` job cancelled by GitHub for no
+runner, never started; the tree at `03937b4` holds the fix and its macOS
+job passed there (run 45712905904). `WHERE-THINGS-ARE.md`'s header has the
+map.)
+
 ### 3.2 Sidecar (Shelf) home
 
 | control | today | new home | how | note |
@@ -325,6 +359,18 @@ placed by a click or a drag, from try-out 1's piece 6, `e9f7923`,
 `05c2c0e`, `81db7ca`; `docs/CLIPS.md` §6.6's try-out note and
 `WHERE-THINGS-ARE.md`'s Library. It still opens on Stickers, Decision 9 as
 answered in §7.6.)
+
+(2026-11-25, after the 14 steps: the Graphics drawer holds ten tiles, the
+last three, after Lower third, **Timeline**, **Before and after**
+and **Versus**, step 6's 3D templates (`docs/CLIPS.md` §9, piece 1:
+`8786882`, `136a3d3`; `graphics/library.ts`), placed by the same click or
+drag in placeholder words: "2020" "First moment", "2022" "Second moment",
+"2024" "Third moment"; "Before" "10", "After" "100"; "This one" "40",
+"That one" "60". No new control: three more tiles in the same grid; the
+census counts the tile title by `LIBRARY_GRAPHICS.length` (10). Placed from
+the store's `placeLibraryGraphic` and looked at by the session on the
+harness page, on the Mac, 2026-11-25, on a 16:9 project (not rated); not
+read in the development app or on the Surface.)
 
 ### 3.7 Transcript tile
 
@@ -593,6 +639,24 @@ open.)
 | Voice presets (Chipmunk … Radio) | `ClipMenu.tsx:226` | unchanged (right-click) | — | built and exported; Decision 4 |
 | Pool item selected → Trimmer as a source monitor | none (sheets 03, 21) | trimmer dock | build | phase 2 |
 
+(2026-11-25, after the 14 steps: the dock's **Graphic** panel
+(`GraphicPanel.tsx`, built 2026-11-11 with the graphics pass, `docs/CLIPS.md`
+§6.6, and not in this table) takes step 6's three 3D templates (§9, pieces 1
+and 3: `8786882`, `136a3d3`, `9fbb0b9`, `f06d083`) with no new control: a
+timeline's fields row by row, **Row 1 when**, **Row 1 label**, **Row 2
+when** … (`BY_ROW`; bars and steps keep every row of one field, then the
+next); a before-and-after's **Before label**, **Before value**, **After
+label**, **After value**; a versus' **Left label**, **Left value**, **Right
+label**, **Right value** (`FIELD_LABELS`); the heading names a
+before-after "before-and-after" (`graphicName`); and the existing **Depth**
+row (Flat, Tilt, Parallax, Dolly, Focus) shows for the three and drives
+them. The census holds the eight side labels (recipes
+`graphic-before-after`, `graphic-versus`): 1029 checked, 12 skipped,
+missing [], read by the session on the harness page, on the Mac,
+2026-11-25. The fields and the Depth choices on the three were not driven
+by hand on screen, and nothing of them was read in the development app or
+on the Surface.)
+
 ### 3.19 Curve tray (timeline sidebar, closed by default)
 
 | control | today | new home | how | note |
@@ -710,6 +774,13 @@ session state, like `urlSource`: none is saved in the project file, and
 newProject and loadProject leave them alone. Beside them `PendingIngest`
 gained `projectId`, recorded for every download, which `collectIngest`
 compares to tell projects apart.)
+
+(2026-11-25, step 6's 3D templates (§3.6's and §3.18's notes) and the paste
+fix (§3.1's): neither added store state. `src/renderer/src/store.ts` is
+unchanged from `0f87aa8` to `03937b4` (`git diff 7553972^ 03937b4`); the Library's three tiles land
+through the existing `placeLibraryGraphic`, and their fields and Depth
+through `setGraphic`. The paste fix's `textFocus` is reported to main with
+the menu's state from `App.tsx`, not kept in the store.)
 
 ---
 

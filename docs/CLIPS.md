@@ -8868,6 +8868,13 @@ become frame-cache paths unsanitised (`writeTitleFrame`,
 >   with its type", a subset match. Suite at `6272050`: 313 files (308
 >   passed, 5 skipped), 4272 tests (4209 passed, 63 skipped).
 
+> **Step 6's three, 2026-11-25** (§9's three Built notes of that date).
+> `GraphicData`'s `timeline`, `before-after` and `versus` members, typed
+> here in phase 1, are drawn as typed: no member changed. `TemplateDef`
+> gained `pairsInOrder?: true` (`f1fa026`), set on the three: each pair's
+> value said after the one before it, beyond this section's type. Their
+> rows' values are §9's piece 1 note.
+
 ### 6.2 The templates — eight ids, nine shapes
 
 **Phase 2 · 4 days.** Phase 2 draws §6.2's six templates as written, plus
@@ -9372,6 +9379,22 @@ fixtures' wiring and the three tests above.
 >   suite 0 at every commit; 326 files passed and 5 skipped, 4627 tests
 >   passed and 64 skipped at `ddd1ede`; 331 and 5, 4722 and 64 at
 >   `85b59e3`.
+
+> **Step 6's three, 2026-11-25** (§9's Built notes). The heading's "eight
+> ids, nine shapes" is phase 2's. At `03937b4` `GRAPHIC_TEMPLATES` holds
+> twelve rows (`counter`, `bars`, `steps`, `quote`, `callout`, `ring`,
+> `keyword`, `lower-third`, `screen-card`, `timeline`, `before-after`,
+> `versus`) and `DRAWERS` the same twelve; there is no `source` row or
+> drawer (after the beta, §16.75; two tests pin both). The three's rows:
+> `timeline` 3 / 6 / 8, `items.when` and `items.label` grounded, `pairs`
+> `[items.label, items.when]`, `maxItems` 5 (at least 2); `before-after`
+> 2.5 / 4 / 6, `before.label`, `before.value`, `after.label`,
+> `after.value` grounded, two pairs; `versus` the same with `left` and
+> `right`; no title, no `fixedTitles`, no `appFields`, `pairsInOrder` and
+> `threeD` true on all three, the seconds proposals until M16. The
+> paragraph above that says the menu never offers them: since piece 2 it
+> offers the three where a window's sentences hold what each needs
+> (§6.6's note), never `source` or `screen-card`.
 
 ### 6.3 Drawing: one draw list, two painters, preview, bake, export
 
@@ -13801,6 +13824,29 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 (Clip it's is step 4's, above); the two panels; the store actions and the
 four tests (2.5 would be safer; the figure is kept).
 
+> **Step 6's three on the menu, 2026-11-25** (§9's piece 2 Built note,
+> `f1fa026`, `b70b0bf`). `graphicsMenuFor` now appends to each window's
+> templates `stepSixOffered(offeredOn, transcript)`
+> (`src/shared/director/menuGraphics.ts`): `timeline` where a stretch says
+> two different years said as dates, `before-after` and `versus` where it
+> says two different numbers in one unit (no year, no list's place) and,
+> except in Hindi and Telugu, one of `BEFORE_AFTER_CUES_EN` or
+> `VERSUS_CUES_EN` in a sentence holding one of them. So one window of a
+> clip may offer them and the next not. The schema gains no key (the three
+> fill `items`; the item's `value` description now "This row's number or
+> year, copied, or empty"), and `GRAPHIC_TEMPLATE_ROWS` gains three rows,
+> listed only when offered: `timeline — two to five dated moments said in
+> date order (items: label is the words said for what happened, value is
+> its year as said, four digits) — items[].label, items[].value`,
+> `before-after — a number said as it was, then as it is now (two items,
+> the before first; each label and number copied, a label may be empty) —
+> items[].label, items[].value`, `versus — two things set against each
+> other, each with its number (two items, in the order said) —
+> items[].label, items[].value`. The worst menu's budget is 4,875 tokens
+> at 3.0 characters a token, 5,675 with the thinking retry, of `num_ctx`
+> 8,192 (the agents' figures). No real model has been asked for one of
+> the three.
+
 ### 6.7 The validator — `src/shared/director/validateGraphics.ts` and `claims.ts`
 
 **Phase 2 · 3 days.** `validateGraphics(answer, menu, transcript, options:
@@ -14676,6 +14722,23 @@ validation half, and both tests.
 >   its `add`, which `run.ts`' drops code attaches; `settleByHand` in
 >   `run.ts` validates one by-hand candidate (§6.6's try-out note).
 
+> **Step 6's three, 2026-11-25** (§9's piece 1 and 2 Built notes). Rule
+> 6 now binds the three's pairs as it binds a bars item (a side's label
+> with its value, a timeline row's label with its when), and
+> `pairsInOrder` holds their values to drawn order ("'<text>' is not said
+> in the order the <graphicName> draws it in <sentence>"). New rules, each
+> with its note in §9's piece 2 note: the shape half (a missing side, "a
+> before-and-after needs its after side: a label and a value"; a timeline
+> row's label must say something); a timeline's when one year
+> (`TIMELINE_YEARS` 1000 to 2999, `notAYear`), the speaker's own token a
+> year said as a date (`saidAsYear`, `YEAR_LEADS_EN`, the plural rule,
+> `notSaidAsAYear`; an English heuristic), its years rising; the two sides
+> in one unit; a two-sided answer `SIDE_ROWS` (2) items (`sideRowsNote`);
+> one number said once never both sides. **For every template**
+> (`b70b0bf`): a number said only inside a range or a ratio is refused
+> with "'<text>' is said as part of a range or a ratio in <sentence>, not
+> as one number" in place of "not said" (`claims.ts` `numberSpansHeld`).
+
 ### 6.8 Beats — the words land the animation
 
 **Phase 2 · 0.5 day.** `graphicBeats(project, clip, transcript,
@@ -14885,6 +14948,15 @@ late.
 > start: 195, duration: 90 } to deeply equal { start: 210, duration: 90 }";
 > before `73c6f69` it passed `graphic.int`). Green on both runners at
 > `ae3a670` (run 43573261749) and `4450e3d`.
+
+> **Step 6's three, 2026-11-25** (§9's piece 2 Built note). `beatWordsOf`
+> gives each of their elements its value's bound word, in drawn order, as
+> bars': one beat a timeline row (its when), two for a before-and-after or
+> a versus (the before's or left's value, then the after's or right's).
+> Each drawer lands its element ON its beat (§9's piece 1 note). Read on
+> the harness page on the Mac, 2026-11-25, through the `find` option's stub
+> talks: beats 0.30, 2.40 and 4.20 s (timeline), 0.50 and 2.90 s
+> (before-after), 0.50 and 2.00 s (versus).
 
 ### 6.9 Placement and the budget — `src/shared/graphics/place.ts`, `budget.ts`
 
@@ -16036,6 +16108,16 @@ the fixtures' wiring, and M14's and the look rating's runs.
 >   and the second counter $2,500 ("within 6 s of the ring at 81.5 s, the
 >   earlier one stays").
 
+> **Step 6's three, 2026-11-25** (§9's piece 2 Built note). The baseline
+> makes none of the three (pinned over each fixture talk). The eval's
+> `FORGE_EVAL_GRAPHICS` block now asks every `eval-*.json`, the nested set
+> and three code-built English talks (`tests/eval/stepSixFixtures.ts`:
+> `step6-timeline-en`, `step6-before-after-en`, `step6-versus-en`), even
+> when no `eval-*.json` exists; `EVAL_TEMPLATE_IDS` gains the three, a
+> truth naming one no window offers is refused (`notOfferedTruthLine`),
+> and `DROP_REASONS` classes their notes. The block has never run on the
+> three: no model has answered them.
+
 ### 6.11 Tests, harness check, render checks, mutations — by phase
 
 **1 day**: 0.5 in phase 1 (the harness check's `pathLength` and `strokes`
@@ -16383,6 +16465,32 @@ V1 line, "through the full settle it survives, its onset Infinity and the
 per-20 s cap hiding it", was true when settle spaced; settle spaces
 nothing since `d3daf1e`, and V1 through the full settle has not been run
 again.)
+
+**Step 6's three 3D templates' tests, 2026-11-25** (§9's three Built
+notes; `8786882` … `f06d083`, pushed with `03937b4`, green on both
+runners, run 45712905904). New files, cases counted at `03937b4`:
+`tests/graphic3dTemplates.test.ts` (17; the three flat),
+`tests/graphic3dModel.test.ts` (28 and one `it.each` over the three
+fixture talks; the model's side, the menu, the baseline, the budget),
+`tests/renderer/depthTemplatesMeasure.test.ts` (12; the depth half's bars
+and verdict), `tests/renderer/findCheck.test.ts` (4; the `find` option),
+and `tests/eval/stepSixFixtures.ts` (the eval's three talks, not a test
+file). Changed: `claims`, `graphicBudget` (the hero rule not widened),
+`graphicDrawList` (the three in depth, the first inked frame, the focus
+blur sharp on the first beat; `MAY_ASK` gains them), `graphicHolds` (a
+comment: the three wait for their Hindi and Telugu fixtures), `graphicLibrary`,
+`graphicSound`, `graphicSpecs`, `graphicTemplates`, `graphicsEval`,
+`graphicsValidator` (the property and its adversarial generators over
+the three), `uiCensus` (the Graphics tiles counted by `LIBRARY_GRAPHICS`),
+and the renderer's `graphicCheckPrimitives`, `graphicCheckTemplates`,
+`graphicCompositor`, `graphicPanel` and `transcriptGraphics`;
+`graphic.int` gained the describe "step 6, piece 1" (the render check
+below). Tests that pinned the fixture count or no step-6 row now assert
+membership. Mutations, the agents' readings: 23 + 4, 27 + 10, 22 + 8,
+builder and fixer per piece, each failing and restored. The suite on the
+Mac at `f06d083`, the session's: 384 files passed and 6 skipped (390),
+6364 tests passed and 67 skipped (6431), against 380 files and 6275 tests
+at `7553972`.
 
 #### Phase 0's cases
 
@@ -16914,6 +17022,26 @@ every run is yours.
 >   option (`memoryBack`); a case fails on `WEBGL_MISSING_NOTE`, and a
 >   Preview frame that wants a compositor and holds none is named drawn
 >   flat (`61365a4`).
+
+> **Built 2026-11-25 (step 6's harness half: `find`, and `parity` with
+> `templates`)** (§9's piece 2 and 3 Built notes, with the session's
+> readings). Two rows the table above does not have:
+> - **`find: GraphicTemplateId[]`** (`findCheck.ts`, `f1fa026`): Find's
+>   own path for each of `timeline`, `before-after` and `versus` over the
+>   stub's made-up talk and fixed answer (`graphicsStub.ts`
+>   `harnessStepSixRun`), in a project built in memory; offered, placed,
+>   beats, seconds, every string drawn at the settled frame, sounds.
+>   Read on the harness page, the Mac, 2026-11-25: three cases, each PASS.
+> - **`parity: true` with `templates`** (`depthTemplatesCheck.ts`,
+>   `depthTemplatesMeasure.ts`, `9fbb0b9`, `f06d083`): §9's call. `parity`
+>   alone is phase 0's rig, unchanged; with `templates` it adds, after the
+>   templates row, `result.parity.templates`: preview against export flat
+>   at 9:16 and 16:9, and each depth at 540×960 and 960×540 under `clean`
+>   (`DEPTH_TEMPLATES_BAR` `{ settledMax: 0, firstMinMax: 8, missingMax: 0,
+>   moveLeftAtFirstInkMin: 0.5 }`, WebGL missing read on the first inked
+>   frame). Read on the harness page, the Mac, 2026-11-25: `parity
+>   templates verdict: PASS`, 4683 ms. The `parity` row's "3 (whole …)"
+>   stays the `compositor` and `depth` options' for counter and ring.
 
 #### The Indic render check
 
@@ -17481,6 +17609,17 @@ is absent (only §6.20's two Noto faces and their licences are tracked under
 > - **Not read by it**: the card's side of the hand-off on a real
 >   recording is M20's (`screenCard: '<path>'`, not run); the render side
 >   on a real file is read by no option.
+
+> **Built 2026-11-25 (step 6, piece 1: the three flat through the
+> export)** (§9's piece 1 Built note). The describe "step 6, piece 1" (3
+> cases): `timeline-en`, `before-after-en` and `versus-en` at 360×640 and
+> 640×360 through `bakeForExport`, `buildRenderPlan` and the bundled
+> ffmpeg, a two-level fake baker (shapes grey, words white), every frame
+> read equal to the drawer's own list for that frame, 3 px clear of every
+> edge, the frame before each element's words come on included. Green on
+> `windows-latest`'s 2018 ffmpeg and on `macos-15` at `03937b4` (run
+> 45712905904; no figure read). No depth case: node has no WebGL, a depth
+> clip bakes the canvas route, and its settled frames are route one's.
 
 #### Census rows
 
@@ -19896,6 +20035,16 @@ sweep, the store's follow-on edits, the switch and the tests.
 > `windows-latest`, so it holds within 1 ms there too (the job's own
 > figures need a sign-in and are not read).
 
+> **Step 6's three, 2026-11-25** (§9's piece 2 Built note; a proposal:
+> this table has no row for them). Piece 1 left them silent and pinned it;
+> piece 2 changed that on purpose. As the code has it at `03937b4`
+> (`graphicSoundCues`): restrained styles, a tick on the first element's
+> beat, on its value; `energetic`, a tick on every beat and a whoosh on
+> each entrance and stroke (a timeline's row entrances and edges; a
+> versus' two entrances and its divider; a before-and-after's two
+> entrances and its reveal, which shares the after's entrance span, one
+> whoosh there). `tests/graphicSound.test.ts` pins both.
+
 ### 6.15 Phase 0 — Measure before relying: M1-M22 and H1-H13
 
 **2 days**, mostly your runs. Its pieces, built in this order (§6.19):
@@ -21424,6 +21573,23 @@ and not one of your twelve answers:
 >   panel blurred with the label under focus; and, kept by `c829007` as
 >   records for the look: the GPU memory per compositor an estimate, glow
 >   taps at 4K spaced unevenly, ANGLE's Metal against D3D11.
+
+> **Step 6's three in depth, 2026-11-25** (§9's piece 3 Built note,
+> `9fbb0b9`, `f06d083`, `03937b4`). The table above gains three
+> templates through `DEPTH_PLANES` (`DepthTemplate`, `DEPTH_TEMPLATES`),
+> each read as the counter's: parallax, backing 0, labels 0.02, values
+> (a timeline row's when) 0.05; dolly, the values 0.05, the rest 0;
+> focus, the values sharp on 0, the labels and every panel and the reveal
+> they sit on at −0.02, the timeline's rail and dots and the versus'
+> divider on 0; tilt one plane. `DEPTH_FOCUS_LABEL_Z` −0.02 for all five;
+> `fieldOf` takes every trailing number off. `depthCamera` and `depthOut`
+> take a `start` (default 0, so counter and ring are unchanged: the
+> agents' hash rig, 756 cases, 49,518 lists, byte-equal): the three pass
+> their first beat less `DURATIONS.entrance`, so the camera moves over the
+> first element's entrance and is flat from the first beat, and the focus
+> blur is exactly 0 on the first beat. **The hero rule was not widened**:
+> `HERO_TEMPLATES` stays counter and ring, `HERO_GLOW_ITEM` has no row
+> for the three, and `heroGlow` gives them none.
 
 #### The screen card — `src/shared/graphics/templates/screenCard.ts`
 
@@ -25708,6 +25874,607 @@ This step runs `await window.__forgeGraphicCheck({ parity: true, templates:
 each depth.
 
 The tests and render checks are §6.11's, extended per template.
+
+> **Built 2026-11-25 (the 3D half, piece 1: the three drawn flat).**
+> `8786882`, then `136a3d3` after two critics (workflow run
+> `wf_fb4d4433-335`, twelve Opus agents, three pieces, each a builder,
+> two critics and a fixer). Pushed with the rest of the lane as
+> `7553972..03937b4` on 2026-11-25; CI green on both runners at `03937b4`
+> (run 45712905904). Only the 3D half of this step is built: the
+> retrieved-fact cards and the `source` template are not (after the beta,
+> §16.75); there is no `source` row in `GRAPHIC_TEMPLATES` and no `source`
+> drawer, and two tests pin both. Described from the code at `03937b4`.
+> - **`GRAPHIC_TEMPLATES`** (`src/shared/graphics/template.ts`) gains three
+>   rows, every drawn string `grounded`, no title, no `fixedTitles`, no
+>   `appFields`: `timeline` seconds 3 / 6 / 8, `fields` `'items.when'` and
+>   `'items.label'`, `pairs` `[['items.label', 'items.when']]` (a row's
+>   `when` is its pair's value), `maxItems` 5, `minItems` 2;
+>   `before-after` 2.5 / 4 / 6, `fields` `'before.label'`,
+>   `'before.value'`, `'after.label'`, `'after.value'`, `pairs`
+>   `[['before.label', 'before.value'], ['after.label', 'after.value']]`;
+>   `versus` 2.5 / 4 / 6, the same with `left` and `right`. All three
+>   `threeD: true` and, since piece 2, `pairsInOrder: true`. The seconds are
+>   this piece's proposals until M16, said in the file: the timeline takes
+>   steps' 3 / 6 / 8 (a list arriving a row per beat, two strings a row,
+>   at most 5 rows to steps' 6); the two-sided pair is two pairs to read,
+>   a counter's 2 / 3 / 4 with the default a second longer, the most bars'
+>   6, the least `LEAD_S` + about a second between beats + `TAIL_S` (0.5 +
+>   1 + 0.8 = 2.3) rounded up. `GRAPHIC_SIDES` `{ 'before-after':
+>   ['before', 'after'], versus: ['left', 'right'] }`. `graphicFieldText(data,
+>   path)` is the one reader of a field path (`value`, `items[1].label`,
+>   `before.value`) that the validator's `fieldText`, `claimsOf` and the
+>   dock share; without it every two-sided graphic drew the false note
+>   "'' is not one number". `graphicName(template)` (`136a3d3`) is the one
+>   way on-screen words name a template: `GRAPHIC_NAMES` `{ 'before-after':
+>   'before-and-after' }`, every other id its dash read as a space; it
+>   replaced seven `id.replace(/-/g, ' ')` calls (the dock's heading, the
+>   Transcript tile's two lists, `apply.ts` and `beats.ts`' `cardName`,
+>   `budget.ts`' `templateName`, the validator's side note).
+> - **Four new drawer files**, in `DRAWERS` after `screen-card`, pure,
+>   through painter A, from §6.3's kinds and §6.13's motion only, every text
+>   through `lineItems`, the too-big rule at `FIT_MIN` (too long for its
+>   place, nothing is drawn), one layout at both shapes as bars and steps.
+>   `templates/timeline.ts` `drawTimeline`: per row i, `edge-i` (i ≥ 1, a
+>   stroke down the rail from dot i − 1, drawn on over `DURATIONS.stroke`
+>   ending ON beat i, `palette.ink`, round caps), `dot-i` (a circle shape,
+>   `palette.ink`), `when-i`, `label-i` (wrapped lines `when-i-1`,
+>   `label-i-1` …); one beat a row, the row's dot and words entering with
+>   `style.motion.entrance` over `DURATIONS.entrance` ending ON its beat, at
+>   opacity 0 before; the block centred in the content rect, the rail
+>   column, the when column (as wide as the widest when, at most
+>   `whenMax` of the content width), a gap, the label wrapping in the rest.
+>   `templates/beforeAfter.ts` `drawBeforeAfter`: `panel` (the whole card,
+>   only when `palette.panelOpacity` is above 0), `before-label`,
+>   `before-value`, `reveal`, `after-label`, `after-value`; two beats: the
+>   card (panel, the reveal's place, the before's words) ending ON beat 0,
+>   the after's words ending ON beat 1. **The reveal** is a `rounded`
+>   `shape` in `palette.accent` at `REVEAL_OPACITY` = 0.35 (opacity 0 until
+>   it starts to grow), its box's x at the card's middle and its width the
+>   after's half × the progress on `drawOnEase` over `DURATIONS.entrance`
+>   ending ON beat 1: it grows over the after's half only, never over the
+>   before's words, and needs no mask kind and no new item kind. A 0.35
+>   tint, not a solid fill, because several presets' accent is their text
+>   colour (mono, neon, energetic). `templates/versus.ts` `drawVersus`:
+>   `left-panel`, `left-label`, `left-value`, `divider`, `right-panel`,
+>   `right-label`, `right-value`; the left ending ON beat 0, the right ON
+>   beat 1, the `divider` a stroke in `palette.ink` down the middle gap,
+>   drawn on over `DURATIONS.stroke` ending ON beat 1. **No "vs" glyph**:
+>   the template adds no word (§6.2's painter's contract). In both two-sided
+>   templates **the values are drawn whole on their beat, never counted**
+>   (a before and an after are not one number climbing); no string is
+>   formatted. `templates/sides.ts` (beyond the plan's three files): `Side`,
+>   `sideOf` (a missing side, or a field not a string, reads as ''),
+>   `layoutSides`, `HalfLaid`, `SidesLaid`: two halves side by side, label
+>   above value, each half as wide as the wider side's text plus its
+>   padding, so a short pair is a compact card and not a band across a
+>   16:9 frame. In all three, from the last beat on nothing moves: the
+>   settled frame is the last beat's. `LAYOUT_SIZES` (`layout.ts`, proposals
+>   beside §6.2's rows): `timeline: { when: 0.045, label: 0.045, rail:
+>   0.05, dot: 0.35, whenMax: 0.35, gap: 0.4, rowGap: 0.6 }`,
+>   `'before-after': { label: 0.04, value: 0.07, gap: 0.2, pad: 0.5 }`,
+>   `versus: { label: 0.04, value: 0.07, gap: 0.2, pad: 0.5, middle: 1 }`.
+> - **The validator's shape half** (`validateGraphics.ts`, rule 9): a side
+>   missing or not a `{ label, value }` of strings is one problem on
+>   `$.<side>` and nothing is bound ("a before-and-after needs its after
+>   side: a label and a value", "a versus needs its left side: …", in
+>   `graphicName`'s words since `136a3d3`); a timeline row's label must say
+>   something (steps' `mustSay`); its item count through `minItems` and
+>   `maxItems`. A two-sided label may be empty, as a counter's. `claims.ts`'
+>   `claimsOf` reads a side's dotted field through `graphicFieldText`.
+>   **`apply.ts` `drawnStrings`**: a timeline's when and label per row, a
+>   side's label and value, in drawn order, a missing field as ''.
+> - **The Library** (`graphics/library.ts`): three samples, so
+>   `LIBRARY_GRAPHICS` (the drawn templates with a sample, less
+>   `LIBRARY_LEFT_OUT`'s `callout` and `screen-card`) is ten tiles, in
+>   `DRAWERS`' order: Counter, Bars, Steps, Quote, Ring, Keyword, Lower
+>   third, **Timeline** (`{ when: '2020', label: 'First moment' }`, `{ when:
+>   '2022', label: 'Second moment' }`, `{ when: '2024', label: 'Third
+>   moment' }`), **Before and after** (`before: { label: 'Before', value:
+>   '10' }`, `after: { label: 'After', value: '100' }`), **Versus** (`left:
+>   { label: 'This one', value: '40' }`, `right: { label: 'That one',
+>   value: '60' }`).
+> - **The dock** (`GraphicPanel.tsx`): `FIELD_LABELS` gains `when` "When"
+>   and "Before label", "Before value", "After label", "After value", "Left
+>   label", "Left value", "Right label", "Right value"; the panel's field
+>   reader and writer take a side's leaf (`SIDE`, `before.value`), a missing
+>   side starting empty. A timeline is shown row by
+>   row ("Row 1 when", "Row 1 label", "Row 2 when" …, `BY_ROW` =
+>   `['timeline']`, `136a3d3`); bars and steps keep every row of one field,
+>   then the next. The Depth row shows for the three (`threeD`), drawing
+>   since piece 3.
+> - **The census**: eleven rows, the recipes `graphic-before-after` and
+>   `graphic-versus` (the eight side labels, one each, added through the
+>   store) and the three tile names under `library-graphics`; `136a3d3` set
+>   the two `GRAPHIC_TILE_TITLE` rows' count from 7 to 10 (both would have
+>   read ambiguous) and `tests/uiCensus.test.ts` now ties them to
+>   `LIBRARY_GRAPHICS.length`. **The session's reading, the harness page,
+>   the Mac, 2026-11-25, at `f06d083`**: `__forgeCensus()` missing [], 1029
+>   checked, 12 skipped, about 66 s (1018 checked, 12 skipped before the
+>   lane).
+> - **The fixtures**: `timeline-en` (five rows, 2016 to 2025, seconds 7.9
+>   of its 8 s max), `before-after-en` ("Price per wedding" $1,500, "After
+>   the rebrand" $4,000) and `versus-en` ("Photos we deliver" 600, "The
+>   average studio" 350) in `tests/fixtures/graphics/specs.json`, now 30,
+>   its note extended, so every reader of the drawn templates' fixtures
+>   (the harness's `templates`, `graphicDrawList`, `graphicFrame`, the
+>   budget's property) takes them unchanged. **English only**: the Hindi
+>   and Telugu fixtures are yours (rule A; no lane writes them), so the
+>   harness's `indic` option names all three in `noIndic`, and
+>   `graphicHolds.test.ts` says why they are not in its per-language walk.
+>   Tests that pinned 27 fixtures, or no step-6 row or drawer, now assert
+>   membership.
+> - **Tests**: `tests/graphic3dTemplates.test.ts` (new, 17 cases at
+>   `03937b4`: arrivals at 24, 25, 30 and 60 fps, opacity 0 before each
+>   span, the reading hold, the settle, the text-item property at both
+>   shapes for short, long and non-Latin strings, the too-big rule, each
+>   one's geometry, missing fields, `graphicName`, the shape half);
+>   `graphicLibrary` and `graphicPanel` one case each; `graphicSound`'s pin
+>   (`136a3d3`, rewritten by piece 2); the `uiCensus` tile count. **The
+>   render check**: `tests/integration/graphic.int.test.ts` gains the
+>   describe "step 6, piece 1" (3 cases, the README one included): the three
+>   English fixtures at 360×640 and 640×360 through `bakeForExport`,
+>   `buildRenderPlan` and the bundled ffmpeg over a red shot, with a
+>   two-level fake baker (shapes grey, words white; a one-level fake cannot
+>   see a word arrive over its panel); each is baked by the box route, every
+>   frame exported, and on every frame read (before the clip, frame 0, the
+>   frame each element's words first come on and the frame before it, each
+>   beat, the last moving frame, held) the export is the drawer's own list
+>   for that frame, 3 px (`S6_MARGIN`) clear of every edge: a word's white
+>   white, a shape's grey grey, the red elsewhere. The builder's readings:
+>   23 mutations (M1-M23), each failing; the fixer's 4 (F1-F4); the suite
+>   381 files and 6297 tests passed at `8786882`, 6300 at `136a3d3`.
+>   Windows CI ran the step-6 describe on the 2018 ffmpeg at `03937b4`:
+>   green, no figure read (the job's log needs a sign-in).
+> - **By eye, the harness page, the Mac, 2026-11-25** (the session, not a
+>   rating): each placed by the store's `placeLibraryGraphic` on a 16:9
+>   project under the default style, its settled frame: the timeline a
+>   white rail with three dots, "2020 First moment", "2022 Second moment",
+>   "2024 Third moment", years and labels one size, left-aligned, the block
+>   centred; the before-after one small card, "Before" over "10" on the
+>   left on the dark panel, "After" over "100" on the right over an
+>   olive-yellow tint (the accent at 0.35 over the dark panel); the versus
+>   "This one" over "40", a thin white divider, "That one" over "60". A
+>   second graphic where one stood was refused with `another graphic is on
+>   screen then`.
+
+> **Built 2026-11-25 (the 3D half, piece 2: the model's side).** `f1fa026`,
+> then `b70b0bf` after two critics. The three are taken by the graphics
+> pass as §6.6-§6.10 take the nine shapes, with the departures listed
+> below; the baseline makes none of them.
+> - **The menu** (`src/shared/director/menuGraphics.ts`, new; called per
+>   24-sentence window from `run.ts` `graphicsMenuFor`, after
+>   `GRAPHIC_TEMPLATES_ALWAYS` and the callout, `templates: [...templates,
+>   ...stepSixOffered(offeredOn, transcript)]`, so one window may offer
+>   them and the next not). `stepSixOffered(sentences, transcript)` reads
+>   each sentence's stretch (itself and one menu sentence either side) and
+>   returns, in `STEP_SIX_TEMPLATES`' order: **`timeline`** when the stretch
+>   says at least two different years that `saidAsYear` accepts (four
+>   digits, no unit, `TIMELINE_YEARS` 1000 to 2999); **`before-after`** when
+>   it says two different numbers in one unit (and currency), neither a
+>   year nor a list's place (after one of `LIST_NOUNS_EN`: step, tip,
+>   reason, part, number, day, chapter, rule, point, phase, stage, lesson,
+>   episode, round, level; English only), and one of
+>   `BEFORE_AFTER_CUES_EN` (before, after, used, from, went, grew, rose,
+>   fell, dropped, jumped, climbed, doubled, tripled, halved, increased,
+>   decreased, became, anymore, previously) in a sentence that holds one of
+>   them; **`versus`** the same with `VERSUS_CUES_EN` (versus, vs, compared,
+>   comparison, than, whereas, while, against, instead, other, but). 'now'
+>   and 'today' were left out after they offered a before-and-after on a
+>   plain talk. **Languages**: Hindi and Telugu (`hi`, `te`) read no cue
+>   words, so there any two numbers in one unit offer both two-sided
+>   templates (the cue words are yours to give; no list here may hold a
+>   word of theirs): a necessary condition, never a sufficient one. Every
+>   other code, `und`, '' and `auto` included, reads the English cues
+>   (`b70b0bf`; before it, every non-English code took the numbers-alone
+>   path). The year-as-date test and the list nouns are English's alone
+>   (`en`); elsewhere a year is four digits. `b70b0bf` also requires the
+>   cue in a sentence holding one of the two numbers, so the nested
+>   fixture `nested-en-2` ("Step one … the night before") is offered none
+>   of the three, as before step 6.
+> - **No new schema key** (`schemaGraphics.ts`): every key of a graphic
+>   object is required, so each new one would cost every graphic of every
+>   answer tokens under `maxTokensForGraphics`' fixed 850. The three fill
+>   the existing `items`: a timeline row's `value` is its year; a
+>   before-and-after's and a versus' two items are their sides in drawn
+>   order (`dataOf`); the item's `value` description became "This row's
+>   number or year, copied, or empty". `answerPath` maps a drop's data path
+>   back to the answer ('$.after.value' → '.items[1].value', a row's
+>   '.when' → '.value').
+> - **The prompt rows** (`promptGraphics.ts` `GRAPHIC_TEMPLATE_ROWS`, each
+>   listed only when the menu offers it, as `${id} — ${row.when} —
+>   ${row.fields}`; the system text unchanged): `timeline: { when: 'two to
+>   five dated moments said in date order (items: label is the words said
+>   for what happened, value is its year as said, four digits)', fields:
+>   'items[].label, items[].value' }`; `'before-after': { when: 'a number
+>   said as it was, then as it is now (two items, the before first; each
+>   label and number copied, a label may be empty)', fields:
+>   'items[].label, items[].value' }`; `versus: { when: 'two things set
+>   against each other, each with its number (two items, in the order
+>   said)', fields: 'items[].label, items[].value' }` (the first two in
+>   `b70b0bf`'s plainer words).
+> - **The validator as built** (`validateGraphics.ts`, `claims.ts`):
+>   rule 6 binds each pair as a bars item (a side's label with its value, a
+>   timeline row's label with its when). `TemplateDef.pairsInOrder` (true
+>   on the three) makes each pair's value be said after the one before it
+>   (`Claim.inOrder`, `valuesDisordered`): a before said after its after,
+>   a right before its left, a timeline's rows out of turn, dropped with
+>   "'<text>' is not said in the order the <graphicName> draws it in
+>   <sentence>", so a fall is never drawn as a rise. **A timeline's when**
+>   is one year (`TIMELINE_YEARS = { from: 1000, to: 2999 }`): the answer's
+>   text four digits of any script with no unit or currency, else
+>   `notAYear`: "'<text>' is not a year: a timeline's when is one year as
+>   said, such as 2019"; a when bound to an amount ('$2018') is "said in
+>   <sentence> in another unit"; and since `b70b0bf` the speaker's own
+>   token (`spokenNumberAt`) must pass `saidAsYear(tokens, at, english)`:
+>   four digits as said ('1,500' and 'two thousand fifteen' are not), and in
+>   English after one of `YEAR_LEADS_EN` (in, since, by, until, till, from,
+>   to, of, back, year, around, during, after, before, early, late, mid,
+>   circa, january … december) or at its clause's start, and not directly
+>   before a plural (a word of four letters or more ending in s, less
+>   `NOT_PLURAL_EN`'s eighteen), else `notSaidAsAYear`: "'<text>' is not
+>   said as a year in <sentence>: a timeline's when is a year said as a
+>   date, such as 'in 2019'" (a heuristic, said as one; Hindi and Telugu
+>   take the four digits alone). The years must rise: "the timeline's years
+>   are not said in date order in <sentence>". **The two sides** must be
+>   said in one unit, as bars' values: "the two sides of the <graphicName>
+>   are said in <sentence> in more than one unit" (`b70b0bf`). A two-sided
+>   answer of other than `SIDE_ROWS` (2) items is dropped with
+>   `sideRowsNote`: "a <graphicName> is 2 items, the <first> and then the
+>   <second>; this has <n>". One number said once cannot be both sides, nor
+>   one year two rows (no two claims bind one occurrence); said twice ('$1,500
+>   … still $1,500') a no-change before-and-after is kept and drawn as said.
+>   **For every template** (`b70b0bf`): a number said only inside a range
+>   or a ratio ('from 10 to 20', 'between 30 and 40', '1 in 4') is still
+>   refused, but with "'<text>' is said as part of a range or a ratio in
+>   <sentence>, not as one number" in place of the false "not said"
+>   (`claims.ts` `numberSpansHeld`, each withheld number with its reason,
+>   'range', 'adjacent' or 'qualified'; `numberSpans` is its unheld filter,
+>   unchanged; `heldInRange` reads 'range' only). `dataOf`, `beatWordsOf`,
+>   `droppedCandidate`, `strayFields`, `overLength` and `run.ts`'
+>   `answerDrawn` take the three.
+> - **Beats** (`beatWordsOf`): each element on its value's bound word in
+>   drawn order, as bars (a timeline row on its when; the before's or
+>   left's value, then the after's or right's). Rooms: `roomRank` 0, no
+>   change. The hero rule is not widened.
+> - **Sounds, as the code has them at `03937b4`** (`sound.ts`
+>   `graphicSoundCues`, `tests/graphicSound.test.ts`): piece 1 left the
+>   three silent and `136a3d3` pinned that under every preset; piece 2
+>   changed it on purpose and rewrote the pin. Now they take the list
+>   templates' row: restrained styles a tick on the first element's beat
+>   (on its value: '$1,500' for a before-and-after); `energetic` a tick on
+>   every beat and a whoosh on each entrance and stroke as the drawers move
+>   them (a timeline's edges, a versus' divider, a before-and-after's
+>   reveal, which shares the after's entrance span: one whoosh there). A
+>   proposal: §6.14's table has no row for them.
+> - **The baseline** (`baselineGraphics.ts`) makes none of the three; a
+>   test over each fixture talk pins it.
+> - **The eval**: `tests/eval/stepSixFixtures.ts` (new), three code-built
+>   English talks, `step6-timeline-en` ("In 2015 we shot our first wedding,
+>   in 2018 we hired an editor, and in 2021 we opened the studio.", a
+>   negated year the trap), `step6-before-after-en` ($1,500 then $4,000,
+>   a negated $900 the trap) and `step6-versus-en` (600 leads against 350,
+>   a negated 900 the trap), each offering its own template and neither of
+>   the other two. A `FORGE_EVAL_GRAPHICS` run (`director.eval.test.ts`)
+>   now asks every `eval-*.json`, the nested set and these three, even with
+>   no `eval-*.json` (before, it returned early; `noEvalFixturesLine` now
+>   reads "No eval-*.json in <dir>: the ten eval transcripts are your
+>   recordings and are not there yet, so only the nested set and step 6's
+>   three English talks are asked."). `EVAL_TEMPLATE_IDS` gains the three; a
+>   truth naming one no window of its transcript offers is refused
+>   (`notOfferedTruthLine`); `DROP_REASONS` classes the three's notes
+>   (the drawn-order note as 'order'; "is not a year", "is not said as a
+>   year" and the range note as 'not-a-number'; the two-items, missing-side
+>   and date-order notes as 'template-rule', where "in more than one unit"
+>   already was). **No model has
+>   been asked for one of the three**: the block has never run on them.
+>   The generated-talk property (`graphicsValidator.test.ts`) and its
+>   adversarial generators cover the three, in en, hi and te from the
+>   file's own word lists (1,800 talks, the builder's count), with two
+>   generators added by `b70b0bf` (years said falling, an English year said
+>   as a count); the Hindi and Telugu 'and' is again one constant `AND`.
+> - **The budget**, as `graphic3dModel`'s 'THE BUDGET' prints it (the
+>   agents' figures): worst menu 24 sentences × 30 words, all ten
+>   templates, the Telugu language line: system 401 + user 3,624 + answer
+>   850 = 4,875 tokens at 3.0 characters a token, 158 of them the three's
+>   rows (129 before `b70b0bf`'s plainer rows), 4,717 without them; 5,675
+>   with the thinking retry, of `num_ctx` 8,192; the format schema (about
+>   662 tokens) not counted, about 6,337 counted; at 1 character a token
+>   the prompt is 12,075 characters, over 8,192, as it already was without
+>   the three. `maxTokensForGraphics` unchanged at 850.
+> - **The harness**: `graphicsStub.ts` `HARNESS_STEP_SIX`,
+>   `harnessStepSixTranscript`, `harnessStepSixRun` (made-up English talks
+>   with 300 ms words and fixed answers), and the graphic check's new
+>   `find` option (`findCheck.ts`): Find's own path for each template, in a
+>   project built in memory (one 6 s 1080×1920 30 fps footage clip; the
+>   page's timeline unchanged), the real menu, validator, beats, placement,
+>   budget, sounds and landing, then every string read back from the
+>   settled frame. **The session's reading, the harness page, the Mac,
+>   2026-11-25, at `f06d083`**, `await window.__forgeGraphicCheck({ find:
+>   ['timeline', 'before-after', 'versus'] })`: `find.unknown: []`, three
+>   cases each `pass: true`, `placed: 1`, `missing: []`, `dropped: []`,
+>   `error: null`, each offered the six always-offered templates and its
+>   own, neither of the other two; `find timeline: PASS; offered timeline;
+>   placed 1, 3 beats (0.30, 2.40, 4.20 s), 5.00 s on screen, 6 of 6
+>   strings drawn, 0 sounds`, `find before-after: PASS; offered
+>   before-after; placed 1, 2 beats (0.50, 2.90 s), 3.70 s on screen, 4 of 4
+>   strings drawn, 0 sounds`, `find versus: PASS; offered versus; placed 1,
+>   2 beats (0.50, 2.00 s), 2.80 s on screen, 4 of 4 strings drawn, 0
+>   sounds`, each with the note `no sound library is installed — graphics
+>   land silent` (the page has no sound library: 0 is the page's, not the
+>   app's). The answers are the stub's, not a model's.
+> - **Tests**: `tests/graphic3dModel.test.ts` (new, 28 cases and one
+>   `it.each` over the three fixture talks at `03937b4`), `tests/renderer/findCheck.test.ts`
+>   (new, 4), cases in `graphicsValidator`, `graphicSound`, `graphicsEval`,
+>   `claims` ('between 30 and 40' now the range note, a '30 to 40' case
+>   added), `graphicPanel` and `transcriptGraphics` (Find with each of the
+>   three). The agents' readings: 27 mutations by the builder (M1-M27), 10
+>   by the fixer (F1-F10), each failing; the suite 383 files and 6332 tests
+>   passed at `f1fa026`, 6341 at `b70b0bf`.
+
+> **Built 2026-11-25 (the 3D half, piece 3: depth, and the parity run).**
+> `9fbb0b9`, then `f06d083` after two critics, then the session's
+> `03937b4` (the head comment of `templates/depth.ts` brought to what the
+> fixer built; a comment only). The four moves reach the three through
+> painter B, built only from the existing depth branch.
+> - **`templates/depth.ts`**: `DepthTemplate` = `'counter' | 'ring' |
+>   'timeline' | 'before-after' | 'versus'`, `DEPTH_TEMPLATES` the five;
+>   `DEPTH_PLANES` gains a row per template, each read as the counter's
+>   (its backing the counter's panel, its labels its label, its values, a
+>   timeline row's when, its value): `timeline` parallax `{ edge: 0, dot: 0,
+>   label: 0.02, when: 0.05 }`, dolly `{ edge: 0, dot: 0, label: 0, when:
+>   0.05 }`, focus `{ edge: 0, dot: 0, when: 0, label: -0.02 }`;
+>   `before-after` parallax `{ panel: 0, reveal: 0, 'before-label': 0.02,
+>   'after-label': 0.02, 'before-value': 0.05, 'after-value': 0.05 }`, dolly
+>   the values 0.05 and the rest 0, focus panel, reveal and labels −0.02,
+>   the values 0; `versus` parallax `{ 'left-panel': 0, 'right-panel': 0,
+>   divider: 0, 'left-label': 0.02, 'right-label': 0.02, 'left-value':
+>   0.05, 'right-value': 0.05 }`, dolly the values 0.05 and the rest 0,
+>   focus panels and labels −0.02, the values and the divider 0. Under
+>   focus every backing a label sits on goes to the label's plane (a
+>   backing on 0 would be painted over a label behind it, as the counter's
+>   focus panel); the rail and the divider back no text and stay on 0. At
+>   most three distinct `z` (parallax 3, dolly 2, focus 2; tilt one plane),
+>   whatever the row count. `DEPTH_FOCUS_LABEL_Z` (the plane that reads
+>   `DEPTH_FOCUS_BLUR_PX`): −0.02 for all five. `fieldOf` is exported and
+>   takes every trailing number off (`/(?:-\d+)+$/u`), so a timeline's
+>   `when-2-1` is `when`; the old single strip gave `when-2`, plane 0 by
+>   silence (a wrapped `label-0-1` in `timeline-en` showed it).
+> - **The camera over the first element's entrance** (`f06d083`):
+>   `depthCamera(move, style, t, beat, labelZ?, start = 0)` and
+>   `depthOut(template, spec, style, t, beat, size, items, start = 0)`;
+>   the span is `[max(0, min(start, beat)), beat]`, capped at
+>   `DURATIONS.entrance`. Counter and ring pass no `start` (they enter from
+>   t = 0); the three pass their first beat less `DURATIONS.entrance`, when
+>   their first element's entrance begins. Tilt, parallax and dolly are flat
+>   from the FIRST beat; **the focus blur falls over the same span to
+>   exactly 0 on the first beat**, as the counter's on its one, so later
+>   rows and the second side enter sharp. `9fbb0b9` ran the camera from
+>   t = 0, over frames blank for all three (the critics measured 0.034 of
+>   tilt left on the first inked frame, frame 5), and its focus blur to the
+>   LAST beat through a `lastBeat` argument, which blurred each later label
+>   while it was said; `f06d083` removed `lastBeat`. The fixer's node
+>   reading: on the first inked frame 0.731 of each move is left under
+>   `clean`, 0.564 under `editorial`, 0.790 under `energetic`. From the last
+>   beat every frame is the flat list itself (route one), as for counter
+>   and ring.
+> - **Never a hero**: `HERO_GLOW_ITEM` is now `Partial` (counter and ring
+>   only) and `heroGlow` returns nothing for a template with no row, so a
+>   `hero: true` a project file carries on one of the three glows nothing;
+>   `apply.ts` `HERO_TEMPLATES` stays `['counter', 'ring']`, and since
+>   `withHeroes` keys the rule by `HERO_TEMPLATES` AND `threeD`, that list
+>   alone keeps the three out: `graphicBudget`'s "the hero rule is not
+>   widened to step 6’s three" pins it (a timeline, a before-and-after and a
+>   versus landed ahead of a counter get no depth and no hero; the counter
+>   does).
+> - **Counter and ring unchanged**: the builder's hash rig over every draw
+>   list of counter-en/hi/te and ring-en/hi/te (1080×1920 and 1920×1080,
+>   every style, the variants none, flat, the four depths, hero, tilt +
+>   hero and focus + hero, every frame): 756 cases, 49,518 lists,
+>   byte-equal before and after, and the three's plain lists (84 cases,
+>   11,928 lists) likewise; re-run by the fixer at `f06d083` with `cmp`,
+>   identical. The agents' reading, from a rig kept outside the repo's
+>   tracked files, not a committed test.
+> - **The harness** (`depthTemplatesMeasure.ts`, `depthTemplatesCheck.ts`,
+>   new; `graphicCheck.ts` `readTemplateFixture`, `checkParityTemplates`):
+>   the plan's call, `{ parity: true, templates: [...] }`, as `{ indic:
+>   true, templates }` was: `parity` alone still runs phase 0's rig
+>   unchanged; with `templates`, a phase-3 half runs after the templates
+>   row as `result.parity.templates`, wired inside the `if
+>   (options.templates) {` block (`graphicCheckPrimitives`' source test
+>   counts only `if (options.X)` guards). Flat, preview against export at
+>   9:16 (the templates row's own 1080×1920 cases) and 16:9
+>   (`FLAT_PARITY_WIDE` 1920×1080); in depth, for each fixture under
+>   `clean` at 540×960 and 960×540 (`DEPTH_TEMPLATE_SHAPES`), each of the
+>   four moves: the list half (`depthListReading`, `depthListFailures`: the
+>   last moving frame's camera exactly flat, some frame off flat and not
+>   all, none off flat from the last beat on (`offFlatAfterLastBeat`, a bar
+>   beyond the depth option's), a first frame with ink (`itemHasInk`) with
+>   at least half the move left, the settled frame inked, every text item
+>   the flat twin's, the settled list the twin's own); the settled frame
+>   through `paintDrawList3d` against the twin; the first inked frame
+>   against the twin's; WebGL pretended missing, read at the first inked
+>   frame with `missing.inked` required; the Preview's drawn-flat mark at
+>   that frame. `DEPTH_TEMPLATES_BAR` = `{ settledMax: 0, firstMinMax: 8,
+>   missingMax: 0, moveLeftAtFirstInkMin: 0.5 }` (the first two
+>   `DEPTH_BAR`'s). The half reports its page conditions (`{ before, after,
+>   throttled }`) beside its ms. `textsDiffer` compares text, look, box and
+>   opacity, not `z` or the blur (focus is the camera's), and its comment
+>   says so.
+> - **The session's reading, the harness page, the Mac, 2026-11-25, at
+>   `f06d083`**, `window.__forgeGraphicCheck({ parity: true, templates:
+>   ['timeline', 'before-after', 'versus'] })`: about 9 s of wall clock
+>   (the builder had guessed 2 to 5 minutes); `parity templates: 4683 ms,
+>   the page visible and not throttled`, `parity templates by template:
+>   timeline PASS, before-after PASS, versus PASS`, `parity templates
+>   verdict: PASS`; no line FAIL or THROTTLED. `result.parity.templates`:
+>   asked and depth the three, `notDepth`, `noSpec`, `unknown` [],
+>   `conditions.throttled` false. The templates row at 1080×1920:
+>   `timeline-en` PASS, 103 moving frames of 237, baked twice 103 of 103
+>   PNGs byte-equal, over the ink both routes mean 0.064 max 255, the live
+>   Preview max 0, box 728×520 at 192,714; `before-after-en` PASS, 61 of
+>   99, 61 of 61 byte-equal, both routes mean 0.000 max 0, box 894×290 at
+>   94,238; `versus-en` PASS, 61 of 90, 61 of 61 byte-equal, both routes
+>   mean 0.000 max 0, box 930×342 at 76,1396. Flat, six rows, all pass,
+>   `failed` []: `timeline-en` 9:16 worst mean 0.064, 16:9 0; the other
+>   four 0. Depth, 24 readings (3 fixtures × 2 shapes × 4 moves, `clean`),
+>   each PASS, in every one: the last camera `{"tilt":0,"yaw":0,"dolly":0,
+>   "focusPx":0}`; 15 frames off flat, the first frame 0, 0 from the last
+>   beat on; first ink at frame 5 with 0.731 of the move left; text items
+>   against the flat twin's 0 differ (timeline 1133 at 9:16 and 1030 at
+>   16:9, before-after 244 at both, versus 366 at 9:16 and 244 at 16:9);
+>   the settled list the twin's, inked; settled against the twin max 0.
+>   Frame 5 against the twin: max 255 for every timeline reading;
+>   before-after 9:16 tilt 157, parallax 121, dolly 157, focus 102; versus
+>   9:16 tilt 121, parallax 124, dolly 155, focus 99; versus 16:9 dolly
+>   120, focus 99 (the other 16:9 two-sided figures were not copied down;
+>   all passed). WebGL missing, in every reading: `createCompositor` null,
+>   the one note `drawn flat: 3D needs WebGL, which did not start on this
+>   computer`, frame 5 (inked) against painter A max 0, settled against the
+>   twin max 0, and per fixture and shape the Preview marked it drawn flat.
+>   The four depths through `paintDrawList3d` in 131 to 246 ms per fixture
+>   and shape. The same call printed phase 0's M6 rig unchanged: colour
+>   management on, frame mean 0.000 max 0, colour max 1 level; off, frame
+>   mean 0.000 max 1, colour max 0 levels. By eye on the same page (not a
+>   rating): tilt on a before-and-after and parallax on a timeline, set
+>   through the store's `setGraphic`, each drew during the first entrance,
+>   no error logged for them.
+> - **Tests**: `graphicDrawList` (the three in depth at both shapes, every
+>   style and frame; the first inked frame with at least half the move left
+>   over every style and both shapes; the focus blur above 0 the frame
+>   before the first beat and exactly 0 from it on; at most `MAX_PLANES`
+>   with timeline-en's five rows and wrapped lines; `MAY_ASK` gains the
+>   three), `tests/renderer/depthTemplatesMeasure.test.ts` (new, 12 cases at
+>   `03937b4`: the list half, the verdict lines, `itemHasInk`, a reading
+>   through a pre-fix camera that fails by name), `graphicCompositor` (the
+>   real bakes and WebGL missing for the three), `graphicPanel` (Depth
+>   kept), `graphicBudget` (the hero rule), `graphicCheckPrimitives` (the
+>   guard). The agents' readings: 22 mutations by the builder (M1-M22), 8 by
+>   the fixer (MA-MH; MH first survived and a test was added), each
+>   failing; the suite 384 files and 6360 tests passed at `9fbb0b9`.
+>   `graphic.int` gained no depth case (node has no WebGL; a depth clip
+>   bakes the canvas route, and its settled frames are route one's).
+> - **The session's verification at `f06d083`** (each run to a file, its
+>   exit code read): typecheck 0; the suite 0, 384 files passed and 6
+>   skipped (390), 6364 tests passed and 67 skipped (6431), against 380 and
+>   6275 at `7553972`; build 0. After `03937b4` (a comment): typecheck 0 and
+>   the three depth test files, 84 tests, 0. **CI**: run 45712905904 at
+>   `03937b4`, `windows-latest` (job 139551562589) and `macos-15` (job
+>   139551563092) green, no annotation; the first macOS job to complete
+>   since `e70c9e9`, so step 4's code and the paste fix passed macOS CI in
+>   it (their own runs' macOS jobs were cancelled by GitHub for no runner).
+>
+> **Read, and where; not read.** The phase-2 bar flat and the phase-3 bar
+> with each depth, for the three, were read on the Mac's harness page
+> only, under `clean`, in English only. Nothing of the lane was read in the
+> development app or on the Surface, no real model has been asked for one
+> of the three, and no Hindi or Telugu graphic of the three exists. §6.12's
+> phase-2 and phase-3 exits also ask for the Surface and the development
+> app: those readings, and the look, are yours. M16, M18 and every look
+> rating were not made.
+>
+> **Departures from the plan's words** (the 3D half):
+> 1. `before-after`'s reveal is not "the after panel's box growing over
+>    the before": the panel is the whole card, and the reveal is a rounded
+>    accent shape at `REVEAL_OPACITY` 0.35 growing from the card's middle
+>    over the after's half only, so the before stays readable beside the
+>    after. A decision for your look rating, not the plan's wording.
+> 2. A fourth file, `templates/sides.ts`, lays out both two-sided
+>    templates; each half is as wide as the wider side's text needs.
+> 3. Seconds and `LAYOUT_SIZES` for the three are new proposals, not in
+>    §6.2's table: timeline 3 / 6 / 8, the two-sided 2.5 / 4 / 6.
+> 4. `TemplateDef.pairsInOrder` is beyond §6.1's type; "in spoken order"
+>    holds for the versus too (a right said first is dropped, not drawn on
+>    the left).
+> 5. A timeline's `when` is one YEAR said as a date (four digits, 1000 to
+>    2999, no unit; in English after a lead word or opening its clause and
+>    not before a plural), not any `when`; 'last year', 'March 2018', 'day
+>    3' and a range are refused; the years must rise (date order, beyond
+>    "spoken order").
+> 6. The two sides must share one unit, and a two-sided answer is exactly
+>    two items; neither is in §9's words.
+> 7. The menu does not take the three "as … the nine shapes": they are
+>    offered only where a window's sentences hold what each needs
+>    (`menuGraphics.ts`, called from `run.ts` `graphicsMenuFor`; the
+>    plan's `menu.ts` is the spine's), English cue words deciding the
+>    two-sided ones; in Hindi and Telugu the numbers alone, until you give
+>    cue words.
+> 8. The schema gains no key: the three fill `items`.
+> 9. The fixtures are not yours: three English ones written by the lane
+>    into `specs.json`, and three code-built English eval talks; the Hindi
+>    and Telugu ones are still yours to write.
+> 10. Sounds: §9 and §6.14 give the three no row; piece 2 gave them the
+>     list templates' row (a proposal).
+> 11. "Settling flat on the last beat" is met earlier: the camera moves
+>     over the first element's entrance only and is flat from the first
+>     beat, the focus blur sharp on the first beat (the new `start`
+>     argument); later rows and the second side enter flat and sharp.
+> 12. The harness call is the plan's, but it runs as a phase-3 half of
+>     `parity` inside the `templates` block, at 540×960 and 960×540 under
+>     `clean`; and a `find` option the plan does not name was added.
+> 13. The range-or-ratio note changed the refusal text for every template,
+>     counter and bars included.
+> 14. `graphicName`, the dock's row-by-row timeline and the eval asking the
+>     three and the nested set with no `eval-*.json` are beyond the plan.
+> 15. Values are drawn whole and never counted; no "vs" glyph; never a
+>     hero. §9 says none of these.
+>
+> **Left open** (the 3D half; each builder's, critic's as declined and
+> fixer's open item, unless the code at `03937b4` shows it done):
+> - Unmeasured on a real model: whether a small model fills `items` right
+>   for the three, puts the before first, copies years as four digits and
+>   names one only where offered; the next `FORGE_EVAL_GRAPHICS` run asks
+>   the three code-built talks.
+> - Unmeasured: whether Ollama or LM Studio count the format schema against
+>   `num_ctx`; Indic token density (at 1 character a token the worst prompt
+>   is 12,075 characters, over 8,192 before the three too).
+> - Yours: `specs.json`'s `timeline-hi`, `timeline-te`, `before-after-hi`,
+>   `before-after-te`, `versus-hi`, `versus-te`; the Hindi and Telugu eval
+>   talks for the three; Hindi and Telugu cue words for the two-sided
+>   templates and year postpositions. When the fixtures land, the three join
+>   `graphicHolds.test.ts`' walk; `timeline-en` already needs 7.9 s of its
+>   8 s, so a Hindi or Telugu timeline may exceed it.
+> - What a before-and-after MEANS is guarded only by the menu: 'My camera
+>   cost $1,500. My lens cost $4,000.' would be kept if a window offered
+>   it. Worth an eval trap per talk.
+> - The year-as-date test is an English heuristic: 'In 2015, 2018 and 2021
+>   we …' refuses 2021 (after 'and'), 'In 2015 weddings were cheaper' is
+>   refused as a count; both the safe direction. Whether a `when` widens
+>   beyond a year (months, 'last year', ranges) is open.
+> - The true note covers ranges only: a qualified number ('almost 40') and
+>   two adjacent numbers ('nineteen ninety nine') still get "not said";
+>   `numberSpansHeld` already tells them apart.
+> - Pre-existing, made more visible by the three, declined in this lane:
+>   questions are not refused ('Did I charge $1,500 before …?' is kept, rule
+>   7, every template); drawn text follows the model's spelling of the same
+>   number ('$1500' for the spoken '$1,500', rule 5: "as said" means the
+>   same number, not the same characters); `strayFields`' repair note
+>   quotes an answer key ("'value' is not a field of a versus — left
+>   out"), as every template's does, to change in a pass over all of them.
+> - The text-item property reads `t.box` under `clean` only, as its
+>   neighbours' do: a critic's scratch run over all seven presets found
+>   neon at 16:9's bottom third passing the frame's bottom by more than 1
+>   px during the rise (the export crops it); extending it to every preset
+>   and to `itemBounds` is open.
+> - The look, unrated: the reveal's 0.35 tint (lowest contrast under mono)
+>   and its rounded seam notches at the card's middle; the timeline's when
+>   drawn in its label's look; the two-sided cards' size (the value 0.07 of
+>   the short side to the counter's 0.11); with a depth, only the first
+>   element's entrance carrying the camera (rows 2 to 5 enter flat); focus
+>   sharp from the first beat; the planes; the reveal on −0.02 under focus;
+>   the divider on 0.
+> - Declined by piece 3's fixer: a critic's bar of "half the move left on
+>   the first frame with a word at opacity 0.5 or more", because counter-en
+>   itself reads 0.27 there under `clean` (frame 2) and the three now read
+>   0.37; the bar used is the first frame with any ink.
+> - The counter/ring proof is a kept rig, not a committed test.
+> - Not read: the dock's fields and Depth choices on the three driven by
+>   hand (the census covers their labels, the panel's node tests the
+>   reading and writing); anything in the development app or on the
+>   Surface; the export of the three on Windows beyond CI's green
+>   `graphic.int` (no figure).
+> - `src/shared/graphics/templates/index.ts`' comment on the three's
+>   `DRAWERS` rows still says "their depth variants are this step's next
+>   piece"; they are built (piece 3). A comment only.
 
 **Exit:** each of `timeline`, `before-after` and `versus` passes step 3's
 phase-2 bar (§6.12: the property test over its text items, the render check
