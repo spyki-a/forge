@@ -11728,7 +11728,7 @@ tests passed and 66 skipped (5931). CI green on `windows-latest` and
   agents listed, `Preview.tsx`'s `planeFor` and `threeShared.ts`'s
   `textureFor` with an empty path, were NOT what fired.
 
-## 62. Reading luma as gray stretches the limited range, and so does a PNG between (2026-11-25)
+## 63. Reading luma as gray stretches the limited range, and so does a PNG between (2026-11-25)
 
 For `docs/CLIPS.md` §7.7 (step 4's render check,
 `tests/integration/bestClipsCard.int.test.ts`, piece 5, `131cefe`).
@@ -11747,9 +11747,9 @@ written here from its report and the test's own comments.
   `columnOf(gray) = 160 + gray × 320 / 255`, the stretch undone, and the
   centred crop's left edge, middle and right edge then read within its 4
   columns (the builder's worst left edge: 2.2).
-- **A PNG between stretches the levels the same way.** The draft drew the
-  ramp to a PNG and fed that in; the round trip through RGB carried the
-  levels to full range: at column 200, **30 read for the 43 expected**.
+- **A PNG between stretches the levels the same way.** Measured by the
+  builder: a ramp drawn to a PNG and fed in read **30 for the 43 expected**
+  at column 200, the levels carried to full range by the round trip.
   So the check draws the ramp in Y by `geq` on every frame, as it draws the
   frame-index bars, with no PNG.
 - **The Windows build**: not measured by hand. CI's windows-latest job

@@ -5162,8 +5162,9 @@ captions a chip sets the start and end fields instead
 > cards will call. (2026-11-25: they do not; a card's Clip it goes through
 > `startIngest` and `collectIngest` as M0's does, §7.5's piece 4 note, and
 > `placeAssetRange` still has no caller in the window.) At 1× and 2× every
-> kept frame shows exactly the footage it showed; at 0.5× and through a ramp within one source frame, because an
-> in-point is a whole frame (a split has the same property). Tests:
+> kept frame shows exactly the footage it showed; at 0.5× and through a
+> ramp within one source frame, because an in-point is a whole
+> frame (a split has the same property). Tests:
 > `tests/timelineFrameAt.test.ts` (11: the round trip over 200 random frames
 > at 1×, 2×, 0.5× and two ramps, the first frame showing a source, 29.97 fps,
 > a skipped source frame, the clamp, the hold), `tests/clipIt.test.ts` (28:
@@ -18082,18 +18083,17 @@ M17 or left null with the reason; `LLM.md` §Built records `graphics@1`.
   Those are the item's own words. Clip it's route (step 4) does not exist
   yet (2026-11-25: it does since step 4, §7.5's piece 4 note, but the Keep
   wait is not tested on a card's clip), the harness states stub the
-  answer rather than call `findGraphics`, and no real model's answer has gone through it. The
-  rest of the bar stands as the T3 paragraph above says (the property
-  item is still not met: Find and Direct now ship through the validator,
-  so the T2a paragraph's first reason, "nothing in the app ships through
-  the validator yet", no longer holds, but its other two do: two named
-  mutations fail the property only through its floors, and the lane's
-  list holds false graphics it keeps), and T4's
-  eval, render checks, preview = export, M14, the look rating, M18 and
-  the budget property over every fixture are ahead. Of "Also before phase
-  2 is called done": `LLM.md` §Built records `graphics@1` (written with
-  this record, 2026-11-11); §15 rows 10 and 11, M15 and M17 are still
-  unmeasured.
+  answer rather than call `findGraphics`, and no real model's answer has
+  gone through it. The rest of the bar stands as the T3 paragraph above says
+  (the property item is still not met: Find and Direct now ship through the
+  validator, so the T2a paragraph's first reason, "nothing in the app ships
+  through the validator yet", no longer holds, but its other two do: two
+  named mutations fail the property only through its floors, and the lane's
+  list holds false graphics it keeps), and T4's eval, render checks, preview =
+  export, M14, the look rating, M18 and the budget property over every
+  fixture are ahead. Of "Also before phase 2 is called done": `LLM.md`
+  §Built records `graphics@1` (written with this record, 2026-11-11); §15
+  rows 10 and 11, M15 and M17 are still unmeasured.
   **Still yours, from lane T2b** (each from a commit's "Open, yours", a
   builder's open list or a fixer's declined list; every other "beyond the
   plan's words" choice is in §6.6's T2b Built note, each yours to keep or
@@ -23806,7 +23806,7 @@ shared with the eval, as the Director's is.
 >   the builders' choices, unmeasured against a real talk (the ten links,
 >   §7.8, judge them); there is no connective or address list for Hindi or
 >   Telugu, so those talks have no opening signal and no address hook (the
->   owner's to give); in a code-mixed video that clears the English gate,
+>   yours to give); in a code-mixed video that clears the English gate,
 >   other-script windows get opening 1 and no address hook (unmeasured,
 >   likely rare: YouTube's Hindi ASR writes English in Devanagari); a
 >   partial heatmap favours its uncovered tail (it follows from "absent, not
@@ -23959,8 +23959,8 @@ shared with the eval, as the Director's is.
 >   numbers, quantity words and capitals are held to the window too, its
 >   other words not; (5) the candidates are listed best first, not by time;
 >   (6) a model card whose title or why fell back keeps `scoredBy: 'model'`
->   with a note; (7) no title on any card is drawn into a frame, as §7.4
->   says.
+>   with a note. (No title on any card is drawn into a frame, as §7.4
+>   says.)
 > - **Declined**: an English list to exempt a capitalised first title word
 >   the window says only in lower case ("Why", "How"; the prompt's rule
 >   addresses it, and the eval's title fallbacks judge it); exempting a bare
@@ -23973,7 +23973,9 @@ shared with the eval, as the Director's is.
 >   denser than about 2 characters a token, `CONDENSED_MAX_CHARS` or
 >   `MAX_CANDIDATES` must vary by script; the stricter grounding raises
 >   fallback rates (a "Why …" title, a why opening "Funny …", a pronoun "one"
->   as a number); over a mixed window a lower-case Latin word is unchecked
+>   as a number), and the eval's three fixtures are nonsense words, so a real
+>   model's title and why fallback rates on them will run high and are not a
+>   measure of quality; over a mixed window a lower-case Latin word is unchecked
 >   (romanised Hindi, a name in lower case), and one Latin letter ("OK" in a
 >   Telugu talk) makes a window mixed; a caseless-script why can name
 >   anyone; the timeout races the ask but never cancels it; the weights,
@@ -24138,7 +24140,9 @@ another, with the helper or without it: piece 3's note below.)
 >   deadline), `tests/renderer/bestClipsPanel.test.tsx` 17 (among them a
 >   pairing test that parses `LinkTranscript.tsx` and, while its Listen to it
 >   is a bare `disabled`, forbids the pointer naming it). Mutations: 23 by
->   the builder (21 behaviour, two census source checks), 10 by the fixer,
+>   the builder (21 behaviour, two census source checks; its M13, no
+>   `timeoutMs` passed, fails only by vitest's 120 s test timeout, not by an
+>   assertion), 10 by the fixer,
 >   each anchor matched once, each failing, each restored and checked with
 >   `cmp`. Suite, the agents' readings: 6105 → 6147 tests (files 371 → 374)
 >   → 6154.
@@ -24303,8 +24307,8 @@ another, with the helper or without it: piece 3's note below.)
 >   question, a thrown save says `SAVE_FAILED_NOTE`, never its text; only
 >   then `newProject({ name: NEW_PROJECT_DEFAULT.name, aspect: '9:16', fps })`
 >   and the card's download. "Add it to this project" sends with the aspect
->   unchanged. The three choices are greyed while a download is being asked
->   for.
+>   unchanged. Start new and Add are greyed while a download is being asked
+>   for; Not now stays pressable.
 > - **The panel** (`BestClips.tsx`): Make it vertical (`aria-pressed`, its
 >   title) above the cards, only with cards; Clip it at the foot of each
 >   card's text column; the question in place of the asking card's foot; a
@@ -24345,8 +24349,9 @@ another, with the helper or without it: piece 3's note below.)
 >   tile, each with Drop." whatever the run found, untrue for a run that
 >   placed nothing and for a card clip's numbers, which come from a YouTube
 >   track and wait for Keep (§6.6).
-> - **Departures from the plan** (each checked against the code): (1) §7.5
->   and §7's table say steps 3–5 are "already on that path"; they were not
+> - **Departures from the plan** (each checked against the code): (1) §7's
+>   table says steps 3–5 are "already on that path", and §7.5 lists them as
+>   steps after M0's Clip it; they were not
 >   (`collectIngest` chained no reframe, captions or graphics): step 4 wires
 >   them for a card's clip only, and M0's Clip download from picked rows is
 >   unchanged; (2) the cards are stacked, each with a 9:16 face, not three
@@ -24361,8 +24366,8 @@ another, with the helper or without it: piece 3's note below.)
 >   "…needs the AI helper to listen to it": listening is not built; (8) step
 >   4 turns captions on only in a new project or on an empty timeline, not
 >   into an existing edit; (9) a timeline a card's clip is still downloading
->   into counts as not empty, and Start new waits for it; (10) every
->   graphic is not "listed with Drop": step 5's line counts what is placed
+>   into counts as not empty, and Start new waits for it; (10) not every
+>   graphic is "listed with Drop": step 5's line counts what is placed
 >   and what waits for Keep; (11) `collectIngest` tells projects apart by
 >   id, for every download; (12) "saves or asks first" is built as save
 >   first, a closed Save dialog keeping the question; (13) one Analyse at a
@@ -24375,7 +24380,13 @@ another, with the helper or without it: piece 3's note below.)
 >   the 9:16 change is undone; a button for the face finder on the card.
 > - **Left open**: no real model, real link, real download, real reframe
 >   or real graphics run has gone through Analyse or a card's chain; §7.8's
->   Surface run is yours. The timeout does not cancel the request in main or
+>   Surface run is yours. Step 6 is not built: it waits for §8.7, after the
+>   beta (§16.75), so Clip it from a card ends at step 5. Not looked at on
+>   screen yet (the session read only the English harness cards, at 240 px
+>   and in a 620 px window): a 60-grapheme Devanagari or Telugu title and an
+>   emoji title at 240 px and about 160 px, the question's three buttons
+>   wrapping at 240 px and about 160 px, and the step list under a long Indic
+>   title. The timeout does not cancel the request in main or
 >   at the local server (`directorComplete` has no `AbortSignal`); a late
 >   answer is dropped in the app, but the server stays busy. A status check
 >   out of time is reported as "The model took too long", untested against
@@ -24494,9 +24505,10 @@ rows.
   (§3b.8).
 
 > **Built 2026-11-25 (piece 5: the checks).** `131cefe`, then `d6000ed`
-> after two critics (run B; the builder of 2026-11-24 night was stopped at
-> your word to hold, and a new builder on 2026-11-25 took its four
-> uncommitted draft files as an unverified draft, kept the split and fixed
+> after two critics (run B; the first builder was stopped at 00:30 on
+> 2026-11-24, at your word to hold, and a new builder on 2026-11-25 took its
+> four uncommitted draft files as an unverified draft, kept the split and
+> fixed
 > its wrong assertions). Described from the code at `d6000ed`.
 > - **Step 4's test files, as they exist** (the bullets above are the
 >   plan's): `tests/bestClips.test.ts` (36) and `tests/bestClipsModel.test.ts`
@@ -24597,28 +24609,32 @@ rows.
 >   frame's index bit by bit, and under them a ramp (rows 48 to 111) whose
 >   level is its own source column between 160 and 480, drawn in Y by `geq`
 >   on every frame (not through a PNG, which stretched the levels:
->   `EFFECTS.md` §62). Through the REAL store: Analyse at 1 min with no
->   model, Clip it on **the card that starts latest** (79.5 s, so a shift
->   cannot hide at 0) on an empty timeline with captions turned off first;
+>   `EFFECTS.md` §63). Through the REAL store: Analyse at 1 min with no
+>   model, Clip it on **the card that starts latest** (79.5 s, the builder's
+>   reading, so a shift cannot hide at 0) on an empty timeline with captions
+>   turned off first;
 >   then it asserts one exact download of the card's range, 9:16 set, the
 >   card's words on the file's clock, each step's line (landed, set, the
 >   no-helper skip, captions "on.", graphics equal to `graphicsResultText`
->   of what it counts itself: the baseline placed two keywords on this talk,
->   measured), step 4's own undo step (1) and the skipped follow's (0).
+>   of what it counts itself, more than none placed and none waiting: the
+>   baseline placed two keywords on this talk, measured by piece 5's fixer,
+>   and the test asserts only more than none), step 4's own undo step (1)
+>   and the skipped follow's (0).
 >   Exported by the app's own plan at the project's shape scaled to 512
 >   rows, **288×512**, with and without libass captions; **the first 12 s
 >   read**: portrait and 9:16 off the file; the crop's left edge, middle and
 >   right edge read off the ramp as columns (`columnOf`, the gray stretch of
->   `EFFECTS.md` §62 undone) within 4 of the centred crop's; the first frame the card's
->   first word's, frame for frame after; the first caption line and every
->   word lit in those seconds within one frame of its word's frame (the
+>   `EFFECTS.md` §63 undone) within 4 of the centred crop's; the first frame
+>   the card's first word's, frame for frame after; the first caption line and
+>   every word lit in those seconds within one frame of its word's frame (the
 >   first line compares frame 0 with frame 0; the per-word onsets catch a
 >   shift). **Left out**: the graphic clips the baseline placed (their
 >   pictures are the renderer's canvas; `graphic.int` is their render
 >   check). Built for the 2018 Windows ffmpeg: `color`, `geq` (N, X, if,
 >   lt, gt, mod, floor, pow), `pad`, `overlay`, every path through argv. On
 >   the Mac the builder read the worst left edge 2.2 columns off, against a
->   slack of 4.
+>   slack of 4; Windows' scaler may differ, and CI's pass there at `d6000ed`
+>   says only that it stayed within 4 (its log is unread).
 > - **The ten-links recorder** (§7.8's first bullet):
 >   `tests/integration/bestClipsExit.int.test.ts`, its pure parts in
 >   `tests/fixtures/bestClipsExit.ts`, node-tested in
@@ -24653,7 +24669,7 @@ rows.
 >   filled is shown on the model's side unrated; the header says for how
 >   many links the model picked cards. **The page**: one self-contained
 >   file, everything fetched escaped, links only for http(s), ratings kept
->   per run in the browser's `localStorage` (wrapped in try/catch), "Copy the
+>   per file in the browser's `localStorage` (wrapped in try/catch), "Copy the
 >   ratings" as JSON, a tally per side against 7 of 10. **File names**
 >   (`exitFileName`): `< > : " / \ | ? *` and controls become `-`, white
 >   space runs one space, no leading or trailing dot or space (before and
@@ -24667,7 +24683,9 @@ rows.
 > - **Mutations**, all by the agents' reports, each failing and restored:
 >   piece 1, 61; piece 2, 48, and the session's one at `cf35644`; piece 3,
 >   33; piece 4, 31 by the reports' counts (the builder's lists 17 where it
->   says 15); piece 5, 19 by the builder (six caught by the stub cases, eight on
+>   says 15); piece 5, 19 by the builder (six caught by the stub cases, one of
+>   them, S2, the timeout ignored, failing only by vitest's 120 s test
+>   timeout, not by an assertion; eight on
 >   the recorder's pure parts, one census, four on the render check: the
 >   card's run a segment early, the range 3 s early with the words kept, the
 >   empty timeline left 16:9, no crop on placing) and 13 by the fixer (step
@@ -24692,10 +24710,11 @@ rows.
 >   project and a second Analyse while one runs (covered in node only).
 > - **Left open**: §7.8's exit is not met and nothing of it is read (the
 >   ten links, two of them Hindi or Telugu, with the model and with the
->   signals alone; Clip it from a card on the Surface without swapping;
->   YouTube's ASR timing against Whisper on three videos, which no piece
->   built or addressed): all yours. macOS CI at `d6000ed` waits for a re-run
->   or the next code push.
+>   signals alone; Clip it from a card on the Surface without swapping,
+>   which has no instrument yet and no stated way to read swap, `vm_stat` on
+>   the Mac or Task Manager on the Surface; YouTube's ASR timing against
+>   Whisper on three videos, which no piece built or addressed): all yours.
+>   macOS CI at `d6000ed` waits for a re-run or the next code push.
 
 ### 7.8 Exit
 

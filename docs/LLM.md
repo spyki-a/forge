@@ -326,9 +326,12 @@ and word count come from the window its id names.
 | `src/shared/bestclips/run.ts` | `bestClips`, shared by Analyse and the eval: no model, a failed or slow ask, or an unusable answer gives the signals' three with a fixed line that never carries an error's text; fewer usable picks are filled from the signals; the cards in time order |
 
 The title is shown on the card only, never drawn into a frame. The store's
-Analyse (`analyseBestClips`) asks only when `chooseProvider` finds a model,
-through the same `window.forge.directorComplete` route as the spine, with
-one three-minute deadline for the whole press; one Analyse at a time. There
+Analyse (`analyseBestClips`) asks only when `chooseProvider` finds a model
+(or when the status cannot be read: it asks anyway, and a failed ask reads
+"The model did not answer, so these are picked from the talk's own
+signals."), through the same `window.forge.directorComplete` route as the
+spine, with one three-minute deadline for the whole press; one Analyse at a
+time. There
 is no `DecisionRecord` for it: the cards are session state.
 
 **No real model has answered it.** The eval block (`FORGE_EVAL_BESTCLIPS`,

@@ -468,7 +468,8 @@ range clipped before the download (sheets 5 and 12). What is left is Narration �
 the one tile still marked "soon" (sheets 4 and 28) — and, on the URL tile,
 chapters, several ranges in one job, a transcript from the link (sheet 25) and
 Best clips (sheet 27). Still the largest hole, and upstream of everything that
-already works.
+already works. (2026-11-25: Best clips is built, step 4 of `docs/CLIPS.md`,
+sheet 27 below.)
 
 **Models not yet added.** Scene detection, matting, object tracking, and the
 deciding half of auto-flip. The sidecar already hosts three models (speech,
@@ -712,7 +713,8 @@ chapters, several ranges and Get transcript are small additions in order (2).
 job, and ONE range before download (sheet 12). Chapters, several ranges, a
 transcript from the link and Best clips are not built. Chapters are in the
 downloader's own metadata, and YouTube's timed captions can be fetched without
-transcribing, so neither needs a model.
+transcribing, so neither needs a model. (2026-11-25: Best clips is built, step
+4, `e354cd8` … `d6000ed`; see sheet 27.)
 
 ---
 
@@ -745,10 +747,17 @@ appear, top or bottom, the shapes we already have for the B-roll effects),
 transitions — we will discuss it when the time comes after all the small things
 are done."
 
-**Status — not started.** It needs a transcript (have), a model pass to score
-segments (the Director's model plumbing, `shared/director/ask.ts`, serves), and
+**Status, before step 4 — not started.** It needs a transcript (have), a model
+pass to score segments (the Director's model plumbing,
+`shared/director/ask.ts`, serves), and
 a 9:16 reframe that follows the speaker (new; the sidecar's subject box is a
 start). Depends on a local model being set up, as the Director does.
+
+**Status — built** (2026-11-23/25, step 4, `e354cd8` … `d6000ed`:
+`docs/CLIPS.md` §7.3–§7.7). The lengths and Analyse as drawn; the three cards
+stacked in the 240 px column, each with a 9:16 face, not side by side; with no
+model the signals pick the three. The 3D toggle, B-roll images and transitions
+are not built.
 
 ---
 

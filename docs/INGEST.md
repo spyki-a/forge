@@ -489,7 +489,11 @@ replaces this section's "mark at answer", and that is a decision still to take.
 **A download remembers which project it belongs to.** A 4K fetch is minutes;
 opening another project meanwhile used to append the asset, the clip and the
 trim to *that* one, mark it dirty and move its playhead. Now it says where the
-file was saved and leaves the wrong project alone.
+file was saved and leaves the wrong project alone. (2026-11-25, `08875ea`:
+the project is now told apart by its id, recorded with the download, and by
+its path only for a record without one, so two untitled projects, both with no
+path, are no longer taken for one; this covers every Get and Clip download,
+`docs/CLIPS.md` §7.5's piece 4 note.)
 
 **One press of Get is one undo step.** The asset, the placement and the trim
 were three, so a single Cmd+Z left the untrimmed padded clip behind — which

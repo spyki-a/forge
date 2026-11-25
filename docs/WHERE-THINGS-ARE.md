@@ -429,8 +429,9 @@ the subject**, **Captions** and **Graphics** (for example "on the timeline.",
 the crop is centred.", "on.", "none found in this stretch."); a failed line
 is red. Captions are turned on only in a new project or on an empty
 timeline; graphics wait until no face finding is running. The other cards
-stay pressable: three separate shorts. A card whose clip was undone or
-removed offers Clip it again.
+stay pressable, three separate shorts, except that every card's Clip it is
+greyed while a card's question is open or a download is being asked for. A
+card whose clip was undone or removed offers Clip it again.
 
 **Not there:** no thumbnail on a card; nothing listens to a video without
 captions (Listen to it is not built); no button for the face finder on a
