@@ -82,7 +82,8 @@
 > next" the session read as its recommended order (`CLIPS.md` §16.96, not
 > answered in terms), and step 6's three 3D templates (`timeline`,
 > `before-after`, `versus`; `CLIPS.md` §9) were built in three pieces,
-> `8786882..03937b4`, and pushed once with the paste fix; CI green on
+> `8786882..03937b4`, and pushed once (the paste fix had been pushed
+> alone earlier that day, its own CI run 45672761395); CI green on
 > both runners at `03937b4` (run 45712905904), the first macOS job to
 > complete since `e70c9e9`, so step 4 and the paste fix passed macOS CI
 > inside it. They are done on the build side only: §9's exit is read on
@@ -92,12 +93,15 @@
 > `CLIPS.md` §16.99-105. Step 6's retrieved-fact cards stay after the
 > beta. So what is left of `CLIPS.md` before the beta, by the session's
 > list of 2026-11-25 (the user has not contradicted it): step 7's creator
-> style and saved template (gated on `MARKET.md` Stage 0), then 1g,
+> style, then its saved template (gated on `MARKET.md` Stage 0), then 1g,
 > Florence-2's caption placement (gated, last; `CLIPS.md` §16.96 open),
 > then R1–R12, R13 and R14 here. Beside them, the user's exit readings
 > for phase 2, phase 3, step 4 and step 6's 3D half. The deadline is
-> unchanged, 25 December 2026. The R list and its estimates are
-> unchanged.
+> unchanged, 25 December 2026; a feature freeze about 10 December is the
+> session's suggestion, not confirmed by the user. Captions on the
+> timeline come after the beta, and traditional keyframing too (the
+> session's recommendation, above). The R list and
+> its estimates are unchanged.
 
 ## 0. What "beta" means
 

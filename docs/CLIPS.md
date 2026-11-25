@@ -547,9 +547,9 @@
 > paste the links or use the right click in the mouse on the url section
 > it dont acpt it now can you fix that?"), the session's own `7553972`:
 > on macOS an editing key reaches a text box only through the Edit menu,
-> whose Cut, Copy, Paste and Select All went to the timeline whatever had
-> the keyboard; now, while a text box has it, Cut, Copy, Paste, Delete
-> and Select All are Electron's own roles and act on the box (Undo and
+> whose Cut, Copy, Paste, Delete and Select All went to the timeline
+> whatever had the keyboard; now, while a text box has it, Cut, Copy,
+> Paste, Delete and Select All are Electron's own roles and act on the box (Undo and
 > Redo stay the project's), and a right-click in a text box gives Cut,
 > Copy, Paste and Select All (`WINDOW.md`'s note of 2026-11-25,
 > `WHERE-THINGS-ARE.md`'s "The Edit menu and text boxes"). The session's
@@ -576,8 +576,9 @@
 > `136a3d3`; piece 2, the model's side (the menu, the validator, the
 > prompt, the eval), `f1fa026`, fix `b70b0bf`; piece 3, depth and the
 > parity run, `9fbb0b9`, fix `f06d083`; then the session's `03937b4` (a
-> comment). Seven commits, pushed once with the paste fix,
-> `7553972..03937b4`; origin = main = `03937b4`. **The session's readings
+> comment). Seven commits, `8786882..03937b4`, pushed once (the paste
+> fix `7553972` had been pushed alone earlier that day, with its own CI
+> run 45672761395); origin = main = `03937b4`. **The session's readings
 > at `f06d083`, on the Mac**: typecheck 0; the suite 384 files passed and
 > 6 skipped (390), 6364 tests passed and 67 skipped (6431), against 380
 > and 6275 at `7553972`; build 0 (after `03937b4`, a comment: typecheck 0
@@ -1009,8 +1010,9 @@ this and will get back to the beta". **This plan comes first**, then
   deadline is unchanged: 25 December 2026.** A feature freeze
   about 10 December is the session's suggestion, not confirmed by you.
 - **2026-11-25, later: step 6's three 3D templates are built** (§9's
-  three Built notes, `8786882..03937b4`, pushed once on 2026-11-25 with
-  the paste fix `7553972`, green on both runners at `03937b4`; the status
+  three Built notes, `8786882..03937b4`, pushed once on 2026-11-25 (the
+  paste fix `7553972` had been pushed alone earlier that day, its own CI
+  run 45672761395), green on both runners at `03937b4`; the status
   block at the top). They went before 1g by the session's reading of your
   "lets continue the next" (§16.96, not answered in terms). §9's exit is
   open and yours (its note of 2026-11-25); the decisions the lane left are
@@ -24790,7 +24792,9 @@ another, with the helper or without it: piece 3's note below.)
 >   main's `downloadMedia`: §7.7's note "Read on a real model,
 >   2026-11-25"; Analyse and a card's chain are still unrun); §7.8's
 >   Surface run is yours. Step 6 is not built: it waits for §8.7, after the
->   beta (§16.75), so Clip it from a card ends at step 5. Not looked at on
+>   beta (§16.75), so Clip it from a card ends at step 5. (2026-11-25,
+>   later: that is the card's step 6, B-roll; not CLIPS step 6, whose 3D
+>   half was built that day, §9.) Not looked at on
 >   screen yet (the session read only the English harness cards, at 240 px
 >   and in a 620 px window): a 60-grapheme Devanagari or Telugu title and an
 >   emoji title at 240 px and about 160 px, the question's three buttons
@@ -25881,7 +25885,9 @@ Census rows: every label above, plus the Settings rows and the switch.
 > days (the table under the exit: 1.5 for the three draw functions, their
 > pairs, menu, schema and fixtures, 0.5 for their depth variants and the
 > harness run); built in one working day of wall clock, about three hours
-> of a twelve-agent run, then the session's checks and the push. Its exit
+> of a twelve-agent run, then the session's checks and the push; before
+> 1g, by the session's reading of your "lets continue the next" (§16.96,
+> not answered in terms). Its exit
 > is not met (the exit note below). **The cards half is not built**: the
 > retrieved-fact cards and the `source` template stay after the beta
 > (§16.75).
@@ -26484,8 +26490,8 @@ The tests and render checks are §6.11's, extended per template.
 > rating were not made.
 >
 > **Departures from the plan's words** (the 3D half):
-> 1. `before-after`'s reveal is not "the after panel's box growing over
->    the before": the panel is the whole card, and the reveal is a rounded
+> 1. `before-after`'s reveal is not the "after" panel's box growing over
+>    the "before": the panel is the whole card, and the reveal is a rounded
 >    accent shape at `REVEAL_OPACITY` 0.35 growing from the card's middle
 >    over the after's half only, so the before stays readable beside the
 >    after. A decision for your look rating, not the plan's wording.
@@ -26624,7 +26630,8 @@ Built notes above; nothing here is marked met):
     (run 45712905904; no figure read).
   - Preview equal to export within 1/255: read by the session on the Mac's
     harness page at `f06d083` (§9's call): the six flat rows pass,
-    `timeline-en` 9:16 worst mean 0.064, the other five 0.
+    `timeline-en` 9:16 worst mean 0.064 (max 255 over the ink, on both
+    routes; piece 3's Built note), the other five 0.
   - What it still needs, by §6.12's own words: preview = export is "yours,
     Mac and Surface", and the harness's export is its bridge's stand-in
     files, as phase 3's note of 2026-11-20 reads the same kind of reading,
@@ -27341,8 +27348,8 @@ H11, and H12 again, in phase 4.
   ring-en and ring-hi. Enforcing it is yours. (2026-11-25: step 6's
   three are not in that walk; their Hindi and Telugu fixtures do not
   exist, yours. Their English hold is checked in
-  `tests/graphic3dTemplates.test.ts`, `timeline-en` needing 7.9 s of its
-  8 s max, so a Hindi or Telugu timeline may exceed it; their seconds
+  `tests/graphic3dTemplates.test.ts`; `timeline-en` needs 7.9 s of its
+  8 s max (its `seconds` in `tests/fixtures/graphics/specs.json`), so a Hindi or Telugu timeline may exceed it; their seconds
   are proposals until M16 is read for them, §16.101.)
 - **Row 59 (M21): not measured.** Its gated case is built (`fca8194`) and
   waits on your Hindi clips. (2026-11-11: phase 2's counter was built
@@ -28985,8 +28992,10 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
 
     (Later on 2026-11-25: after the paste fix you said "perfect everything
     is good landed well now lets continue the next and later ill do the
-    fail run myslef". That day the session had put the three 3D templates
-    next and Florence-2 last as its recommendation; it read "lets continue
+    fail run myslef". That day the session had recommended to you, in the
+    conversation, the three 3D templates next and Florence-2 last (this
+    entry, written earlier for the docs record, gave none, and its "No
+    recommendation." stands as history); it read "lets continue
     the next" as that order and built the three (§9, `8786882..03937b4`).
     Its list after them: creator style, the saved template, then 1g. You
     did not answer this entry in terms, so it stays open: whether 1g goes
@@ -29045,8 +29054,9 @@ record states one, and is written as theirs. What was read was read in the
 session's suite and on the harness page on the Mac, and in CI at
 `03937b4`; nothing in the development app or on the Surface, no real model
 has been asked for one of the three, and no Hindi or Telugu graphic of the
-three exists. Every figure below is a proposal, unrated and unmeasured on a
-model.
+three exists. Every constant below (seconds, sizes, opacity, planes, cue
+words, the year rule) is a proposal, unrated and unmeasured on a model;
+the readings are attributed where they stand.
 
 99. **What a timeline's "when" may be.** As built (`b70b0bf`,
     `validateGraphics.ts`): one YEAR said as a date. The answer's text four
@@ -29081,172 +29091,186 @@ model.
 
     **Answer (2026-11-25): OPEN.** Yours.
 100. **The menu's conditions, and Hindi and Telugu.** As built
-    (`menuGraphics.ts` `stepSixOffered`, per 24-sentence window):
-    `before-after` and `versus` are offered on two different numbers in one
-    unit, neither a year nor a list's place (after `LIST_NOUNS_EN`), with a
-    word of `BEFORE_AFTER_CUES_EN` or `VERSUS_CUES_EN` in a sentence holding
-    one of them ('now' and 'today' were left out after they offered a
-    before-and-after on a plain talk); the two English lists are the
-    builder's, unrated. In Hindi and Telugu (`hi`, `te`) no cue word is
-    read, since no list here may hold a word of theirs: there any two
-    numbers in one unit offer both two-sided templates, until you give cue
-    words. The menu is also the only guard on what a before-and-after
-    MEANS: 'My camera cost $1,500. My lens cost $4,000.' would be kept if a
-    window offered it, since the validator cannot know that two prices are
-    one thing changing (piece 2's first critic). Yours as well: `specs.json`'s
-    `timeline-hi`, `timeline-te`, `before-after-hi`, `before-after-te`,
-    `versus-hi` and `versus-te`, and the Hindi and Telugu eval talks for the
-    three (`eval-*.json`, with truth naming them).
+     (`menuGraphics.ts` `stepSixOffered`, per stretch of a 24-sentence menu
+     window: a sentence and one either side):
+     `before-after` and `versus` are offered on two different numbers in one
+     unit, neither a year nor a list's place (after `LIST_NOUNS_EN`), with a
+     word of `BEFORE_AFTER_CUES_EN` or `VERSUS_CUES_EN` in a sentence holding
+     one of them ('now' and 'today' were left out after they offered a
+     before-and-after on a plain talk); the two English lists are the
+     builder's, unrated. In Hindi and Telugu (`hi`, `te`) no cue word is
+     read, since no list here may hold a word of theirs: there any two
+     numbers in one unit offer both two-sided templates, until you give cue
+     words. The menu is also the only guard on what a before-and-after
+     MEANS: 'My camera cost $1,500. My lens cost $4,000.' would be kept if a
+     window offered it, since the validator cannot know that two prices are
+     one thing changing (piece 2's first critic). Yours as well: `specs.json`'s
+     `timeline-hi`, `timeline-te`, `before-after-hi`, `before-after-te`,
+     `versus-hi` and `versus-te`, and the Hindi and Telugu eval talks for the
+     three (`eval-*.json`, with truth naming them).
 
-    What it costs: each word in a cue list widens the offer, and every
-    offered template adds its prompt row to that window's request (the
-    three's rows are 158 of the worst menu's 4,875 tokens, the agents'
-    figures). Without Hindi and Telugu cue words those windows carry both
-    two-sided rows wherever two numbers in one unit are said, which no
-    model has been measured on. A critic and fixer of piece 2 called an
-    eval trap per talk (the camera and the lens) worth adding; nothing
-    else is recommended.
+     What it costs: each word in a cue list widens the offer, and every
+     offered template adds its prompt row to that window's request (the
+     three's rows are 158 of the worst menu's 4,875 tokens, the agents'
+     figures). Without Hindi and Telugu cue words those windows carry both
+     two-sided rows wherever two numbers in one unit are said, which no
+     model has been measured on. A critic and fixer of piece 2 called an
+     eval trap per talk (the camera and the lens) worth adding; nothing
+     else is recommended.
 
-    **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): OPEN.** Yours.
 101. **The look of the three, to rate.** Each a proposal of piece 1's,
-    one named constant each:
-    - `before-after`'s reveal: a rounded shape in the style's accent at
-      `REVEAL_OPACITY` 0.35, growing from the card's middle over the
-      after's half only (opacity 0 until it grows), where the plan's words
-      were "the after panel's box growing over the before"; the before
-      stays readable beside the after. A critic of piece 1: the lowest
-      contrast is under `mono` (ink and accent both white over a black
-      panel at 0.5), where a lower tint for presets whose accent equals
-      their text colour is the fix if wanted; the rounded reveal leaves
-      small notches at the seam (a plain rectangle would push past the
-      panel's rounded corners). The session saw it once by eye on the
-      harness page, an olive-yellow tint under the default style, and did
-      not rate it.
-    - The two-sided cards' size: the value 0.07 of the short side against
-      the counter's 0.11, the label 0.04 (`LAYOUT_SIZES`), each half as
-      wide as the wider side's text needs, so a short pair is a compact
-      card, not a band across 16:9.
-    - `versus`: a thin divider stroke and no "vs" glyph (the template adds
-      no word; a fixed glyph would be an app-written word to list).
-    - `timeline`: the when and its label in one look, 0.045 each, no accent
-      (a critic of piece 1: `lookOf` already takes an accent, as other
-      templates use for their value).
-    - The seconds: `timeline` 3 / 6 / 8, `before-after` and `versus` 2.5 /
-      4 / 6, proposals until M16 (`template.ts`); `timeline-en` already
-      needs 7.9 s of its 8, so a Hindi or Telugu timeline may exceed it.
+     one named constant each:
+     - `before-after`'s reveal: a rounded shape in the style's accent at
+       `REVEAL_OPACITY` 0.35, growing from the card's middle over the
+       after's half only (opacity 0 until it grows), where the plan's words
+       were the "after" panel's box growing over the "before"; the before
+       stays readable beside the after. A critic of piece 1: the lowest
+       contrast is under `mono` (ink and accent both white over a black
+       panel at 0.5), where a lower tint for presets whose accent equals
+       their text colour is the fix if wanted; the rounded reveal leaves
+       small notches at the seam (a plain rectangle would push past the
+       panel's rounded corners). The session saw it once by eye on the
+       harness page, an olive-yellow tint under the default style, and did
+       not rate it.
+     - The two-sided cards' size: the value 0.07 of the short side against
+       the counter's 0.11, the label 0.04 (`LAYOUT_SIZES`), each half as
+       wide as the wider side's text needs, so a short pair is a compact
+       card, not a band across 16:9.
+     - `versus`: a thin divider stroke and no "vs" glyph (the template adds
+       no word; a fixed glyph would be an app-written word to list).
+     - `timeline`: the when and its label in one look, 0.045 each, no accent
+       (a critic of piece 1: `lookOf` already takes an accent, as other
+       templates use for their value).
+     - The seconds: `timeline` 3 / 6 / 8, `before-after` and `versus` 2.5 /
+       4 / 6, proposals until M16 (`template.ts`); `timeline-en` already
+       needs 7.9 s of its 8 (its `seconds` in
+       `tests/fixtures/graphics/specs.json`), so a Hindi or Telugu timeline may exceed it.
 
-    What changing one costs: the constant, and the tests that read it
-    (`tests/graphic3dTemplates.test.ts`' geometry and holds). No
-    recommendation beyond the critic's lines quoted; your eye in the
-    development app settles them, with the look rating (§6.10).
+     What changing one costs: the constant, and the tests that read it
+     (`tests/graphic3dTemplates.test.ts`' geometry and holds). No
+     recommendation beyond the critic's lines quoted; your eye in the
+     development app settles them, with the look rating (§6.10).
 
-    **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): OPEN.** Yours.
 102. **Depth on the three.** As built (`f06d083`, `templates/depth.ts`):
-    tilt, parallax and dolly move over the FIRST element's entrance only,
-    from its first beat less `DURATIONS.entrance` to the first beat, and
-    are flat from it; the focus blur falls over the same span to exactly 0
-    on the first beat. So on a timeline rows 2 to 5, and on a two-sided
-    card the second side, enter flat and sharp. Piece 3's builder: whether
-    the move should span the whole list "is the owner's call; it is one
-    argument in each drawer's depthOut call" (the `start`, and the span's
-    end). A focus blur held to the last beat was the builder's first
-    version (`lastBeat`), which blurred each later label while it was said;
-    a critic read that against §6.16's "as the value lands sharp", and the
-    fixer removed it, so putting it back is yours to ask for. The planes,
-    also proposals: parallax, every backing 0, labels 0.02, values (a
-    timeline row's when) 0.05; dolly, the values 0.05; focus, the values 0
-    and the labels with the panels and the reveal under them −0.02, the
-    rail, the dots and the divider 0. Never a hero: `HERO_TEMPLATES` stays
-    counter and ring, and the three have no `HERO_GLOW_ITEM` row. The bar
-    `DEPTH_TEMPLATES_BAR.moveLeftAtFirstInkMin` 0.5 is new (read 0.731
-    under `clean` on the Mac's harness page); a critic's stricter bar,
-    half the move left at the first word at opacity 0.5, was declined
-    because counter-en itself reads 0.27 there.
+     tilt, parallax and dolly move over the FIRST element's entrance only,
+     from its first beat less `DURATIONS.entrance` to the first beat, and
+     are flat from it; the focus blur falls over the same span to exactly 0
+     on the first beat. So on a timeline rows 2 to 5, and on a two-sided
+     card the second side, enter flat and sharp. Piece 3's builder: whether
+     the move should span the whole list "is the owner's call; it is one
+     argument in each drawer's depthOut call" (the `start`, and the span's
+     end). A focus blur held to the last beat was the builder's first
+     version (`lastBeat`), which blurred each later label while it was said;
+     a critic read that against §6.16's "as the value lands sharp", and the
+     fixer removed it, so putting it back is yours to ask for. The planes,
+     also proposals: parallax, every backing 0, labels 0.02, values (a
+     timeline row's when) 0.05; dolly, the values 0.05; focus, the values 0
+     and the labels with the panels and the reveal under them −0.02, the
+     rail, the dots and the divider 0. Never a hero: `HERO_TEMPLATES` stays
+     counter and ring, and the three have no `HERO_GLOW_ITEM` row. The bar
+     `DEPTH_TEMPLATES_BAR.moveLeftAtFirstInkMin` 0.5 is new (read 0.731
+     under `clean` on the Mac's harness page); a critic's stricter bar,
+     half the move left at the first word at opacity 0.5, was declined
+     because counter-en itself reads 0.27 there.
 
-    What a change costs: spanning the list changes the `start` and the
-    span in the three drawers' calls and the timing pinned by
-    `graphicDrawList` and `depthTemplatesMeasure` (15 frames off flat
-    today); a hero for the three means a `HERO_TEMPLATES` entry, a
-    `HERO_GLOW_ITEM` row and `graphicBudget`'s pin. No recommendation; your
-    eye on each depth of the three in the development app settles it (as
-    §16.82 for counter and ring).
+     What a change costs: spanning the list changes the `start` and the
+     span in the three drawers' calls and the timing pinned by
+     `graphicDrawList` and `depthTemplatesMeasure` (15 frames off flat
+     today); a hero for the three means a `HERO_TEMPLATES` entry, a
+     `HERO_GLOW_ITEM` row and `graphicBudget`'s pin. No recommendation; your
+     eye on each depth of the three in the development app settles it (as
+     §16.82 for counter and ring).
 
-    **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): OPEN.** Yours.
 103. **The sounds of the three.** §6.14's table had no row for them. Piece
-    1 left them silent and `136a3d3` pinned that; piece 2 changed it on
-    purpose (its task asked for them "as the list templates do"). As the
-    code has it at `03937b4` (`sound.ts` `graphicSoundCues`, pinned by
-    `tests/graphicSound.test.ts`): restrained styles, a tick on the first
-    element's beat, on its value; `energetic`, a tick on every beat and a
-    whoosh on each entrance and stroke (a timeline's row entrances and
-    edges, a versus' entrances and divider, a before-and-after's entrances
-    and reveal, one whoosh where the reveal shares the after's entrance).
-    No sound of the three has been heard: the harness page has no sound
-    library, so its `find` cases placed 0 sounds. The choices: as built;
-    piece 1's silence; or a tick alone. What a change costs: `sound.ts` and
-    its pin. No recommendation; M18, by your ear, judges it (piece 2's
-    builder: yours "after M18").
+     1 left them silent and `136a3d3` pinned that; piece 2 changed it on
+     purpose (its task asked for them "as the list templates do"). As the
+     code has it at `03937b4` (`sound.ts` `graphicSoundCues`, pinned by
+     `tests/graphicSound.test.ts`): restrained styles, a tick on the first
+     element's beat, on its value; `energetic`, a tick on every beat and a
+     whoosh on each entrance and stroke (a timeline's row entrances and
+     edges, a versus' entrances and divider, a before-and-after's entrances
+     and reveal, one whoosh where the reveal shares the after's entrance).
+     No sound of the three has been heard: the harness page has no sound
+     library, so its `find` cases placed 0 sounds. The choices: as built;
+     piece 1's silence; or a tick alone. What a change costs: `sound.ts` and
+     its pin. No recommendation; M18, by your ear, judges it (piece 2's
+     builder: yours "after M18").
 
-    **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): OPEN.** Yours.
 104. **Rules that drop a graphic a person might expect.** Each drops, and
-    none draws a guess (`validateGraphics.ts`, `claims.ts`, pieces 2's
-    builder and fixer):
-    - **Spoken order** (`pairsInOrder`): a before said after its after, or
-      a versus' right said before its left, is dropped ("'<text>' is not
-      said in the order the <graphicName> draws it in <sentence>"), not
-      redrawn the other way round; so 'now $4,000, I used to charge $1,500'
-      drops every time (a critic of piece 2).
-    - **One unit across the two sides**: "the two sides of the
-      <graphicName> are said in <sentence> in more than one unit".
-    - **One number said once is never both sides**, nor one year two rows;
-      a no-change before-and-after is kept only when the number is said
-      twice ('$1,500 … still $1,500'), and the menu never offers one,
-      since it asks for two different numbers.
-    - **Exactly two items** for a two-sided answer (`sideRowsNote`), and a
-      timeline's years rising.
-    - **The range-or-ratio note, for every template** (`b70b0bf`,
-      `numberSpansHeld`): a number said only inside a range or a ratio
-      ('from 10 to 20', '1 in 4') was and is refused, counter and bars
-      included; only the note changed, to "'<text>' is said as part of a
-      range or a ratio in <sentence>, not as one number". A qualified
-      number ('almost 40') and two adjacent numbers ('nineteen ninety
-      nine') still get "not said"; `numberSpansHeld` already tells them
-      apart, so a note for each is cheap later (piece 2's fixer).
+     none draws a guess (`validateGraphics.ts`, `claims.ts`, pieces 2's
+     builder and fixer):
+     - **Spoken order** (`pairsInOrder`): a before said after its after, or
+       a versus' right said before its left, is dropped ("'<text>' is not
+       said in the order the <graphicName> draws it in <sentence>"), not
+       redrawn the other way round; so 'now $4,000, I used to charge $1,500'
+       drops every time (a critic of piece 2).
+     - **One unit across the two sides**: "the two sides of the
+       <graphicName> are said in <sentence> in more than one unit".
+     - **One number said once is never both sides**, nor one year two rows;
+       a no-change before-and-after is kept only when the number is said
+       twice ('$1,500 … still $1,500'), and the menu never offers one,
+       since it asks for two different numbers.
+     - **Exactly two items** for a two-sided answer (`sideRowsNote`), and a
+       timeline's years rising.
+     - **The range-or-ratio note, for every template** (`b70b0bf`,
+       `numberSpansHeld`): a number said only inside a range or a ratio
+       ('from 10 to 20', '1 in 4') was and is refused, counter and bars
+       included; only the note changed, to "'<text>' is said as part of a
+       range or a ratio in <sentence>, not as one number". A qualified
+       number ('almost 40') and two adjacent numbers ('nineteen ninety
+       nine') still get "not said"; `numberSpansHeld` already tells them
+       apart, so a note for each is cheap later (piece 2's fixer).
 
-    What loosening costs: each rule is a mutation-checked test today
-    (`graphic3dModel`, `graphicsValidator`'s property), and each loosening
-    draws something the speaker did not say in that shape (a fall drawn as
-    a rise, a price against a share). No recommendation.
+     What loosening costs: each rule is a mutation-checked test today
+     (`graphic3dModel`, `graphicsValidator`'s property), and each loosening
+     draws something the speaker did not say in that shape (a fall drawn as
+     a rise, a price against a share). No recommendation.
 
-    **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): OPEN.** Yours.
 105. **The rest the lane left to you.**
-    - Questions are not refused: 'Did I charge $1,500 before and $4,000
-      after?' gives a kept before-and-after (rule 7, every template;
-      pre-existing, made more visible by the three; declined in this lane).
-    - Drawn text follows the model's spelling of the same number: '$1500'
-      for the spoken '$1,500' is kept and drawn as written (rule 5: "as
-      said" means the same number, not the same characters; pre-existing).
-    - `strayFields`' repair note quotes an answer key ("'value' is not a
-      field of a versus — left out"), as every template's does; a critic
-      of piece 2 suggested "a versus holds its numbers in its rows; the
-      extra number is left out", declined for one template, to change in a
-      pass over all of them.
-    - The text-item property reads `t.box` under `clean` only: a critic's
-      scratch run over all seven presets found `neon` at 16:9's bottom
-      third passing the frame's bottom by more than 1 px during the rise
-      (the export crops it). Extending it to every preset and to
-      `itemBounds` is open.
-    - Counter and ring unchanged by piece 3 is the agents' kept hash rig
-      (756 cases, 49,518 lists, byte-equal), outside the repo's tracked
-      files, not a committed test.
-    - The paste fix (`7553972`, the session's): in a text box Undo and Redo
-      stay the project's (a number box in the Trimmer keeps the keyboard
-      after a drag), so by the code Cmd+Z in a text box undoes the project,
-      not the typing; not read in the app.
+     - Questions are not refused: 'Did I charge $1,500 before and $4,000
+       after?' gives a kept before-and-after (rule 7, every template;
+       pre-existing, made more visible by the three; declined in this lane).
+       What refusing costs: a new rule-7 test over every template, a change
+       to behaviour that predates the three.
+     - Drawn text follows the model's spelling of the same number: '$1500'
+       for the spoken '$1,500' is kept and drawn as written (rule 5: "as
+       said" means the same number, not the same characters; pre-existing).
+       What requiring the same characters costs: '$1500' for a spoken
+       '$1,500' would be dropped.
+     - `strayFields`' repair note quotes an answer key ("'value' is not a
+       field of a versus — left out"), as every template's does; a critic
+       of piece 2 suggested "a versus holds its numbers in its rows; the
+       extra number is left out", declined for one template, to change in a
+       pass over all of them. What it costs: that pass, over every
+       template's repair note, not one template's.
+     - The text-item property reads `t.box` under `clean` only: a critic's
+       scratch run over all seven presets found `neon` at 16:9's bottom
+       third passing the frame's bottom by more than 1 px during the rise
+       (the export crops it). Extending it to every preset and to
+       `itemBounds` is open. What it costs: as it stands, the extended
+       property would fail on `neon` at 16:9's bottom third, so the
+       overshoot is fixed or allowed for first.
+     - Counter and ring unchanged by piece 3 is the agents' kept hash rig
+       (756 cases, 49,518 lists, byte-equal), outside the repo's tracked
+       files, not a committed test. What committing it costs: its baseline
+       (`cr-before2.json`) goes into the repo beside it, to redo whenever
+       counter or ring changes on purpose.
+     - The paste fix (`7553972`, the session's): in a text box Undo and Redo
+       stay the project's (a number box in the Trimmer keeps the keyboard
+       after a drag), so by the code Cmd+Z in a text box undoes the project,
+       not the typing; not read in the app. What making them the text's
+       roles in a text box costs: Cmd+Z after a drag on a Trimmer number box
+       would no longer undo the drag (`src/main/menu.ts`'s comment on
+       `editSubmenu`).
 
-    No recommendation for any of them.
+     No recommendation for any of them.
 
-    **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): OPEN.** Yours.
 
 ---
 
