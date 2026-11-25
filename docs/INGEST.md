@@ -493,7 +493,8 @@ file was saved and leaves the wrong project alone. (2026-11-25, `08875ea`:
 the project is now told apart by its id, recorded with the download, and by
 its path only for a record without one, so two untitled projects, both with no
 path, are no longer taken for one; this covers every Get and Clip download,
-`docs/CLIPS.md` §7.5's piece 4 note.)
+`docs/CLIPS.md` §7.5's piece 4 note; for the user to confirm, `docs/CLIPS.md`
+§16.91.)
 
 **One press of Get is one undo step.** The asset, the placement and the trim
 were three, so a single Cmd+Z left the untrimmed padded clip behind — which

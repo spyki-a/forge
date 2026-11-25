@@ -468,8 +468,8 @@ range clipped before the download (sheets 5 and 12). What is left is Narration �
 the one tile still marked "soon" (sheets 4 and 28) — and, on the URL tile,
 chapters, several ranges in one job, a transcript from the link (sheet 25) and
 Best clips (sheet 27). Still the largest hole, and upstream of everything that
-already works. (2026-11-25: Best clips is built, step 4 of `docs/CLIPS.md`,
-sheet 27 below.)
+already works. (2026-11-25: Best clips is built on the build side, step 4 of
+`docs/CLIPS.md`, sheet 27 below; its exit open, `docs/CLIPS.md` §7.8.)
 
 **Models not yet added.** Scene detection, matting, object tracking, and the
 deciding half of auto-flip. The sidecar already hosts three models (speech,
@@ -713,8 +713,9 @@ chapters, several ranges and Get transcript are small additions in order (2).
 job, and ONE range before download (sheet 12). Chapters, several ranges, a
 transcript from the link and Best clips are not built. Chapters are in the
 downloader's own metadata, and YouTube's timed captions can be fetched without
-transcribing, so neither needs a model. (2026-11-25: Best clips is built, step
-4, `e354cd8` … `d6000ed`; see sheet 27.)
+transcribing, so neither needs a model. (2026-11-25: Best clips is built on the
+build side, step 4, `e354cd8` … `d6000ed`; its exit open, `docs/CLIPS.md` §7.8;
+see sheet 27.)
 
 ---
 
@@ -757,7 +758,8 @@ start). Depends on a local model being set up, as the Director does.
 `docs/CLIPS.md` §7.3–§7.7). The lengths and Analyse as drawn; the three cards
 stacked in the 240 px column, each with a 9:16 face, not side by side; with no
 model the signals pick the three. The 3D toggle, B-roll images and transitions
-are not built.
+are not built. Built on the build side only: its exit is open
+(`docs/CLIPS.md` §7.8), and no real model or link has gone through it.
 
 ---
 

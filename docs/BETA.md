@@ -51,18 +51,21 @@
 > session's suite, harness check and census green on the Mac). It is done
 > on the build side only: its exit (`CLIPS.md` §7.8: the ten links rated,
 > Clip it from a card on the Surface without swapping, YouTube's ASR
-> timing against Whisper) is open and the user's, no real model or link
-> has gone through it, and nothing of it was read in the development app
-> or on the Surface; its decisions are `CLIPS.md` §16.89-95. On
-> 2026-11-23 the user said the speech models, tried on the Surface after a
-> pull, "landed as expected" (no figures; it closes no exit by itself).
-> So what is left of `CLIPS.md` before the beta, in the agreed order as
-> the session's record of 2026-11-25 gives it (`CLIPS.md` §2's 2026-11-25
-> note): step 6's three 3D templates, step 7's creator style and saved
-> template, Florence-2's caption placement (1g, gated), then R1–R12, R13
-> and R14 here; beside them, the user's exit readings for phase 2, phase
-> 3 and step 4. The deadline is unchanged, 25 December 2026; the R list
-> and its estimates are unchanged.
+> timing against Whisper; whether the windows property meets its words,
+> `CLIPS.md` §16.90) is open and the user's, no real model or link has
+> gone through it, and nothing of it was read in the development app or
+> on the Surface; its decisions are `CLIPS.md` §16.89-97. On 2026-11-23
+> the user said, after a pull on the Surface and trying the speech models,
+> "everything landed as expected" (no figures; it closes no exit by
+> itself). So what is left of `CLIPS.md` before the beta, in `CLIPS.md`
+> §2's order (2026-11-14, standing): 1g, Florence-2's caption placement
+> (gated, free to slip behind M3), step 6's three 3D templates, step 7's
+> creator style and saved template, then R1–R12, R13 and R14 here; the
+> session's list of 2026-11-25 puts 1g last, which the user has not
+> decided (`CLIPS.md` §16.96). Beside them, the user's exit readings for
+> phase 2, phase 3 and step 4. The deadline is unchanged, 25 December
+> 2026; a feature freeze about 10 December is the session's suggestion,
+> not confirmed by the user. The R list and its estimates are unchanged.
 
 ## 0. What "beta" means
 

@@ -430,12 +430,13 @@
 > §6.12), step 4, 1g, step 6's three 3D templates and step 7, then
 > `BETA.md`.
 >
-> **2026-11-23: your word from the Surface.** You pulled origin
-> (`e70c9e9`) on the Surface and tried the speech models: "everything
-> landed as expected". No figures came with it (no accuracy on Hindi,
-> Telugu or Hinglish, no speed, no sizes, not which of the three models
-> you downloaded), so it is recorded as your word that they worked; it
-> closes no exit list by itself (phase 2's, phase 3's, the three items').
+> **2026-11-23: your word from the Surface.** You pulled on the Surface
+> (origin was then `e70c9e9`, the session's reading) and tried the speech
+> models: "everything landed as expected". No figures came with it (no
+> accuracy on Hindi, Telugu or Hinglish, no speed, no sizes, not which of
+> the three models you downloaded), so it is recorded as your word that
+> they worked; it closes no exit list by itself (phase 2's, phase 3's,
+> the three items').
 >
 > **Step 4, Best clips, is built and pushed, 2026-11-23 to 25** (§7),
 > in five pieces, eleven commits `e354cd8..d6000ed`, each piece built by
@@ -471,10 +472,14 @@
 > from the fetched captions, by a model when one is set up and by the
 > talk's own signals when not, as stacked cards each with Clip it, which
 > downloads exactly that stretch, with Make it vertical on into a 9:16
-> short (asking first when the timeline holds an edit), and then follows the subject, turns captions on
-> and finds graphics, each step listed on the card (§7.5; step 6, B-roll,
-> after the beta). **Not read, by anyone**: no real model has answered a
-> Best clips request (the relay was tried on 2026-11-23 and 2026-11-25:
+> short (asking first when the timeline holds an edit or another card's
+> download is still on its way into the project), and then follows the
+> subject (with the AI helper and its face finder; otherwise the crop is
+> centred), turns captions on in a new project or on an empty timeline
+> (an existing edit's are left as they are) and finds graphics, each step
+> listed on the card (§7.5; §7.5's step 6, B-roll, after the beta).
+> **Not read, by anyone**: no real model has answered a Best clips request
+> (the relay was tried on 2026-11-23 and 2026-11-25:
 > every request status 500 within 2 to 31 ms, LM Studio not running); no
 > real link was fetched through Analyse, and no real download, reframe or
 > graphics pass ran through a card (the harness's stubs and the render
@@ -482,13 +487,17 @@
 > against the fake yt-dlp, never against YouTube; nothing was read in the
 > development app or on the Surface. **§7.8's exit is not met**, and
 > every item still open on it is yours (§7.8, item by item). The
-> decisions step 4 left to you are §16.89-95.
-> **Next, by the agreed order** (as the session's record of 2026-11-25
-> gives it; §2's 2026-11-25 note): step 6's three 3D templates (2 days),
-> step 7's creator style (2) and saved template (2.5, gated on `MARKET.md`
-> Stage 0, §10), Florence-2's caption placement (1g, 3, gated by its own
-> measurement), then `BETA.md`'s R1–R12, R13 and R14; still open beside
-> them, yours: phase 2's and phase 3's exit readings (§6.12) and §7.8's.
+> decisions step 4 left to you are §16.89-97.
+> **Next, by §2's order** (2026-11-14, standing on 2026-11-18): 1g,
+> Florence-2's caption placement (3 days, gated by its own measurement and
+> "free to slip behind M3"), step 6's three 3D templates (2), step 7's
+> creator style (2) and saved template (2.5, gated on `MARKET.md` Stage 0,
+> §10), then `BETA.md`'s R1–R12, R13 and R14. The session's list of
+> 2026-11-25 names them as the three 3D templates, creator style, the saved
+> template, then Florence-2 (gated): 1g last, which the slip clause allows
+> but which you have not decided; where 1g goes is §16.96. Still open
+> beside them, yours: phase 2's and phase 3's exit readings (§6.12) and
+> §7.8's.
 > **The deadline is unchanged: 25 December 2026.** A feature freeze about
 > 10 December is the session's suggestion, not confirmed by you.
 >
@@ -867,16 +876,16 @@ this and will get back to the beta". **This plan comes first**, then
 - **2026-11-25: step 4 is built** (M3; §7, built 2026-11-23 to 25 in five
   pieces, `e354cd8..d6000ed`, pushed once on 2026-11-25; the status block
   at the top). Its exit (§7.8) is open and yours; the decisions it left
-  are §16.89-95. No day figure or total in this section changes: step 4's
-  3.5 stand as planned. **Next, in the agreed order as the session's
-  record of 2026-11-25 gives it**: step 6's three 3D templates (2), step
-  7's creator style (2) and saved template (2.5, gated on `MARKET.md`
-  Stage 0, below), Florence-2's caption placement (1g, 3, gated), then
-  `BETA.md` R1–R12 → R13 → R14. That puts 1g after step 7, where the
-  2026-11-14 order had it before step 6; that order already let 1g slip
-  behind M3 without blocking anything ("free to slip behind M3"). Still open
-  beside them, all yours: phase 2's and phase 3's exit readings (§6.12) and
-  §7.8's. **The deadline is unchanged: 25 December 2026.** A feature freeze
+  are §16.89-97. No day figure or total in this section changes: step 4's
+  3.5 stand as planned. **Next, by the 2026-11-14 order above**: 1g (3,
+  gated, and free to slip behind M3), step 6's three 3D templates (2),
+  step 7's creator style (2) and saved template (2.5, gated on `MARKET.md`
+  Stage 0, below), then `BETA.md` R1–R12 → R13 → R14. The session's list
+  of 2026-11-25 differs only in 1g's place: it names Florence-2 (gated)
+  after the saved template. The slip clause allows that, but you have not
+  decided it; 1g's place is §16.96. Still open beside them, all yours:
+  phase 2's and phase 3's exit readings (§6.12) and §7.8's. **The
+  deadline is unchanged: 25 December 2026.** A feature freeze
   about 10 December is the session's suggestion, not confirmed by you.
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
@@ -23558,7 +23567,7 @@ the plan's, 3.5, and were not re-estimated; the build took three calendar
 days, 2026-11-23, the small hours of 2026-11-24 and 2026-11-25, held at
 your word from 00:30 on 2026-11-24 to the morning of 2026-11-25. Where the
 step stands, its exit and the decisions it left: the status block at the
-top, §7.8 and §16.89-95.)
+top, §7.8 and §16.89-97.)
 
 ### 7.1 Metadata and the transcript from a link — measured with yt-dlp 2026.08.19
 
@@ -24808,11 +24817,18 @@ rows.
   `tests/output/_session-keep/bestclips-exit-links.txt` (one link a line,
   its length 1 to 4 min, optionally the captions' language); pass 1,
   `FORGE_BESTCLIPS_EXIT=1 npx vitest run
-  tests/integration/bestClipsExit.int.test.ts`, which fetches details and
-  captions only and writes the signals' cards and the model's requests;
-  then, with LM Studio open and serving the model, on the harness page
+  tests/integration/bestClipsExit.int.test.ts`, which first clears
+  `tests/output/bestclips-exit/links` and `tests/output/eval/bestclips-exit`
+  (saved answers included), fetches details and captions only (with no
+  yt-dlp on PATH it may fetch yt-dlp itself into
+  `tests/output/bestclips-exit/userData/tools`) and writes the signals'
+  cards and the model's requests; then, with LM Studio open and serving
+  the model, on the harness page (`npm run harness`,
+  http://localhost:5199/harness.html)
   `window.__forgeEvalRelay('bestclips-exit')`; pass 2, the same command
-  with `FORGE_BESTCLIPS_EXIT_STEP=score`, no network; then rate each card
+  with `FORGE_BESTCLIPS_EXIT_STEP=score`, no network, which refuses if the
+  links file changed since pass 1 and names any saved answer whose status
+  is not 200, to delete before relaying again; then rate each card
   yes or no in `tests/output/bestclips-exit/index.html`, which tallies the
   model's side and the signals' side apart against 7 of 10, the model's
   only over the links it answered. It has run only against the fake
@@ -24823,8 +24839,9 @@ rows.
   band and stride (§7.3)" › "every window starts at a capped segment start
   and ends at a capped segment end, inside the band, for random
   transcripts", green in the session's suite at `d6000ed`. Over 60 seeded
-  transcripts (half punctuated, 200 to 1,199 words, even seeds with gaps in
-  `Word.index`, lengths of 1 to 4 min, tolerance 0.1, 0.2 or 0.3; more than
+  transcripts (each punctuated or not by a seeded coin flip, 200 to 1,199
+  words, even seeds with gaps in `Word.index`, lengths of 1 to 4 min,
+  tolerance 0.1, 0.2 or 0.3; more than
   500 windows asserted) it pins: every window starts at a capped segment's
   start and ends at a capped segment's end, inside the band taken from the
   numbers themselves; its words counted by position; and its starts are
@@ -27580,10 +27597,11 @@ Each is a wording, a stated departure, a gap or a chosen constant that the
 builders, critics, fixers or the session left to you (the two runs'
 reports and the session's record); the session decided none. A
 recommendation is given only where the session's record states one; a
-critic's or a fixer's suggestion is quoted as theirs. Everything here was
-read in the suite or on the harness page on the Mac, never in the
-development app or on the Surface, and no real model, link, download or
-reframe has gone through Best clips.
+critic's or a fixer's suggestion is quoted as theirs. What was read was
+read in the session's suite and on the harness page on the Mac, and in
+Windows CI at `d6000ed`; several entries rest on the code as read, not on
+a run. Nothing was read in the development app or on the Surface, and no
+real model, link, download or reframe has gone through Best clips.
 
 89. **The words on the cards.** On-screen words no one has chosen for you:
     - "signals" and "talk" in `SCORED_BY_LABEL`'s "Picked from the talk's
@@ -27611,8 +27629,24 @@ reframe has gone through Best clips.
       written with a straight one ("talk's"), while
       `BEST_CLIPS_NEEDS_TRANSCRIPT`, `CLIP_IT_CARD_TITLE` ("…with its words
       and the link’s credit") and the recorder's page use the curly one.
+    - A why that falls back to the signals' reason line is English even on
+      a Telugu or Hindi card (piece 2's builder).
 
-    No recommendation beyond the critics' suggestions quoted.
+    What a rewording costs: each string is one shared constant
+    (`SCORED_BY_LABEL` in `session.ts`; `NO_MODEL_NOTE`, the three
+    `MODEL_*_NOTE`s, `FILLED_NOTE`, `WHY_FALLBACK_NOTE` and `WHY_EMPTY_NOTE`
+    in `run.ts`), and each on-screen label has a row in
+    `tests/fixtures/ui-census.json` ("Picked from the talk's own signals",
+    count 3, under `link-best-clips`; the `BEST_CLIPS_NEEDS_TRANSCRIPT` row
+    under `link-failed`), so `tests/uiCensus.test.ts`'s "finds every label
+    written in the interface source" fails on a rename until the fixture is
+    changed with it (piece 3's builder mutation-checked that test by
+    renaming "Analyse" and "1 min", piece 5's by renaming "Picked by the
+    model"). Taking the ending signal out of the lines that may be a why
+    changes `strongestReason` in `signals.ts` and the cases of "the why: a
+    reason to post, never a neutral or negative line" in
+    `tests/bestClips.test.ts`. Keeping the wording costs nothing. No
+    recommendation beyond the critics' suggestions quoted.
 
     **Answer (2026-11-25): OPEN.** Yours.
 90. **The departures from §7's words, to confirm or overrule.** Each is
@@ -27620,29 +27654,39 @@ reframe has gone through Best clips.
     and §7.5's notes ("Departures from the plan's words", "Departures
     from the plan"):
     - the three cards stacked in the 240 px column, each with a 48 px 9:16
-      face, not side by side as sheet 27 draws them (three side by side
-      leave about 68 px each, piece 3's builder);
-    - no thumbnail on a card (the plan's own "left out of v1");
+      face, not side by side as sheet 27 draws them; side by side would
+      leave about 68 px a card, too narrow for a 60-grapheme title and a
+      120-grapheme why (piece 3's builder);
+    - no thumbnail on a card (the plan's own "unmeasured and left out of
+      v1"); one would need yt-dlp's storyboard formats, unmeasured;
     - "Make it vertical" a toggle above the cards, on by default (the plan
       left its place open; sheet 27 does not draw it);
     - a missing face finder a line on the card pointing at the Trimmer,
       "skipped: the face finder is not downloaded, so the crop is centred.
       Follow the subject, in the Trimmer, gets it.", not "a button with its
-      size" on the card: one home for that press (piece 4's builder);
+      size" on the card, which would be a second home for the Trimmer's
+      download press (piece 4's builder);
     - Analyse never fetching captions: with no transcript it is greyed and
-      points at Get transcript;
+      points at Get transcript; fetching from Analyse would hide two
+      different waits behind one button (piece 3's builder);
     - the no-captions line, "This video has no captions, and Best clips
       cannot listen to a video yet." with or without the AI helper, not
       §7.5's "…needs the AI helper to listen to it": Listen to it is not
-      built, so the line does not send you to install the helper for it (a
-      panel test lets it point at Listen to it once that button is built);
+      built, so §7.5's line would send you to install a large download
+      that cannot listen yet (piece 5's second critic); a panel test lets
+      the line point at Listen to it once that button is built;
     - step 4 turning captions on only in a new project or on an empty
       timeline, never in an existing edit, where §7.5's step 4 turned them
-      on for the project (`08875ea`, after a critic);
+      on for the project (`08875ea`, after a critic): turned on in an
+      existing edit, they would change that edit unasked, captions and
+      placement for every clip (piece 4's first critic);
     - two lines the fixers declined to change: a cancelled reframe reads
       "the faces could not be found, so the crop is centred.", and after the
       9:16 change is undone (its own undo step) the card still reads "this
-      project set to 9:16.";
+      project set to 9:16."; and a reframe job that never ends holds every
+      card's graphics, because the claim is held until the job settles: the
+      card offers no way out, and the only one is cancelling the job in the
+      jobs list (piece 4's fixer, open);
     - and §7.8's second item: whether the property as built, §7.3's
       capped-segment boundaries with a punctuated track's starts on a
       sentence start and every end on a mark preferred, not required, meets
@@ -27679,8 +27723,11 @@ reframe has gone through Best clips.
     across features: Best clips allows one Analyse at a time, but Find
     graphics or Direct can run beside it, and a Find graphics or Follow the
     subject you press while a card's chain runs is not held back (only the
-    card chains obey §12.1 among themselves); two prompts on one local
-    model is what §12.1 keeps off the 8 GB machine. No recommendation.
+    card chains obey §12.1 among themselves). Two prompts on one local
+    model at once is what piece 3's builder read as against §12.1's memory
+    budget on the 8 GB machine; §12.1 itself names the AI helper's
+    sessions and the local model resident together, not two prompts. No
+    recommendation.
 
     **Answer (2026-11-25): OPEN.** Yours.
 93. **A pointer to Settings from the no-model note.** With no model set up
@@ -27722,13 +27769,53 @@ reframe has gone through Best clips.
     token density, where at one character a token the worst case is 8,159
     of `NUM_CTX` 8,192, 33 spare (piece 2's fixer: if Indic is denser than
     about two characters a token, `CONDENSED_MAX_CHARS` or `MAX_CANDIDATES`
-    must vary by script). Beside them, no connective or address list for
+    must vary by script). The builders' other choices, judged the same
+    way: the prompt lists the candidates best first, not by time (a small
+    model favours what it reads first); the decode limits, title 180 and
+    why 360 code points, three a kept grapheme; one Latin letter in a
+    window making it mixed, so its lower-case Latin title words go
+    unchecked (a share threshold would be stricter); the code-mixed English
+    gate decided once per transcript; and a partial heatmap favouring its
+    uncovered tail, an uncovered window scored without heat (with
+    `HEAT_MIN_COVER`). Beside them, no connective or address list for
     Hindi or Telugu exists, so those talks have no opening signal and no
     address hook (§7.4's piece 1 note); the lists are yours to give. What
     judges the constants is the ten links, with the model and with the
     signals alone (§7.8's first item), and a real model answering the eval
     block's requests (run `bestclips-a1`, prepared, never answered: LM
     Studio was not running). No recommendation until those are read.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+96. **Where 1g goes: before step 6 or after step 7.** §2's order of
+    2026-11-14, standing on 2026-11-18, runs step 4, then 1g (Florence-2's
+    caption placement, 3 days, gated by its own measurement and "free to
+    slip behind M3"), then step 6's three 3D templates, then step 7. The
+    session's list of 2026-11-25 names the next items as the three 3D
+    templates, creator style, the saved template, then Florence-2 (gated):
+    1g last. The two records differ only in 1g's place. 1g before step 6
+    keeps the documented order; 1g after step 7 is what the slip clause
+    already allows, and puts the two pieces with no gate of their own
+    first. No day figure changes either way. No recommendation.
+
+    **Answer (2026-11-25): OPEN.** Yours.
+97. **What a model's title and why are held to.** The validator
+    (`validate.ts` `ungroundedIn`, piece 2 and its fixer) holds every
+    capitalised word of a title, its first word included, to the window,
+    compared case-blind; so a title opening on a capitalised word the
+    window does not say, an English function word ("How", "The") included,
+    falls back to the clip's first sentence. A why may open a sentence
+    unchecked only on an English function word (`FUNCTION_WORDS_EN`: "It",
+    "This", "A", "We"…); one opening on any other capital ("Funny …") the
+    window does not say falls back to the signals' line. A bare pronoun
+    "one" counts as a number, so it must be said in the window as "one" or
+    as 1. Exempting a title's opening function word, or the pronoun, needs
+    an English list or a judgement on English, which piece 2's fixer
+    declined as yours; the prompt asks instead for sentence case starting
+    on a word the candidate says, and in English a why opening on "This"
+    or "It". What judges it is the eval's `titleFallbacks` and
+    `whyFallbacks` with a real model, unread: no real model has answered,
+    and the eval's fixtures are nonsense words, so their rates would not
+    measure quality. No recommendation.
 
     **Answer (2026-11-25): OPEN.** Yours.
 
