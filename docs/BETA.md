@@ -56,7 +56,7 @@
 > gone through it, and nothing of it was read in the development app or
 > on the Surface; its decisions are `CLIPS.md` §16.89-97. (Later on
 > 2026-11-25: a real model answered and two real links were fetched and
-> clipped as exact downloads, outside Analyse and a card, on the session's
+> one exact range of each downloaded, outside Analyse and a card, on the session's
 > picks, not the ten: `CLIPS.md` §7.7's note "Read on a real model,
 > 2026-11-25"; §16.98, the model server's port, answered.) On 2026-11-23
 > the user said, after a pull on the Surface and trying the speech models,

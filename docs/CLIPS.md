@@ -487,7 +487,7 @@
 > against the fake yt-dlp, never against YouTube; nothing was read in the
 > development app or on the Surface. **§7.8's exit is not met**, and
 > every item still open on it is yours (§7.8, item by item). (Later on
-> 2026-11-25: answered, a real model, two real links and two real exact
+> 2026-11-25: a real model answered, two real links and two real exact
 > downloads, outside Analyse and a card: the later note below.) The
 > decisions step 4 left to you are §16.89-97.
 > **Next, by §2's order** (2026-11-14, standing on 2026-11-18): 1g,
@@ -512,10 +512,11 @@
 > characters a token (so 3.0 undercounted one of the two by 22 tokens,
 > 2 %), made-up Georgian 1.76, 204 to 256 output tokens of 950, 5.3 to 7.1 s
 > an answer; the ten-links recorder's first run against YouTube, both
-> passes with the model, on two links the session picked (Randy Pausch's
-> last lecture at 1 min, Joe Rogan #1309 with Naval Ravikant at 2 min:
+> passes with the model, on two links the session picked ("Randy
+> Pausch's Last Lecture: Achieving Your Childhood Dreams" at 1 min,
+> "Joe Rogan Experience #1309 - Naval Ravikant" at 2 min:
 > three signals cards and three model cards each, no shared window); and
-> the model's first card of each downloaded as an exact range through
+> the model's first card of each in time order downloaded as an exact range through
 > main's `downloadMedia`, the two clips sent to you, raw and landscape,
 > never through the renderer. All of it is §7.7's note "Read on a real
 > model, 2026-11-25". **Your model server**: the app you opened is
@@ -523,7 +524,8 @@
 > answers on `127.0.0.1:1235`, while the app looks at `DEFAULT_OPENAI`'s
 > `http://127.0.0.1:1234/v1` (`src/shared/director/provider.ts`) and the
 > Settings field's placeholder is `http://127.0.0.1:1234/v1`
-> (`SettingsPanel.tsx`): in the app, type `http://127.0.0.1:1235/v1` in
+> (the OpenAI-shaped server's field in
+> `src/renderer/src/components/SettingsPanel.tsx`): in the app, type `http://127.0.0.1:1235/v1` in
 > Settings' Server field, or set the port back to 1234 in Bionic (the
 > harness's relay the same: §7.8's first item). **Your words after
 > seeing the two clips and the cards**: "i appetite your work, everything
@@ -538,7 +540,8 @@
 > (characters a token included), Analyse and Clip it from a card in the
 > development app, a card's chain with a real reframe and graphics, the
 > Surface, YouTube's ASR against Whisper. The decisions step 4 left to
-> you are now §16.89-98.
+> you are still §16.89-97, all open; §16.98, the port, was added and
+> answered the same day.
 >
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
@@ -23794,7 +23797,8 @@ overlap by more than half. An hour is ~10.8k words and does not fit
 **condensed** to ~60–80 tokens: its first two sentences and its densest one.
 24 × 80 + the system prompt + the answer is about 3k tokens. The density was
 measured on Gemma 4 E2B in LM Studio at 3.0–3.55 chars a prompt token, from
-the recorded spine runs.
+the recorded spine runs. (Later, 2026-11-25: Best clips' `bc-en-heat` read
+2.94, below that range; §7.7's note "Read on a real model, 2026-11-25".)
 
 **The model** makes **one comparative call**: `{reasoning, picks: [{id, title, why}]}`,
 with `minItems 3`, `maxItems 3`, and `id` an enum. A 2B compares well and
@@ -24077,7 +24081,7 @@ shared with the eval, as the Director's is.
 >   with an empty error, LM Studio not running on the Mac. So the parse,
 >   prose and unusable rates, the title and why fallback rates, the prompt
 >   tokens against the 3,353, the answer room and Indic token density are
->   all unmeasured. (Later on 2026-11-25: answered, on Gemma 4 E2B in
+>   all unmeasured. (Later on 2026-11-25: a real model answered, Gemma 4 E2B in
 >   Bionic, LM Studio renamed, on port 1235: three of three parsed, no
 >   fallback, English 2.94 and 3.08 characters a token, so the comment's
 >   "never undercounts English" is not true as measured; §7.7's note "Read
@@ -24904,7 +24908,7 @@ rows.
 > - **Against `prompt.ts`'s arithmetic.** English read 2.94 and 3.08
 >   characters a token. The file's comment says `promptTokensAtMost`
 >   counts at 3.0 "so it never undercounts English": on `bc-en-heat` the
->   server's 1,086 is above 3,191 / 3.0 = 1,064 by 22 tokens (2 %), so 3.0
+>   server's 1,086 is above 3,191 / 3.0 = 1,064 (on the whole request's characters) by 22 tokens (2 %), so 3.0
 >   undercounts one of the two English readings, and the comment is not
 >   true as measured (left in the code as it is). With 24 candidates the
 >   estimate is 3,353 against the 4,096 budget, so a 2 % miss does not
@@ -25032,8 +25036,8 @@ rows.
   choosing (§7.7's note "Read on a real model, 2026-11-25"). They are not
   part of the ten and nothing is rated, so the item stays open and yours.
   Your model server now answers on port 1235, and the relay goes to
-  `tests/eval/relay.ts`'s `MODEL_SERVER`, `FORGE_EVAL_SERVER` or else
-  `http://127.0.0.1:1234`: start the harness with
+  `tests/eval/relay.ts`'s `MODEL_SERVER`, which is `FORGE_EVAL_SERVER`
+  when set and `http://127.0.0.1:1234` otherwise: start the harness with
   `FORGE_EVAL_SERVER=http://127.0.0.1:1235` in its environment, as the
   session did, or set the port back to 1234 in Bionic.)
 - Every window on sentence boundaries, by property.
@@ -25079,8 +25083,8 @@ rows.
   the local model loads, a real graphics pass, and a reading of swap, for
   which nothing is built and no way is stated (`vm_stat` on the Mac, Task
   Manager on the Surface). **Open, yours.**)
-  (Later on 2026-11-25: two exact ranges, the model's first card of each
-  of the session's two links, were downloaded through main's own
+  (Later on 2026-11-25: two exact ranges, the model's first card in time
+  order of each of the session's two links, were downloaded through main's own
   `downloadMedia` with the real yt-dlp on the Mac, outside the renderer:
   59.03 s read of 59.000 s asked, 120.67 s of 120.639 s (§7.7's note "Read
   on a real model, 2026-11-25"). No project, 9:16, reframe, captions or
@@ -28015,6 +28019,9 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
     of 950 on the fixtures, 185 and 205 on the two links; 4.5 to 7.1 s an
     answer against the 180 s deadline, on the Mac. Still unmeasured:
     Devanagari and Telugu, the weights and thresholds, and the ten links.
+    The session's observation, no recommendation: 1.76 is already denser
+    than piece 2's fixer's line of about two characters a token, though
+    `bc-caseless` (11 candidates, 2,017 prompt tokens) answered and parsed.
     The entry stays open.)
 
     **Answer (2026-11-25): OPEN.** Yours.
@@ -28047,8 +28054,8 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
     or "It". What judges it is the eval's `titleFallbacks` and
     `whyFallbacks` with a real model, unread: no real model has answered,
     and the eval's fixtures are nonsense words, so their rates would not
-    measure quality. No recommendation. (Later on 2026-11-25: answered,
-    `titleFallbacks` 0 and `whyFallbacks` 0 on the three fixtures, and no
+    measure quality. No recommendation. (Later on 2026-11-25: a real model
+    answered; `titleFallbacks` 0 and `whyFallbacks` 0 on the three fixtures, and no
     fallback on the six model cards of the recorder's two real links;
     §7.7's note "Read on a real model, 2026-11-25". The fixtures still
     measure no quality, and two English links are not the ten.)
@@ -28059,7 +28066,8 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
     `127.0.0.1:1235`; 1234 refused the connection. The app looks at
     `DEFAULT_OPENAI`'s `http://127.0.0.1:1234/v1`
     (`src/shared/director/provider.ts`), and Settings' Server field shows
-    the same as its placeholder (`SettingsPanel.tsx`), so the app finds no
+    the same as its placeholder (the OpenAI-shaped server's field in
+    `src/renderer/src/components/SettingsPanel.tsx`), so the app finds no
     model there until the address is changed (§7.7's note "Read on a real
     model, 2026-11-25"). The choices: (a) leave it to you to type
     `http://127.0.0.1:1235/v1` in Settings, or set the port back in
