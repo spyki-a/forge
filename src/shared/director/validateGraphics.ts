@@ -26,6 +26,7 @@ import {
   marksOf,
   marksUnsaid,
   numberSpans,
+  numberSpansHeld,
   type Claim,
   type ClaimStretch
 } from './claims'
@@ -253,6 +254,83 @@ export function notAYear(text: string): string {
   return `'${text}' is not a year: a timeline's when is one year as said, such as 2019`
 }
 
+/** The note a when is refused with when the speaker's own word for it is not a year said as a date ('1,500 guests', 'we had 2015 photos'). */
+export function notSaidAsAYear(text: string, sentence: string): string {
+  return `'${text}' is not said as a year in ${sentence}: a timeline's when is a year said as a date, such as 'in 2019'`
+}
+
+/**
+ * The English words a year said as a date may stand after ('in 2015', 'since
+ * 2018', 'back 2015' is not English but costs nothing): a heuristic, beyond
+ * §9's words, so a count said as four digits ('we had 1500 guests', 'we shot
+ * 2015 photos') is never drawn as a date. A year may also open its clause
+ * ('2015 was the year'). `claimTokens`' form (lower case).
+ */
+export const YEAR_LEADS_EN: readonly string[] = Object.freeze([
+  'in', 'since', 'by', 'until', 'till', 'from', 'to', 'of', 'back', 'year', 'around', 'during', 'after', 'before',
+  'early', 'late', 'mid', 'circa', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
+  'september', 'october', 'november', 'december'
+])
+
+/** English words of four letters or more ending in s that are no plural noun, so a year before them is not read as a count. */
+const NOT_PLURAL_EN: readonly string[] = [
+  'this', 'thus', 'plus', 'less', 'unless', 'across', 'always', 'perhaps', 'whereas', 'besides', 'towards',
+  'afterwards', 'sometimes', 'does', 'goes', 'ours', 'yours', 'theirs'
+]
+
+/**
+ * Whether the spoken token `tokens[at]` (a sentence's `claimTokens`, clause
+ * breaks included) is a year said as a date: four digits as said ('1,500'
+ * and 'two thousand fifteen' are not, whatever the answer writes), and, in
+ * English, after one of `YEAR_LEADS_EN` or at its clause's start, and not
+ * directly before a plural noun ('2015 photos' is a count). Hindi and Telugu
+ * take the four digits alone until the owner gives their postpositions. The
+ * menu (menuGraphics.ts) asks the same, so it never offers a timeline the
+ * validator would refuse for this. Pure.
+ */
+export function saidAsYear(tokens: readonly string[], at: number, english: boolean): boolean {
+  if (!/^\p{Nd}{4}$/u.test(tokens[at] ?? '')) return false
+  if (!english) return true
+  const before = tokens[at - 1]
+  const after = tokens[at + 1]
+  const leads = before === undefined || before === CLAUSE_BREAK || YEAR_LEADS_EN.includes(before)
+  const count = after !== undefined && /^\p{L}{4,}$/u.test(after) && after.endsWith('s') && !NOT_PLURAL_EN.includes(after)
+  return leads && !count
+}
+
+/** The spoken tokens of the stretch sentence holding word `word`, and where in them that word's first digit-bearing token is. */
+function spokenNumberAt(stretch: ClaimStretch, word: number): { tokens: string[]; at: number } | null {
+  const s = stretch.sentences.find((x) => x.wordStart <= word && word <= x.wordEnd)
+  if (!s) return null
+  const tokens: string[] = []
+  let at = -1
+  for (const w of [...stretch.words].sort((a, b) => a.index - b.index)) {
+    if (w.index < s.wordStart || w.index > s.wordEnd) continue
+    for (const t of claimTokens(w.text)) {
+      if (at < 0 && w.index === word && /\p{Nd}/u.test(t)) at = tokens.length
+      tokens.push(t)
+    }
+  }
+  return at < 0 ? null : { tokens, at }
+}
+
+/**
+ * Whether `n` is said in the stretch only as part of a range or a ratio
+ * ('from 10 to 20', '1 in 4'), which `numberSpans` reads as no number: the
+ * note then says so, rather than "not said" of a number the speaker did say.
+ */
+function heldInRange(stretch: ClaimStretch, n: number): boolean {
+  const byIndex = new Map(stretch.words.map((w) => [w.index, w]))
+  return stretch.sentences.some((s) => {
+    const tokens: string[] = []
+    for (let i = s.wordStart; i <= s.wordEnd; i++) {
+      const w = byIndex.get(i)
+      if (w) tokens.push(...claimTokens(w.text))
+    }
+    return numberSpansHeld(tokens).some((x) => x.held === 'range' && Math.abs(x.value.n - n) <= 1e-9 * Math.max(1, Math.abs(n)))
+  })
+}
+
 /** The per-graphic core, which `checkGraphicData` returns the problems of and `validateGraphics` keeps the binding of. */
 function check(
   data: GraphicData,
@@ -370,9 +448,13 @@ function check(
       const row = r.reason === 'order' && c.kind === 'token' && c.pair === undefined
       // Step 6's pairs are drawn in spoken order (`pairsInOrder`): a before said after its after is out of the drawn order.
       const drawnOrder = r.reason === 'order' && def.pairsInOrder === true
+      // A number the speaker said only inside a range ('from 10 to 20') is said, but not as one number.
+      const ranged = r.reason === 'absent' && c.kind === 'number' && c.value !== undefined && heldInRange(stretch, c.value.n)
       const message = row
         ? `'${fieldText(data, c.path)}' is not said in the order the list draws it in ${sentence}`
-        : drawnOrder
+        : ranged
+          ? `'${fieldText(data, c.path)}' is said as part of a range or a ratio in ${sentence}, not as one number`
+          : drawnOrder
           ? `'${fieldText(data, c.path)}' is not said in the order the ${graphicName(def.id)} draws it in ${sentence}`
           : reasonText(r.reason, fieldText(data, c.path), sentence)
       problems.push({ path: `$.${c.path}`, message })
@@ -393,18 +475,36 @@ function check(
     if (!m || m.unit !== '%') problems.push({ path: '$.value', message: `'${data.value}' is not said as a percentage in ${sentence}` })
     else if (m.n < 0 || m.n > 100) problems.push({ path: '$.value', message: `'${data.value}' is not a share of a whole (0 to 100%)` })
   }
-  // A timeline's when is a year as said: a bare spec year never binds to an amount ('$2019').
+  // A timeline's when is a year as said: a bare spec year never binds to an amount ('$2019'), nor to a
+  // word the speaker did not say as a year ('1,500', 'we had 1500 guests'); and its years rise down the rail.
   if (data.template === 'timeline') {
+    const years: number[] = []
     claims.forEach((c, i) => {
       const m = r.matched[i]
-      if (TIMELINE_WHEN.test(c.path) && m && (m.unit !== '' || m.currency !== undefined)) {
+      if (!TIMELINE_WHEN.test(c.path) || !m) return
+      if (m.unit !== '' || m.currency !== undefined) {
         problems.push({ path: `$.${c.path}`, message: reasonText('unit', c.text, sentence) })
+        return
       }
+      const said = spokenNumberAt(stretch, r.at[i])
+      if (!said || !saidAsYear(said.tokens, said.at, english)) {
+        problems.push({ path: `$.${c.path}`, message: notSaidAsAYear(c.text, sentence) })
+        return
+      }
+      years.push(m.n)
     })
+    if (problems.length === 0 && years.some((y, k) => k > 0 && !(years[k - 1] < y))) {
+      problems.push({ path: '$.items', message: `the timeline's years are not said in date order in ${sentence}` })
+    }
   }
-  if (data.template === 'bars') {
+  // One unit across a list's values, and across the two sides of a before-and-after or a versus ($1,500 against 40% is no comparison).
+  if (data.template === 'bars' || data.template === 'before-after' || data.template === 'versus') {
     const units = claims.flatMap((c, i) => (c.kind === 'number' && r.matched[i] ? [`${r.matched[i]!.unit}${r.matched[i]!.currency ?? ''}`] : []))
-    if (new Set(units).size > 1) problems.push({ path: '$.items', message: `the bars are said in ${sentence} in more than one unit` })
+    if (new Set(units).size > 1) {
+      const bars = data.template === 'bars'
+      const what = bars ? 'the bars are' : `the two sides of the ${graphicName(def.id)} are`
+      problems.push({ path: bars ? '$.items' : '$', message: `${what} said in ${sentence} in more than one unit` })
+    }
   }
   // Rule 8's speaker mode, a said quote's.
   if (data.template === 'quote' && data.kind !== 'social') {

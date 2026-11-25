@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { graphicsMenuFor, pairSettled, runGraphicsPass, settleGraphics, type GraphicsAsk, type GraphicsMenu } from '@shared/director/run'
 import { GRAPHICS_SYSTEM, GRAPHIC_TEMPLATE_ROWS, graphicsPrompt } from '@shared/director/promptGraphics'
 import { MAX_GRAPHICS, graphicsSchema, maxTokensForGraphics, type AnswerGraphic } from '@shared/director/schemaGraphics'
-import { BEFORE_AFTER_CUES_EN, STEP_SIX_TEMPLATES, VERSUS_CUES_EN, stepSixOffered } from '@shared/director/menuGraphics'
-import { SIDE_ROWS, checkGraphicData, notAYear, sideRowsNote } from '@shared/director/validateGraphics'
+import { BEFORE_AFTER_CUES_EN, LIST_NOUNS_EN, STEP_SIX_TEMPLATES, VERSUS_CUES_EN, stepSixOffered } from '@shared/director/menuGraphics'
+import { SIDE_ROWS, checkGraphicData, notAYear, notSaidAsAYear, sideRowsNote } from '@shared/director/validateGraphics'
 import { baselineGraphics } from '@shared/director/baselineGraphics'
 import { MAX_CANDIDATES } from '@shared/director/menu'
 import { THINKING_EXTRA_TOKENS } from '@shared/director/ask'
@@ -178,6 +180,106 @@ describe('rule 6 binds each pair of the three as it binds a bars item, in drawn 
   })
 })
 
+/* ---------------------------------------------- the critics' edge cases */
+
+/** The dock's check (checkGraphicData) on a one-off talk: what the validator says of these data, whatever a menu offers. */
+const dock = (sentences: string[], data: GraphicData, sentence = 's00') => {
+  const t = stepSixTalk('edge', sentences)
+  return checkGraphicData(data, GRAPHIC_TEMPLATES[data.template]!, { assetId: 'edge', sentence, words: [] }, t)
+}
+const side = (label: string, value: string) => ({ label, value })
+
+describe('the two sides in one unit, a when said as a date, years in date order, ranges and one number said once (the critics of piece 2)', () => {
+  it('the two sides of a before-and-after or a versus said in two units are refused: a price is not set against a share', () => {
+    // MUTATION (the one-unit check back to bars only): fails both: each is kept (no problem).
+    const ba = dock(
+      ['Before the course I charged $1,500 a wedding.', 'After the course 40% of couples book early.'],
+      { template: 'before-after', before: side('Before the course', '$1,500'), after: side('After the course', '40%') }
+    )
+    expect(ba).toEqual([{ path: '$', message: 'the two sides of the before-and-after are said in s00 in more than one unit' }])
+    const vs = dock(['Instagram brought 600 leads, while referrals cost $350.'], { template: 'versus', left: side('Instagram', '600'), right: side('referrals', '$350') })
+    expect(vs).toEqual([{ path: '$', message: 'the two sides of the versus are said in s00 in more than one unit' }])
+    // In one unit, the same shapes ground.
+    expect(dock(['Instagram brought 600 leads, while referrals brought 350 leads.'], { template: 'versus', left: side('Instagram', '600'), right: side('referrals', '350') })).toEqual([])
+    expect(dropReasonOf('the two sides of the versus are said in s00 in more than one unit')).toBe('template-rule')
+  })
+
+  it('a when is the speaker’s own four digits: "1,500" and "two thousand fifteen" are not said as a year, whatever the answer writes', () => {
+    // MUTATION (saidAsYear's four-digit test of the spoken token removed): fails the '1,500' case: it is kept. ('two thousand fifteen'
+    // has no digit-bearing token to read, so it is refused either way.)
+    const commas = dock(['In 1,500 we shot our first wedding, and in 2,000 we hired an editor.'], {
+      template: 'timeline',
+      items: [{ when: '1500', label: 'shot our first wedding' }, { when: '2000', label: 'hired an editor' }]
+    })
+    expect(commas).toEqual([
+      { path: '$.items[0].when', message: notSaidAsAYear('1500', 's00') },
+      { path: '$.items[1].when', message: notSaidAsAYear('2000', 's00') }
+    ])
+    const words = dock(['In two thousand fifteen we shot our first wedding, and in 2018 we hired an editor.'], {
+      template: 'timeline',
+      items: [{ when: '2015', label: 'shot our first wedding' }, { when: '2018', label: 'hired an editor' }]
+    })
+    expect(words).toEqual([{ path: '$.items[0].when', message: notSaidAsAYear('2015', 's00') }])
+    expect(notSaidAsAYear('1500', 's00')).toBe("'1500' is not said as a year in s00: a timeline's when is a year said as a date, such as 'in 2019'")
+    expect(dropReasonOf(notSaidAsAYear('1500', 's00'))).toBe('not-a-number')
+  })
+
+  it('a count said as four bare digits is not a year (English): "1500 guests" is refused and offers no timeline; "in 2015" is kept and offered', () => {
+    // MUTATION (saidAsYear's English lead and plural tests removed): fails the guests and photos cases (kept, and offered).
+    const offers = (...s: string[]): GraphicTemplateId[] => {
+      const t = stepSixTalk('y', s)
+      return stepSixOffered(menusOf(t)[0].sentences, t)
+    }
+    const guests = 'We had 1500 guests at the first wedding and 2000 guests at the second.'
+    expect(dock([guests], { template: 'timeline', items: [{ when: '1500', label: 'guests at the first wedding' }, { when: '2000', label: 'guests at the second' }] })).toEqual([
+      { path: '$.items[0].when', message: notSaidAsAYear('1500', 's00') },
+      { path: '$.items[1].when', message: notSaidAsAYear('2000', 's00') }
+    ])
+    expect(offers(guests)).toEqual([])
+    const photos = 'In May we shot 2015 photos and edited 2018 frames.'
+    expect(dock([photos], { template: 'timeline', items: [{ when: '2015', label: 'photos' }, { when: '2018', label: 'frames' }] }).map((p) => p.message)).toContain(notSaidAsAYear('2015', 's00'))
+    expect(offers(photos)).toEqual([])
+    // Said as dates: after 'in', 'since', or opening the clause.
+    const dated = 'In 2015 we shot our first wedding, and since 2018 we have an editor.'
+    expect(dock([dated], { template: 'timeline', items: [{ when: '2015', label: 'shot our first wedding' }, { when: '2018', label: 'have an editor' }] })).toEqual([])
+    expect(offers(dated)).toEqual(['timeline'])
+    expect(dock(['2015 was our first wedding, 2018 was our first editor.'], { template: 'timeline', items: [{ when: '2015', label: 'our first wedding' }, { when: '2018', label: 'our first editor' }] })).toEqual([])
+  })
+
+  it('a timeline’s years are drawn down the rail in date order: said falling, it is refused', () => {
+    // MUTATION (the timeline's date-order check removed): fails: the falling timeline is kept.
+    const falling = dock(['In 2021 we opened the studio, and in 2015 we shot our first wedding.'], {
+      template: 'timeline',
+      items: [{ when: '2021', label: 'opened the studio' }, { when: '2015', label: 'shot our first wedding' }]
+    })
+    expect(falling).toEqual([{ path: '$.items', message: "the timeline's years are not said in date order in s00" }])
+    expect(dropReasonOf("the timeline's years are not said in date order in s00")).toBe('template-rule')
+  })
+
+  it('a number said only inside a range ("from 10 to 20") is refused with a true note: said, but not as one number', () => {
+    // MUTATION (validateGraphics' range note off, so the absent note is used): fails: "'10' is not said in s00".
+    const ba = dock(['Bookings went from 10 to 20.'], { template: 'before-after', before: side('Bookings', '10'), after: side('', '20') })
+    expect(ba.map((p) => p.message)).toEqual(["'10' is said as part of a range or a ratio in s00, not as one number", "'20' is said as part of a range or a ratio in s00, not as one number"])
+    const tl = dock(['From 2015 to 2018 we shot weddings.'], { template: 'timeline', items: [{ when: '2015', label: 'shot weddings' }, { when: '2018', label: 'weddings' }] })
+    expect(tl.map((p) => p.message)).toContain("'2015' is said as part of a range or a ratio in s00, not as one number")
+    expect(dropReasonOf("'10' is said as part of a range or a ratio in s00, not as one number")).toBe('not-a-number')
+    // A number not said at all keeps the plain note.
+    expect(dock(['Bookings went up to 20 this year.'], { template: 'before-after', before: side('Bookings', '7'), after: side('', '20') }).map((p) => p.message)).toContain("'7' is not said in s00")
+  })
+
+  it('one number said once is not both sides, nor one year two rows; said twice, a before-and-after of no change is kept as said', () => {
+    // MUTATION (bind lets two claims share a token: the used check off): fails the said-once before-and-after, which is then refused
+    // for order instead (both sides on one word: valuesDisordered's strict '<' is the second guard), not as unpaired.
+    const once = dock(['Before and after the course I charged $1,500.'], { template: 'before-after', before: side('Before', '$1,500'), after: side('after', '$1,500') })
+    expect(once.length).toBeGreaterThan(0)
+    expect(once.map((p) => p.message).join(' | ')).toContain("is not said with what it is paired with, in one sentence of s00")
+    const shared = dock(['In 2015 we shot our first wedding and hired an editor.'], { template: 'timeline', items: [{ when: '2015', label: 'shot our first wedding' }, { when: '2015', label: 'hired an editor' }] })
+    expect(shared.length).toBeGreaterThan(0)
+    // Said twice it grounds: the speaker did say no change, and the app draws it as said.
+    expect(dock(['Before the course I charged $1,500, and after the course I still charged $1,500.'], { template: 'before-after', before: side('Before the course', '$1,500'), after: side('after the course', '$1,500') })).toEqual([])
+  })
+})
+
 /* --------------------------------------------------------------- the menu */
 
 describe('the menu offers each of the three only when its talk holds it (menuGraphics.ts)', () => {
@@ -193,6 +295,26 @@ describe('the menu offers each of the three only when its talk holds it (menuGra
   it('a talk with no comparison, no change and no dates offers none of the three', () => {
     const plain = stepSixTalk('plain', ['We signed 40 clients this year.', 'Keep it simple, always.', 'Light matters more than gear.'])
     expect(stepSixOffered(menusOf(plain)[0].sentences, plain)).toEqual([])
+    // Two counting words and a cue word, as a list talk says them: a list's places are no comparison.
+    // MUTATION (the LIST_NOUNS_EN filter removed): fails: a before-and-after is offered.
+    const list = stepSixTalk('list', ['Step one, pack the bags the night before.', 'Step two, charge three batteries.', 'Step three, sleep.'])
+    expect(stepSixOffered(menusOf(list)[0].sentences, list)).toEqual([])
+    expect(LIST_NOUNS_EN).toContain('step')
+    // A cue in a sentence that holds neither number opens nothing.
+    // MUTATION (the cue read anywhere in the stretch): fails: a before-and-after is offered.
+    const apart = stepSixTalk('apart', ['Take 2 lenses, not 3.', 'After that, pack the bag.'])
+    expect(stepSixOffered(menusOf(apart)[0].sentences, apart)).toEqual([])
+  })
+
+  it('every nested fixture talk (tests/fixtures/graphics/nested-*.json) is offered none of the three: the menu it had before step 6', () => {
+    // MUTATION (the LIST_NOUNS_EN filter removed): fails nested-en-2 ('Step one … the night before').
+    const dir = join(__dirname, 'fixtures', 'graphics')
+    for (const n of [1, 2, 3]) {
+      const t = (JSON.parse(readFileSync(join(dir, `nested-en-${n}.json`), 'utf8')) as { transcript: Transcript }).transcript
+      for (const menu of menusOf(t)) {
+        for (const id of STEP_SIX_TEMPLATES) expect(menu.templates, `nested-en-${n} offers ${id}`).not.toContain(id)
+      }
+    }
   })
 
   it('timeline: two different years said as four digits with no unit, in one stretch', () => {
@@ -222,9 +344,16 @@ describe('the menu offers each of the three only when its talk holds it (menuGra
     expect(offers('en', 'We went from 40 couples, compared with 90 couples.')).toEqual(['before-after', 'versus'])
     // Two units are not one comparison: $1,500 against 40%.
     expect(offers('en', 'I used to charge $1,500, and 40% book early.')).toEqual([])
-    // Not English: the cue words are the owner's to give, so two numbers in one unit offer both (made-up words).
+    // Hindi and Telugu: the cue words are the owner's to give, so two numbers in one unit offer both (made-up words).
     expect(offers('hi', 'zor plim 40 tavek', 'mubo 70 senra')).toEqual(['before-after', 'versus'])
+    expect(offers('te', 'zor plim 40 tavek', 'mubo 70 senra')).toEqual(['before-after', 'versus'])
     expect(offers('te', 'zor plim 40 tavek')).toEqual([])
+    // Any other code, an undetermined one included, reads the English cue words: none said, none offered.
+    // MUTATION (the cue-free path for every code but English): fails the 'und' and '' cases.
+    for (const lang of ['und', '', 'auto']) {
+      expect(offers(lang, 'I have 3 cameras and 4 lenses.'), lang).toEqual([])
+      expect(offers(lang, 'I have 3 cameras, but 4 lenses.'), lang).toEqual(['versus'])
+    }
     // The lists are lower case, as claimTokens writes a word.
     for (const w of [...BEFORE_AFTER_CUES_EN, ...VERSUS_CUES_EN]) expect(w).toBe(w.toLowerCase())
     expect(STEP_SIX_TEMPLATES).toEqual(['timeline', 'before-after', 'versus'])
@@ -257,8 +386,8 @@ describe('the schema gains no key; the prompt lists a row for each of the three 
   it('a TEMPLATES row for each of the three, in the table’s manner, only when the menu offers it', () => {
     // MUTATION (graphicsPrompt lists every GRAPHIC_TEMPLATE_ROWS row, offered or not): fails the not.toContain lines.
     const rowOf = (id: GraphicTemplateId): string => `${id} — ${GRAPHIC_TEMPLATE_ROWS[id]!.when} — ${GRAPHIC_TEMPLATE_ROWS[id]!.fields}`
-    expect(rowOf('timeline')).toBe('timeline — two to five dated moments said in order (items: label is what happened, value is its year) — items[].label, items[].value')
-    expect(rowOf('before-after')).toBe('before-after — a number said as it was and as it is now (two items: the before, then the after) — items[].label, items[].value')
+    expect(rowOf('timeline')).toBe('timeline — two to five dated moments said in date order (items: label is the words said for what happened, value is its year as said, four digits) — items[].label, items[].value')
+    expect(rowOf('before-after')).toBe('before-after — a number said as it was, then as it is now (two items, the before first; each label and number copied, a label may be empty) — items[].label, items[].value')
     expect(rowOf('versus')).toBe('versus — two things set against each other, each with its number (two items, in the order said) — items[].label, items[].value')
     for (const f of stepSixFixtures()) {
       const user = graphicsPrompt(menusOf(f.transcript)[0], 'en').user.split('\n')
@@ -272,7 +401,10 @@ describe('the schema gains no key; the prompt lists a row for each of the three 
   })
 
   it('THE BUDGET: 24 sentences of 30 long words with all ten templates offered, the system text and the answer’s room fit num_ctx with the thinking retry', () => {
-    // MUTATION (maxTokensForGraphics -> 250 + 900 a graphic): fails "toBeLessThanOrEqual(NUM_CTX)".
+    // MUTATION (maxTokensForGraphics -> 250 + 900 a graphic): fails the toBe(250 + 150 * MAX_GRAPHICS) pin first ("expected 3850 to be 850");
+    // the NUM_CTX check alone would catch it too (4,846 - 850 + 3,850 + 800 = 8,646 > 8,192).
+    // Not counted: the answer's format schema (about 1,986 characters, ~662 tokens, for the worst menu), which a runtime may or may not
+    // count against num_ctx; counted, the worst request is still about 6,337 tokens (5,675 + 662), inside 8,192.
     const word = 'abcdefghijkl'
     const sentences = Array.from({ length: MAX_CANDIDATES }, (_, i) => ({
       id: `s${String(i).padStart(2, '0')}`,
@@ -296,9 +428,9 @@ describe('the schema gains no key; the prompt lists a row for each of the three 
     )
     expect(answer).toBe(250 + 150 * MAX_GRAPHICS)
     expect(total + THINKING_EXTRA_TOKENS).toBeLessThanOrEqual(NUM_CTX)
-    // The three's rows cost 129 tokens at 3.0 characters a token (measured here, 2026-11-25).
+    // The three's rows cost 158 tokens at 3.0 characters a token (measured here, 2026-11-25, after the critics' plainer rows; 129 before).
     expect(total - before).toBeGreaterThan(0)
-    expect(total - before).toBeLessThan(150)
+    expect(total - before).toBeLessThan(200)
     // num_ctx is the provider's own.
     const body = ollamaRequestBody({ system: p.system, user: p.user, schema: {}, maxTokens: 1 }, [], 'm') as { options: { num_ctx: number } }
     expect(body.options.num_ctx).toBe(NUM_CTX)

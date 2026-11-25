@@ -341,6 +341,22 @@ export function numbersIn(tokens: readonly string[]): { value: CanonNumber; at: 
  * reads its numbers here rather than with a second reader.
  */
 export function numberSpans(tokens: readonly string[]): { value: CanonNumber; at: number; from: number; end: number }[] {
+  return numberSpansHeld(tokens)
+    .filter((n) => n.held === undefined)
+    .map(({ value, at, from, end }) => ({ value, at, from, end }))
+}
+
+/**
+ * Every number `numberSpans` reads, those it withholds included, each
+ * withheld one with why: 'range' (joined to another by 'to', 'or', 'in',
+ * 'of', 'out of' or 'between … and': '10 to 20'), 'adjacent' (next to another
+ * number: 'nineteen ninety nine') or 'qualified' ('almost 40'). Exported for
+ * the validator's note, which must not call a number said in a range "not
+ * said" (validateGraphics.ts `heldInRange`).
+ */
+export function numberSpansHeld(
+  tokens: readonly string[]
+): { value: CanonNumber; at: number; from: number; end: number; held?: 'range' | 'adjacent' | 'qualified' }[] {
   // A hyphenated ten and unit ('forty-two') becomes its parts, each keeping its token's index.
   const ts: string[] = []
   const index: number[] = []
@@ -447,13 +463,14 @@ export function numberSpans(tokens: readonly string[]): { value: CanonNumber; at
   // Two numbers standing next to each other ('nineteen ninety nine', 'twenty twenty one') or
   // joined as a range or a ratio ('40 to 50', '40 or 50', '1 in 4', '3 out of 4', '3 of 4'):
   // both are no number, since either read alone is a value the speaker did not say.
-  const joined = new Set<number>()
+  const joined = new Map<number, 'range' | 'adjacent'>()
   for (let k = 0; k + 1 < out.length; k++) {
     const gap = ts.slice(out[k].tsEnd, out[k + 1].tsFrom).join(' ')
     const between = gap === 'and' && ts[out[k].tsFrom - 1] === 'between'
     if (gap === '' || NUMBER_JOINERS.includes(gap) || between) {
-      joined.add(k)
-      joined.add(k + 1)
+      const why = gap === '' ? 'adjacent' : 'range'
+      // A range beats adjacency: a number joined both ways reads as part of a range.
+      for (const m of [k, k + 1]) if (joined.get(m) !== 'range') joined.set(m, why)
     }
   }
   // A number said with a qualifier directly before it ('almost 40', 'up to 40', 'fewer than 40%')
@@ -461,7 +478,10 @@ export function numberSpans(tokens: readonly string[]): { value: CanonNumber; at
   const qualified = (o: { tsFrom: number }): boolean =>
     QUALIFIERS.includes(ts[o.tsFrom - 1] ?? '') ||
     QUALIFIER_PAIRS.some(([a, b]) => ts[o.tsFrom - 2] === a && ts[o.tsFrom - 1] === b)
-  return out.filter((o, k) => !joined.has(k) && !qualified(o)).map(({ value, at, from, end }) => ({ value, at, from, end }))
+  return out.map(({ value, at, from, end, tsFrom }, k) => {
+    const held = joined.get(k) ?? (qualified({ tsFrom }) ? ('qualified' as const) : undefined)
+    return { value, at, from, end, ...(held ? { held } : {}) }
+  })
 }
 
 /** The words that join two numbers into a range or a ratio, as one space-joined gap (see `numberSpans`). */

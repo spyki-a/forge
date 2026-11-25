@@ -35,8 +35,8 @@ export const GRAPHIC_TEMPLATE_ROWS: Readonly<Partial<Record<GraphicTemplateId, {
   ring: { when: 'a share of a whole, said as a percentage', fields: 'value, label' },
   keyword: { when: 'one to four words the speaker stresses, copied exactly; lit is which of them to light, counting from 0', fields: 'words, lit' },
   // Step 6's three (§9), listed only when the menu offers them (menuGraphics.ts); each fills `items`, so the answer gains no field.
-  timeline: { when: 'two to five dated moments said in order (items: label is what happened, value is its year)', fields: 'items[].label, items[].value' },
-  'before-after': { when: 'a number said as it was and as it is now (two items: the before, then the after)', fields: 'items[].label, items[].value' },
+  timeline: { when: 'two to five dated moments said in date order (items: label is the words said for what happened, value is its year as said, four digits)', fields: 'items[].label, items[].value' },
+  'before-after': { when: 'a number said as it was, then as it is now (two items, the before first; each label and number copied, a label may be empty)', fields: 'items[].label, items[].value' },
   versus: { when: 'two things set against each other, each with its number (two items, in the order said)', fields: 'items[].label, items[].value' }
 })
 

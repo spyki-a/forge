@@ -1558,7 +1558,13 @@ describe('rule 4: a qualified number is no exact number (piece 3 fix)', () => {
   const absent = [{ path: '$.graphics[0].value', message: "graphic dropped: '40' is not said in s00" }]
 
   it("'between 30 and 40' is a range, as '30 to 40' is", () => {
-    expect(droppedOf(counter('We signed between 30 and 40 clients.'))).toEqual(absent)
+    // Refused as before; since 3D piece 2's critics the note says the number was said, inside a range (not "not said").
+    expect(droppedOf(counter('We signed between 30 and 40 clients.'))).toEqual([
+      { path: '$.graphics[0].value', message: "graphic dropped: '40' is said as part of a range or a ratio in s00, not as one number" }
+    ])
+    expect(droppedOf(counter('We signed 30 to 40 clients.'))).toEqual([
+      { path: '$.graphics[0].value', message: "graphic dropped: '40' is said as part of a range or a ratio in s00, not as one number" }
+    ])
     expect(numbersIn(claimTokensOf('between 30 and 40'))).toEqual([])
     // 'and' alone joins nothing: 'we kept 30 and 40 clients came' is two numbers.
     expect(numbersIn(claimTokensOf('we kept 30 and 40 came')).map((f) => f.value.n)).toEqual([30, 40])

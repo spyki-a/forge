@@ -102,6 +102,10 @@ const M_RUN_GAP = 3
 /** A word's own trailing clause or sentence mark. */
 const M_BREAK = /[,;:—–.!?।॥…]+$/u
 const M_SIGNS = ['$', '€', '£', '₹']
+/** What a year said as a date stands after in English, or it opens its clause (step 6's timeline). */
+const M_YEAR_LEADS = ['in', 'since', 'by', 'until', 'till', 'from', 'to', 'of', 'back', 'year', 'around', 'during', 'after', 'before', 'early', 'late', 'mid', 'circa', 'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
+/** Words of four letters or more ending in s that are no plural (a year before a plural is a count: '2015 photos'). */
+const M_NOT_PLURAL = ['this', 'thus', 'plus', 'less', 'unless', 'across', 'always', 'perhaps', 'whereas', 'besides', 'towards', 'afterwards', 'sometimes', 'does', 'goes', 'ours', 'yours', 'theirs']
 
 /** One spoken word as tokens: a leading currency sign and a trailing % split off, the rest through claimToken. */
 function wordTokens(text: string): { toks: string[]; breakAfter: boolean } {
@@ -455,6 +459,23 @@ function grounds(data: GraphicData, t: Transcript, sentence: string): string | n
     // The template decides on the matched numbers.
     const matched = claims.flatMap((c, i) => (c.kind === 'num' ? [chosen[i]!.value!] : []))
     if (data.template === 'timeline' && matched.some((m) => m.unit !== '')) return false
+    // A timeline's when: the speaker's own word four digits, and in English said as a date, not a count; the years rising.
+    if (data.template === 'timeline') {
+      for (let i = 0; i < claims.length; i++) {
+        if (claims[i].kind !== 'num') continue
+        const o = chosen[i]!
+        const tok = st.toks.find((x) => o.keys.includes(x.key) && /\p{Nd}/u.test(x.t))
+        if (!tok || !/^\p{Nd}{4}$/u.test(tok.t)) return false
+        if (en) {
+          const near = (d: number): MTok | undefined => st.toks.find((x) => x.sent === tok.sent && x.pos === tok.pos + d && x.clause === tok.clause)
+          const before = near(-1)
+          const after = near(1)
+          if (before && !M_YEAR_LEADS.includes(before.t)) return false
+          if (after && after.t.length >= 4 && /^\p{L}+s$/u.test(after.t) && !M_NOT_PLURAL.includes(after.t)) return false
+        }
+      }
+      if (matched.some((m, k) => k > 0 && !(matched[k - 1].n < m.n))) return false
+    }
     if (data.template === 'ring' && !(matched[0].unit === '%' && matched[0].n >= 0 && matched[0].n <= 100)) return false
     if (data.template === 'bars' && new Set(matched.map((m) => `${m.unit}${m.currency ?? ''}`)).size > 1) return false
     return true
@@ -491,6 +512,8 @@ const FILL: Record<Lang, string[]> = {
   te: ['మేము', 'గత', 'సంవత్సరం', 'ఈ', 'నెల', 'స్టూడియోలో', 'మొత్తం', 'నిజంగా']
 }
 const END: Record<Lang, string> = { en: '.', hi: '।', te: '.' }
+/** The word that joins two pairs of a list ('40 clients and 30 couples'). */
+const AND: Record<Lang, string> = { en: 'and', hi: 'और', te: 'మరియు' }
 const NEGATOR: Record<Lang, string> = { en: 'not', hi: 'नहीं', te: 'లేదు' }
 const CAME: Record<Lang, string> = { en: 'came', hi: 'आए', te: 'వచ్చారు' }
 const ZERO: Record<Lang, number> = { en: 0x30, hi: 0x966, te: 0xc66 }
@@ -699,7 +722,7 @@ function factFor(rng: Rng, lang: Lang, template: Tpl, cite: string): { words: st
       nouns.forEach((noun, i) => {
         if (i > 0) {
           if (rng.chance(0.5)) words[words.length - 1] += ','
-          else words.push(lang === 'en' ? 'and' : lang === 'hi' ? 'और' : 'మరియు')
+          else words.push(AND[lang])
         }
         const label = [noun]
         if (labelFirst) {
@@ -771,7 +794,7 @@ function factFor(rng: Rng, lang: Lang, template: Tpl, cite: string): { words: st
       nouns.forEach((noun, i) => {
         if (i > 0) {
           if (rng.chance(0.5)) words[words.length - 1] += ','
-          else words.push(lang === 'en' ? 'and' : lang === 'hi' ? 'और' : 'మరియు')
+          else words.push(AND[lang])
         }
         if (labelFirst) {
           pairs.push({ num: nums[i], numAt: words.length + 1, label: [noun], labelAt: words.length })
@@ -794,6 +817,8 @@ function factFor(rng: Rng, lang: Lang, template: Tpl, cite: string): { words: st
         const y = rng.int(1990, 2030)
         if (!years.includes(y)) years.push(y)
       }
+      // Drawn down the rail in date order, so said in it.
+      years.sort((a, b) => a - b)
       const nat = lang !== 'en' && rng.chance(0.5)
       const labelFirst = lang === 'en' && rng.chance(0.4)
       const words: string[] = [...fill(rng, lang, 1, 2)]
@@ -802,9 +827,13 @@ function factFor(rng: Rng, lang: Lang, template: Tpl, cite: string): { words: st
         if (i > 0) words[words.length - 1] += ','
         const said = nat ? toNative(String(years[i]), lang) : String(years[i])
         const num: Num = { said: [said], stripped: [said], written: [String(years[i]), said], withUnit: '', n: years[i], unit: '', family: 'year' }
-        if (labelFirst) {
-          pairs.push({ num, numAt: words.length + 1, label: [noun], labelAt: words.length })
-          words.push(noun, said)
+        // In English a year is said as a date ('clients in 2015', 'in 2015 the clients'), never before its plural noun.
+        if (lang === 'en' && labelFirst) {
+          pairs.push({ num, numAt: words.length + 2, label: [noun], labelAt: words.length })
+          words.push(noun, 'in', said)
+        } else if (lang === 'en') {
+          pairs.push({ num, numAt: words.length + 1, label: [noun], labelAt: words.length + 3 })
+          words.push('in', said, 'the', noun)
         } else {
           pairs.push({ num, numAt: words.length, label: [noun], labelAt: words.length + 1 })
           words.push(said, noun)
@@ -1251,7 +1280,41 @@ const PAD: Record<Lang, string> = { en: 'really', hi: 'सच', te: 'నిజ�
 /** What one adversarial generator made of one kept true case: a false case, or nothing to make. */
 type Made = { case: Case; graphic: AnswerGraphic } | null
 
-const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Made; outcome: 'dropped' }[] = [
+const ADVERSARIAL: { name: string; from: Tpl[]; make: (c: Case, rng: Rng) => Made; outcome: 'dropped'; floor?: number }[] = [
+  {
+    // Step 6's timeline (the critics of piece 2): the rows in spoken order, each paired, but the years said falling down the rail.
+    name: 'say a timeline’s years falling, each row still paired and in spoken order',
+    from: ['timeline'],
+    make: (c) => {
+      const pairs = c.pairs!
+      const falling = pairs.map((p) => p.num.n).sort((a, b) => b - a)
+      const words = [...c.sentences[c.fact]]
+      for (const [i, p] of pairs.entries()) {
+        const said = p.num.said[0]
+        const next = said === String(p.num.n) ? String(falling[i]) : toNative(String(falling[i]), c.lang)
+        if (!words[p.numAt].includes(said)) return null
+        words[p.numAt] = words[p.numAt].replace(said, next)
+      }
+      return { case: withFact(c, words), graphic: { ...c.graphic, items: c.graphic.items.map((it, i) => ({ ...it, value: String(falling[i]) })) } }
+    },
+    outcome: 'dropped'
+  },
+  {
+    // English only (Hindi and Telugu take the four digits alone): a year said as a count, '2015 clients' or 'clients 2015'.
+    name: 'say one of an English timeline’s years as a count, not a date',
+    from: ['timeline'],
+    make: (c, rng) => {
+      if (c.lang !== 'en') return null
+      const p = rng.pick(c.pairs!)
+      const words = [...c.sentences[c.fact]]
+      // 'in YEAR the NOUN' loses its 'the' (a plural after the year); 'NOUN in YEAR' its 'in' (no date word before it).
+      const at = p.labelAt > p.numAt ? p.numAt + 1 : p.numAt - 1
+      if (!['the', 'in'].includes(words[at])) return null
+      return { case: withFact(c, [...words.slice(0, at), ...words.slice(at + 1)]), graphic: c.graphic }
+    },
+    outcome: 'dropped',
+    floor: 40
+  },
   {
     name: 'swap the values of two pairs',
     from: ['bars', ...STEP_SIX],
@@ -1426,7 +1489,7 @@ describe('the adversarial generators: each false graphic is dropped, every case,
         if (s.rejected !== null || s.kept.length !== 0) failures.push(`kept ${JSON.stringify(s.kept.map((k) => k.data))} (rejected: ${s.rejected}) — ${show(m.case, m.graphic)}`)
       }
       noFailures(failures)
-      expect(made, `${gen.name}: ${made} cases`).toBeGreaterThanOrEqual(FLOOR_ADVERSARIAL)
+      expect(made, `${gen.name}: ${made} cases`).toBeGreaterThanOrEqual(gen.floor ?? FLOOR_ADVERSARIAL)
     })
   }
 
