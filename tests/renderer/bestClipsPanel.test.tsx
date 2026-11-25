@@ -9,7 +9,6 @@ import { bestClips, NO_MODEL_NOTE, type BestClipCard, type BestClipsResult } fro
 import {
   BEST_CLIPS_CANNOT_LISTEN,
   BEST_CLIPS_NEEDS_TRANSCRIPT,
-  BEST_CLIPS_NO_CAPTIONS,
   BEST_CLIPS_RUNNING,
   BEST_CLIPS_RUNNING_ELSEWHERE,
   cardRange,
@@ -217,15 +216,16 @@ describe('the Best clips section', () => {
     expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
   })
 
-  it('says the AI helper is needed on a video with no captions and no helper, and that it cannot listen yet when the helper is there', () => {
+  it('on a video with no captions says Best clips cannot listen yet, with the AI helper or without it: it never sends the user to install the helper for it', () => {
     onLink(null, 'none')
-    useEditor.setState({ helperStatus: NO_HELPER })
-    expect(markup()).toContain(BEST_CLIPS_NO_CAPTIONS)
-    expect(markup()).not.toContain(BEST_CLIPS_CANNOT_LISTEN)
-    expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
-    useEditor.setState({ helperStatus: HELPER })
-    expect(markup()).toContain(BEST_CLIPS_CANNOT_LISTEN)
-    expect(markup()).not.toContain(BEST_CLIPS_NO_CAPTIONS)
+    for (const helperStatus of [NO_HELPER, HELPER, null]) {
+      useEditor.setState({ helperStatus })
+      const pointer = withAttr('data-best-pointer').map((h) => textOf(h.props.children as ReactNode))
+      expect(pointer, JSON.stringify(helperStatus?.state ?? null)).toEqual([BEST_CLIPS_CANNOT_LISTEN])
+      // Nothing on the section names the helper as what Best clips needs (Listen to it is not built).
+      expect(markup()).not.toMatch(/needs the AI helper/u)
+      expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
+    }
   })
 
   it('never sends the user to Listen to it while LinkTranscript renders that button greyed for good', () => {

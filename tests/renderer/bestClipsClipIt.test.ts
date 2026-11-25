@@ -462,7 +462,8 @@ describe('steps 3 to 5 after a card’s clip lands (§7.5, §12.1)', () => {
     expect(overlaps).toEqual([false])
     expect(stepOf(record(), 'reframe')).toMatchObject({ state: 'done', text: STEP_TEXT.reframeDone })
     expect(stepOf(record(), 'captions')).toMatchObject({ state: 'done', text: STEP_TEXT.captionsSmart })
-    expect(stepOf(record(), 'graphics')).toMatchObject({ state: 'done', text: STEP_TEXT.graphicsDone })
+    // The harness talk has no number: the run placed nothing, and the line says so (it never claims graphics that are not there).
+    expect(stepOf(record(), 'graphics')).toMatchObject({ state: 'done', text: STEP_TEXT.graphicsNone })
     const clip = state().project.clips.find((c) => c.id === record().clipId)!
     expect(clip.follow).toBeTruthy()
     expect(state().project.captions).toMatchObject({ enabled: true, placement: 'smart' })

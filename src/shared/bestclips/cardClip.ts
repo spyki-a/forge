@@ -1,6 +1,8 @@
 import type { WordRun } from '../ingest/captions'
 import type { Clip, Project, ProjectSettings } from '../timeline'
 import type { Transcript } from '../transcript'
+import { CLIPS_GRAPHIC_RULE } from '../graphics/apply'
+import { footageOf } from '../graphics/sound'
 import { clipSegments, type ClipWindow } from './windows'
 
 /**
@@ -252,10 +254,38 @@ export const STEP_TEXT = {
   captionsLeftOff: 'skipped: this project has captions off, and they are left off.',
   graphicsWaiting: 'waits for the faces to be found.',
   graphicsRunning: 'finding graphics…',
-  graphicsDone: 'listed in the Transcript tile, each with Drop.',
+  /** The run ended and placed nothing and proposed nothing (`graphicsResultText(0, 0)`). */
+  graphicsNone: 'none found in this stretch.',
+  /** After the counts (`graphicsResultText`): where the graphics placed or waiting for Keep are listed. */
+  graphicsListed: ': listed in the Transcript tile.',
   graphicsNoWords: 'skipped: the clip has no words to read.',
   graphicsFailed: 'could not be found.'
 } as const
+
+/**
+ * Step 5's line once Find graphics ended over the card's clip: what is THERE,
+ * not that it ran. `placed` graphics on the timeline for the clip, `waiting`
+ * proposals for it (a number read off a YouTube track waits for Keep, §6.6),
+ * both counted off the project after the run (`cardGraphicsCount`). A run that
+ * found nothing says so; it never claims graphics that are not there.
+ */
+export function graphicsResultText(placed: number, waiting: number): string {
+  const parts = [...(placed > 0 ? [`${placed} placed`] : []), ...(waiting > 0 ? [`${waiting} waiting for Keep`] : [])]
+  return parts.length === 0 ? STEP_TEXT.graphicsNone : `${parts.join(' and ')}${STEP_TEXT.graphicsListed}`
+}
+
+/**
+ * The graphics Find graphics left for a footage clip, counted as Find
+ * graphics' own clear finds them (`clearClipGraphics`): graphic clips under
+ * CLIPS_GRAPHIC_RULE over that clip, and its proposals under the same rule.
+ */
+export function cardGraphicsCount(project: Pick<Project, 'clips' | 'tracks' | 'graphicProposals'>, clipId: string): { placed: number; waiting: number } {
+  const placed = project.clips.filter(
+    (c) => c.graphic !== undefined && c.generatedBy?.rule === CLIPS_GRAPHIC_RULE && footageOf(project, c, c.graphic) === clipId
+  ).length
+  const waiting = (project.graphicProposals ?? []).filter((g) => g.rule === CLIPS_GRAPHIC_RULE && g.clipId === clipId).length
+  return { placed, waiting }
+}
 
 /** A card's key in the record: the link and the stretch, so a card asked again for the same words shows what it did. */
 export function cardKey(linkKey: string, card: { startMs: number; endMs: number }): string {

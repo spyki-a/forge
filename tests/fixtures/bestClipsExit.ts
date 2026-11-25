@@ -36,8 +36,9 @@ export interface ExitLink {
 
 /**
  * The owner's links file: ONE LINK A LINE, then the length in minutes (1, 2,
- * 3 or 4, written `2` or `2min` or `2 min`), then, optionally, the captions'
- * language when the video does not name its own:
+ * 3 or 4, written `2`, `2min`, `2 min` or `2 mins`), then, optionally, the
+ * captions' language when the video does not name its own (any case: `HI`
+ * is read as `hi`):
  *
  *     # talks and podcasts; two in Hindi or Telugu
  *     https://www.youtube.com/watch?v=XXXXXXXXXXX 2
@@ -56,16 +57,21 @@ export function parseExitLinks(text: string): { links: ExitLink[]; problems: str
     const line = i + 1
     const body = raw.trim()
     if (body === '' || body.startsWith('#')) return
-    const words = body.replace(/(\d)\s+min\b/giu, '$1min').split(/\s+/u)
+    const words = body.replace(/(\d)\s+mins?\b/giu, '$1min').split(/\s+/u)
     const link = parseLink(words[0])
     if (!link) return void problems.push(`line ${line}: "${words[0]}" is not a link yt-dlp can read`)
-    const length = /^([0-9]+)(?:min)?$/iu.exec(words[1] ?? '')
-    if (!length) return void problems.push(`line ${line}: no length after the link (1, 2, 3 or 4, in minutes)`)
+    const length = /^([0-9]+)(?:mins?)?$/iu.exec(words[1] ?? '')
+    if (!length) {
+      return void problems.push(
+        words[1] === undefined ? `line ${line}: no length after the link (1, 2, 3 or 4, in minutes)` : `line ${line}: "${words[1]}" is not a length (write 1, 2, 3 or 4, in minutes)`
+      )
+    }
     const minutes = Number(length[1])
     if (!MINUTES.has(minutes)) return void problems.push(`line ${line}: ${minutes} min is not a length Best clips offers (1, 2, 3 or 4)`)
-    const language = words[2] ?? null
+    // The language subtag in lower case ('HI' is 'hi'); a region keeps its own case ('en-US').
+    const language = words[2]?.replace(/^[A-Za-z]+/u, (tag) => tag.toLowerCase()) ?? null
     if (language !== null && !/^[a-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$/u.test(language)) {
-      return void problems.push(`line ${line}: "${language}" is not a language code (like en, hi, te)`)
+      return void problems.push(`line ${line}: "${words[2]}" is not a language code (like en, hi, te)`)
     }
     if (words.length > 3) return void problems.push(`line ${line}: more than a link, a length and a language`)
     const key = linkCacheKey(link)
@@ -77,6 +83,15 @@ export function parseExitLinks(text: string): { links: ExitLink[]; problems: str
   if (links.length === 0 && problems.length === 0) problems.push('the file names no link')
   return { links, problems }
 }
+
+/**
+ * The most UTF-16 units a title may give a file name. NTFS allows 255 UTF-16
+ * units for a name; a critic measured this Mac refusing a name of 266 units
+ * of six-unit Devanagari clusters (ENAMETOOLONG) and taking one of 248. At 80
+ * units, even three UTF-8 bytes a unit is 240 bytes, plus '<nn>-' and
+ * '.json': under 255 bytes and 255 units on every reading.
+ */
+export const MAX_NAME_UNITS = 80
 
 /** Graphemes, as the app counts them (Intl.Segmenter; code points where it is missing). */
 function graphemes(text: string): string[] {
@@ -93,7 +108,7 @@ function graphemes(text: string): string[] {
  * COM1…) gets a `_` in front, extension or not. Empty after all that: the
  * `fallback`. `Bride 5:30pm.jpg` → `Bride 5-30pm.jpg`.
  */
-export function exitFileName(title: string, fallback: string, max = 60): string {
+export function exitFileName(title: string, fallback: string, max = 60, maxUnits = MAX_NAME_UNITS): string {
   const strip = (s: string): string => s.replace(/^[. ]+|[. ]+$/gu, '')
   const cleaned = strip(
     title
@@ -101,7 +116,11 @@ export function exitFileName(title: string, fallback: string, max = 60): string 
       .replace(/\s+/gu, ' ')
       .replace(/[<>:"/\\|?*\u0000-\u001f\u007f]/gu, '-')
   )
-  const cut = strip(graphemes(cleaned).slice(0, max).join(''))
+  // At most `max` graphemes AND at most `maxUnits` UTF-16 units: a grapheme can be many units (a Devanagari cluster six, an
+  // emoji family eight), and NTFS and APFS both stop at 255 units for the whole name, the number prefix and '.json' included.
+  const kept = graphemes(cleaned).slice(0, max)
+  while (kept.join('').length > maxUnits) kept.pop()
+  const cut = strip(kept.join(''))
   if (!cut) return fallback
   return /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?$/iu.test(cut) ? `_${cut}` : cut
 }
@@ -119,11 +138,22 @@ export interface ExitSide {
   cards: BestClipsResult['cards']
   note: string | null
   modelNote: string | null
+  /**
+   * The model's side only: whether the model answered this link (a saved
+   * answer, status 200, parsed). False when the relay stopped half way, the
+   * server was down, or the answer could not be read: then `bestClips` fell
+   * back to the signals' cards, which are NOT the model's and are never rated
+   * as its.
+   */
+  answered?: boolean
 }
 
-export function sideOf(result: Pick<BestClipsResult, 'cards' | 'note' | 'modelNote'>): ExitSide {
-  return { cards: result.cards, note: result.note, modelNote: result.modelNote }
+export function sideOf(result: Pick<BestClipsResult, 'cards' | 'note' | 'modelNote'>, answered?: boolean): ExitSide {
+  return { cards: result.cards, note: result.note, modelNote: result.modelNote, ...(answered === undefined ? {} : { answered }) }
 }
+
+/** Whether a link's model side holds the model's own picks: at least one card scored by it (a fallback's are all the signals'). */
+export const modelPicked = (side: ExitSide | null): boolean => side !== null && side.cards.some((c) => c.scoredBy === 'model')
 
 /** One link, as the recorder found it. */
 export interface ExitRecord {
@@ -152,6 +182,8 @@ const safeHref = (url: string): string | null => (/^https?:\/\//iu.test(url) ? e
 
 function cardHtml(record: ExitRecord, side: 'signals' | 'model', card: BestClipsResult['cards'][number], i: number): string {
   const name = `${side}-${record.n}-${i + 1}`
+  // On the model's side, a card the signals filled in is shown but not rated: it is not the model's pick.
+  const rated = side === 'signals' || card.scoredBy === 'model'
   const href = safeHref(timeLink(record.url, card.startMs))
   const range = escapeHtml(cardRange(card))
   return [
@@ -160,14 +192,19 @@ function cardHtml(record: ExitRecord, side: 'signals' | 'model', card: BestClips
     `<p class="why">${escapeHtml(card.why)}</p>`,
     `<p class="meta">${href ? `<a href="${href}" target="_blank" rel="noopener noreferrer">${range}</a>` : range} · ${escapeHtml(cardWords(card))} · ${escapeHtml(SCORED_BY_LABEL[card.scoredBy])}</p>`,
     card.note ? `<p class="note">${escapeHtml(card.note)}</p>` : '',
-    `<fieldset class="rate" data-side="${side}" data-link="${record.n}"><legend>Would you post this?</legend>`,
-    `<label><input type="radio" name="${name}" value="yes"> yes</label> <label><input type="radio" name="${name}" value="no"> no</label></fieldset>`,
+    rated
+      ? `<fieldset class="rate" data-side="${side}" data-link="${record.n}"><legend>Would you post this?</legend>` +
+        `<label><input type="radio" name="${name}" value="yes"> yes</label> <label><input type="radio" name="${name}" value="no"> no</label></fieldset>`
+      : '<p class="empty">Filled in from the signals, not picked by the model: not rated on this side.</p>',
     '</li>'
   ].join('')
 }
 
 function sideHtml(record: ExitRecord, side: 'signals' | 'model', cards: ExitSide | null, label: string): string {
   if (!cards) return `<div class="side"><h3>${escapeHtml(label)}</h3><p class="empty">Not asked yet.</p></div>`
+  if (side === 'model' && cards.answered === false) {
+    return `<div class="side" data-model-answered="no"><h3>${escapeHtml(label)}</h3><p class="empty">The model did not answer for this link, so there is nothing of its to rate.</p></div>`
+  }
   return [
     `<div class="side"><h3>${escapeHtml(label)}</h3>`,
     cards.cards.length > 0 ? `<ol class="cards">${cards.cards.map((c, i) => cardHtml(record, side, c, i)).join('')}</ol>` : '<p class="empty">No cards.</p>',
@@ -207,6 +244,7 @@ export function exitPage(records: readonly ExitRecord[], info: ExitPageInfo): st
     return `<section class="link" data-link="${r.n}" data-status="cards">${head}<div class="sides">${sideHtml(r, 'signals', r.signals, 'From the talk’s own signals (no model)')}${info.model ? sideHtml(r, 'model', r.model, `With the model (${info.model})`) : ''}</div></section>`
   })
   const rated = records.filter((r) => r.status === 'cards').length
+  const answered = records.filter((r) => r.status === 'cards' && modelPicked(r.model)).length
   return `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Best clips exit</title>
@@ -223,7 +261,7 @@ a{color:var(--accent)}fieldset{border:0;padding:0;margin:4px 0 0;font-size:13px}
 #tally{font-size:14px;margin:8px 0}textarea{width:100%;min-height:80px;box-sizing:border-box}
 </style></head><body><main>
 <h1>Best clips: would you post these?</h1>
-<p class="meta">${escapeHtml(`Made ${info.ranAt} with yt-dlp ${info.ytdlp}; ${records.length} links, ${rated} with cards. ${info.model ? `The model's cards are ${info.model}'s.` : 'The model’s cards are not here yet: save its answers and run the second pass.'}`)}</p>
+<p class="meta">${escapeHtml(`Made ${info.ranAt} with yt-dlp ${info.ytdlp}, on the owner's own machine at the owner's own press: each video's details and captions only, no media. ${records.length} links, ${rated} with cards. ${info.model ? `The model (${info.model}) picked cards for ${answered} of the ${rated}; only those are rated on its side.` : 'The model’s cards are not here yet: save its answers and run the second pass.'}`)}</p>
 <p id="tally" aria-live="polite"></p>
 <p><button type="button" id="copy">Copy the ratings</button></p><textarea id="out" readonly hidden></textarea>
 ${sections.join('\n')}

@@ -1,4 +1,4 @@
-import type { CompletionRequest, CompletionResult } from '@shared/director/provider'
+import type { CompletionRequest, CompletionResult, LlmStatus } from '@shared/director/provider'
 import type { LinkHeat } from '@shared/ingest/args'
 import { PAUSE_BOUNDARY_MS, segmentIntoSentences, type Transcript, type Word } from '@shared/transcript'
 import { CAP_MS, CAP_WORDS, clipSegments, lengthBand, DEFAULT_TOLERANCE, type ClipWindow } from '@shared/bestclips/windows'
@@ -715,3 +715,28 @@ function noteOnFirstPick(seen: SeenCards, c: Candidates, note: string): string[]
 export function caseFailures(k: StubCase, seen: SeenCards, c: Candidates, t: Transcript): string[] {
   return [...commonChecks(seen, c), ...k.expect(seen, c, t)]
 }
+
+/**
+ * The model's status the harness stands in while the stub answers: BOTH
+ * providers ready and local, so main's own choice (`chooseProvider`, which
+ * Analyse's `modelReady` asks) picks one whatever the page's director setting
+ * is (auto, ollama or openai). Only `directorComplete` is the stub's.
+ */
+export const STUB_READY: LlmStatus[] = [
+  { id: 'ollama', label: 'the harness’s model stub', kind: 'local', ready: true, reason: null },
+  { id: 'openai', label: 'the harness’s model stub', kind: 'local', ready: true, reason: null }
+]
+
+/** The page check's Clip it half, by name (bestClipsCheck.ts runs them in this order, after the cards' cases). */
+export const CLIP_IT_CASE_NAMES = [
+  'Clip it on an empty timeline: this project set to 9:16, one exact download of the card’s range',
+  'landed without the AI helper: the crop centred and said, captions turned on in one undo step, graphics after',
+  'landed with the AI helper: followed, captions kept off the faces, graphics only after the analysis ended',
+  'the AI helper there, the face finder not on disk: named, never fetched; the crop centred; captions turned on, graphics still run',
+  'a 16:9 edit on the timeline: the card asks; Not now sends nothing; Add it to this project keeps the aspect and every crop',
+  'unsaved work: Start a new 9:16 project saves first, then a new 9:16 project and the download',
+  'M0’s Clip download from picked rows: one undo step on landing and nothing after it, captions left off'
+] as const
+
+/** What the session reads from `window.__forgeBestClipsCheck()` when all is well: every case, each `ok`. */
+export const BEST_CLIPS_CHECK_CASES = BEST_CLIPS_STUB_CASES.length + CLIP_IT_CASE_NAMES.length

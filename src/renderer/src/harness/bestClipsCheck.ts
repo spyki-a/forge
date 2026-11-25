@@ -32,8 +32,8 @@
  * and loads nothing):
  *   - the empty timeline: Clip it on a card → this project 9:16, one exact
  *     download of exactly the card's range, the card's lines;
- *   - landed without the AI helper: the crop centred, said; captions on;
- *     graphics run; each its own undo step;
+ *   - landed without the AI helper: the crop centred, said; captions, off
+ *     before, turned on; graphics run, its line counting what is there;
  *   - landed with the helper and the face finder (the bridge's reframe stub):
  *     followed, captions kept off the faces, graphics after; and §12.1's
  *     order watched both ways — graphics never running while a reframe
@@ -43,15 +43,17 @@
  *     analysis asked); captions and graphics still run;
  *   - each landed case counts the undo steps PER STEP, read at the moment
  *     each line ends: the landing one, the follow one when it landed a
- *     track, captions one exactly when the project's captions changed (a new
- *     project's are on already, so usually none), graphics none or one;
+ *     track, captions exactly one (each landed case first turns the empty
+ *     project's captions OFF, since a new project's are on already and step 4
+ *     would otherwise change nothing to see), graphics none or one;
  *   - a timeline with a 16:9 edit: the question on the card, Not now, then
  *     "Add it to this project" (aspect and every existing crop unchanged);
  *   - unsaved work: "Start a new 9:16 project for this clip" saves first
  *     (the bridge's Save, answered), then a new 9:16 project and the
  *     download;
- *   - M0's Clip download from picked rows: one undo step on landing and no
- *     step after it — no follow, no captions change, no graphics, no record.
+ *   - M0's Clip download from picked rows (captions off first): one undo step
+ *     on landing and no step after it — no follow, captions still off, no
+ *     graphics, no record.
  *
  * WHEN ALL IS WELL: `ok: true` and every case `ok: true` — 29 cards cases
  * and 7 Clip it cases, 36 in all (BEST_CLIPS_CHECK_CASES). The store, the
@@ -64,14 +66,16 @@ import { bestClipsAskOver, initialBestClips } from '@shared/bestclips/session'
 import { candidatesFor } from '@shared/bestclips/signals'
 import {
   ADD_TO_PROJECT,
+  cardGraphicsCount,
   cardKey,
+  graphicsResultText,
   START_NEW_PROJECT,
   STEP_LABEL,
   STEP_TEXT,
   stepEnded,
   type CardStepName
 } from '@shared/bestclips/cardClip'
-import type { CompletionRequest, LlmStatus } from '@shared/director/provider'
+import type { CompletionRequest } from '@shared/director/provider'
 import type { IngestRequest } from '@shared/ingest/args'
 import type { CollectedDownload } from '@shared/ingest/collect'
 import type { LinkClip } from '@shared/ingest/linkClip'
@@ -80,10 +84,13 @@ import type { MediaAsset } from '@shared/timeline'
 import { useEditor, type UrlSource } from '../store'
 import { HARNESS_LINKS, harnessIngests, harnessReframe } from './bridge'
 import {
+  BEST_CLIPS_CHECK_CASES,
   BEST_CLIPS_STUB_CASES,
   caseFailures,
+  CLIP_IT_CASE_NAMES,
   seenOf,
   stubComplete,
+  STUB_READY,
   STUB_SECRET_KEY,
   STUB_SECRET_URL,
   type SeenCard,
@@ -104,18 +111,7 @@ export interface BestClipsCheckReport {
   ms: number
 }
 
-/** The Clip it half's cases, by name: with the cards' 29, what the session reads. */
-export const CLIP_IT_CASE_NAMES = [
-  'Clip it on an empty timeline: this project set to 9:16, one exact download of the card’s range',
-  'landed without the AI helper: the crop centred and said, captions on, graphics after, each its own undo step',
-  'landed with the AI helper: followed, captions kept off the faces, graphics only after the analysis ended',
-  'the AI helper there, the face finder not on disk: named, never fetched; the crop centred; captions and graphics still run',
-  'a 16:9 edit on the timeline: the card asks; Not now sends nothing; Add it to this project keeps the aspect and every crop',
-  'unsaved work: Start a new 9:16 project saves first, then a new 9:16 project and the download',
-  'M0’s Clip download from picked rows: one undo step on landing and nothing after it'
-] as const
-
-export const BEST_CLIPS_CHECK_CASES = BEST_CLIPS_STUB_CASES.length + CLIP_IT_CASE_NAMES.length
+export { BEST_CLIPS_CHECK_CASES, CLIP_IT_CASE_NAMES }
 
 const editor = (): ReturnType<typeof useEditor.getState> => useEditor.getState()
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
@@ -188,8 +184,6 @@ const short = (seen: SeenCards): unknown => ({
 type Forge = Record<string, unknown>
 const forge = (): Forge => window.forge as unknown as Forge
 
-const READY: LlmStatus[] = [{ id: 'openai', label: 'the harness’s model stub', kind: 'local', ready: true, reason: null }]
-
 /* -------------------------------------------------------------- the cards */
 
 async function cardCase(k: StubCase, base: UrlSource, original: Forge): Promise<BestClipsCheckCase> {
@@ -209,7 +203,7 @@ async function cardCase(k: StubCase, base: UrlSource, original: Forge): Promise<
     }
     useEditor.setState({ urlSource: source, bestClips: initialBestClips() })
     Object.assign(forge(), {
-      directorStatus: k.model === null ? original.directorStatus : async () => READY,
+      directorStatus: k.model === null ? original.directorStatus : async () => STUB_READY,
       directorComplete: k.model === null ? original.directorComplete : (request: CompletionRequest) => stubComplete(k.model as never, link, calls)(request)
     })
     await frames()
@@ -250,7 +244,9 @@ async function cardCase(k: StubCase, base: UrlSource, original: Forge): Promise<
     if (k.model === null && calls.n !== 0) failures.push(`with no model the stub was asked ${calls.n} times`)
     if (k.model !== null && calls.n === 0) failures.push('the model stub was never asked')
     if (k.model === 'throws') {
-      const page = `${document.body.innerText}\n${editor().notices.map((n) => n.text).join('\n')}\n${document.title}`
+      // The whole document as markup (every text node and every attribute: tooltips, aria labels, data-*, hidden parts, <head>),
+      // and every notice: a key in a title= would not be in innerText.
+      const page = `${document.documentElement.outerHTML}\n${editor().notices.map((n) => n.text).join('\n')}`
       for (const secret of [STUB_SECRET_URL, '10.0.0.7', STUB_SECRET_KEY, 'sk-harness']) {
         if (page.includes(secret)) failures.push(`"${secret}" is on the page`)
       }
@@ -284,6 +280,14 @@ function line(steps: ReturnType<typeof stepsOn>, name: CardStepName, state: stri
   if (!got) return void failures.push(`no ${STEP_LABEL[name]} line on the card`)
   if (got.label !== STEP_LABEL[name]) failures.push(`the ${name} line is labelled "${got.label}"`)
   if (got.state !== state || got.text !== words) failures.push(`${STEP_LABEL[name]} reads ${got.state} "${got.text}", not ${state} "${words}"`)
+}
+
+/** Step 5's line as it must read: what the run left for the card's clip, counted off the project. */
+function graphicsLine(jobId: string): string {
+  const clip = editor().project.clips.find((c) => c.assetId === `harness-best-${jobId}`)
+  if (!clip) return '(the clip is not on the timeline)'
+  const { placed, waiting } = cardGraphicsCount(editor().project, clip.id)
+  return graphicsResultText(placed, waiting)
 }
 
 const ended = (windowId: string): boolean => ['done', 'skipped', 'failed'].includes(stepsOn(windowId).graphics?.state ?? '')
@@ -370,7 +374,7 @@ function watchSteps(key: string): { at: Partial<Record<CardStepName, number>>; s
 function undoSteps(
   at: Partial<Record<CardStepName, number>>,
   depth: number,
-  want: { reframe: 0 | 1; captionsChanged: boolean },
+  want: { reframe: 0 | 1; captions: 0 | 1 },
   failures: string[]
 ): Record<string, number | null> {
   const order: CardStepName[] = ['download', ...AFTER]
@@ -388,7 +392,7 @@ function undoSteps(
   }
   if (out.download !== 1) failures.push(`the landing made ${out.download} undo steps, not 1`)
   if (out.reframe !== want.reframe) failures.push(`the follow made ${out.reframe} undo steps, not ${want.reframe}`)
-  if (out.captions !== (want.captionsChanged ? 1 : 0)) failures.push(`captions made ${out.captions} undo steps, not ${want.captionsChanged ? 1 : 0}`)
+  if (out.captions !== want.captions) failures.push(`captions made ${out.captions} undo steps, not ${want.captions}`)
   if (out.graphics !== null && out.graphics !== 0 && out.graphics !== 1) failures.push(`graphics made ${out.graphics} undo steps`)
   return out
 }
@@ -450,8 +454,10 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
   await run(CLIP_IT_CASE_NAMES[1], async (failures) => {
     if (!firstJob) throw new Error('the first card was never sent')
     const jobsBefore = harnessReframe.jobs.length
+    // A new project's captions are on already: off first, so step 4 has something to do and its undo step can be seen.
+    editor().setCaptionsEnabled(false)
+    await frames()
     const depth = editor().past.length
-    const captionsBefore = JSON.stringify(editor().project.captions)
     const watch = watchSteps(cardKey(editor().urlSource!.linkKey, cards[0]))
     try {
       await editor().collectIngest(firstJob)
@@ -464,13 +470,13 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     line(steps, 'download', 'done', STEP_TEXT.landed, failures)
     line(steps, 'reframe', 'skipped', STEP_TEXT.reframeNoHelper, failures)
     line(steps, 'captions', 'done', STEP_TEXT.captionsOn, failures)
-    line(steps, 'graphics', 'done', STEP_TEXT.graphicsDone, failures)
+    line(steps, 'graphics', 'done', graphicsLine(firstJob), failures)
     if (!editor().project.captions.enabled) failures.push('captions are not on')
     if (harnessReframe.jobs.length !== jobsBefore) failures.push('a reframe analysis was asked without the AI helper')
     const clip = editor().project.clips.find((c) => c.assetId === `harness-best-${firstJob}`)
     if (!clip) failures.push('the clip is not on the timeline at the end')
     else if (clip.follow) failures.push('the clip follows a subject without the AI helper')
-    const undo = undoSteps(watch.at, depth, { reframe: 0, captionsChanged: JSON.stringify(editor().project.captions) !== captionsBefore }, failures)
+    const undo = undoSteps(watch.at, depth, { reframe: 0, captions: 1 }, failures)
     return { steps, undo }
   })
 
@@ -494,8 +500,9 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
       if (s.findingGraphics !== null && prev.findingGraphics === null && pending > 0) graphicsOverReframe.push(`graphics started with ${pending} analyses pending`)
       if (pending > Object.keys(prev.reframe.pending).length && s.findingGraphics !== null) reframeOverGraphics.push('an analysis started while graphics ran')
     })
+    editor().setCaptionsEnabled(false)
+    await frames()
     const depth = editor().past.length
-    const captionsBefore = JSON.stringify(editor().project.captions)
     const watch = watchSteps(cardKey(editor().urlSource!.linkKey, cards[1]))
     try {
       await editor().collectIngest(job.id)
@@ -509,14 +516,16 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     line(steps, 'download', 'done', STEP_TEXT.landed, failures)
     line(steps, 'reframe', 'done', STEP_TEXT.reframeDone, failures)
     line(steps, 'captions', 'done', STEP_TEXT.captionsSmart, failures)
-    line(steps, 'graphics', 'done', STEP_TEXT.graphicsDone, failures)
+    line(steps, 'graphics', 'done', graphicsLine(job.id), failures)
     const clip = editor().project.clips.find((c) => c.assetId === `harness-best-${job.id}`)
     if (!clip?.follow) failures.push('the clip does not follow the subject')
     if (harnessReframe.jobs.length !== jobsBefore + 1) failures.push(`${harnessReframe.jobs.length - jobsBefore} analyses asked, not 1`)
     if (editor().project.captions.placement !== 'smart') failures.push(`captions placement is ${editor().project.captions.placement}`)
     if (Object.keys(editor().reframe.pending).length !== 0) failures.push('an analysis is still pending at the end')
     failures.push(...graphicsOverReframe, ...reframeOverGraphics)
-    const undo = undoSteps(watch.at, depth, { reframe: 1, captionsChanged: JSON.stringify(editor().project.captions) !== captionsBefore }, failures)
+    // Off before: step 4 turns them on kept off the faces, one undo step.
+    if (!editor().project.captions.enabled) failures.push('captions are not on')
+    const undo = undoSteps(watch.at, depth, { reframe: 1, captions: 1 }, failures)
     return { steps, graphicsOverReframe, reframeOverGraphics, undo }
   })
 
@@ -538,8 +547,9 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     const stop = useEditor.subscribe((s) => {
       if (s.reframe.fetching !== null) fetching = true
     })
+    editor().setCaptionsEnabled(false)
+    await frames()
     const depth = editor().past.length
-    const captionsBefore = JSON.stringify(editor().project.captions)
     const watch = watchSteps(cardKey(editor().urlSource!.linkKey, cards[0]))
     try {
       await editor().collectIngest(job.id)
@@ -553,11 +563,12 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     line(steps, 'download', 'done', STEP_TEXT.landed, failures)
     line(steps, 'reframe', 'skipped', STEP_TEXT.reframeNoModel, failures)
     line(steps, 'captions', 'done', STEP_TEXT.captionsOn, failures)
-    line(steps, 'graphics', 'done', STEP_TEXT.graphicsDone, failures)
+    line(steps, 'graphics', 'done', graphicsLine(job.id), failures)
+    if (!editor().project.captions.enabled) failures.push('captions are not on')
     if (harnessReframe.modelPresent) failures.push('the face finder was fetched')
     if (fetching) failures.push('a fetch of the face finder was shown')
     if (harnessReframe.jobs.length !== jobsBefore) failures.push('an analysis was asked without the face finder')
-    const undo = undoSteps(watch.at, depth, { reframe: 0, captionsChanged: JSON.stringify(editor().project.captions) !== captionsBefore }, failures)
+    const undo = undoSteps(watch.at, depth, { reframe: 0, captions: 1 }, failures)
     return { steps, undo }
   })
 
@@ -632,6 +643,8 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     harnessReframe.modelPresent = true
     const records = Object.keys(editor().bestClipsClipped).length
     const graphicsBefore = editor().lastGraphics
+    // Off first: a captions step chained by mistake onto M0's route would turn them on.
+    editor().setCaptionsEnabled(false)
     const captions = JSON.stringify(editor().project.captions)
     const t = editor().urlSource?.transcript
     if (!t) throw new Error('the talk has no transcript')
@@ -655,7 +668,7 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     if (editor().past.length - depth !== 1) failures.push(`${editor().past.length - depth} undo steps on landing, not 1`)
     if (harnessReframe.jobs.length !== jobsBefore) failures.push('a reframe analysis was asked')
     if (graphicsRan || editor().lastGraphics !== graphicsBefore) failures.push('graphics ran')
-    if (JSON.stringify(editor().project.captions) !== captions) failures.push('the captions changed')
+    if (JSON.stringify(editor().project.captions) !== captions || editor().project.captions.enabled) failures.push('the captions changed')
     if (Object.keys(editor().bestClipsClipped).length !== records) failures.push('a card record was written')
     if (editor().aspect !== '16:9') failures.push(`the aspect is ${editor().aspect}`)
     return { undoSteps: editor().past.length - depth }

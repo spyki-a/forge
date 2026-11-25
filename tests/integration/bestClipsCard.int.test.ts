@@ -15,7 +15,7 @@ import type { LinkClip } from '@shared/ingest/linkClip'
 import { buildRenderPlan } from '@shared/render/plan'
 import { captionsNeedBaking } from '@shared/graphics/fromTimeline'
 import { resolveStyle, type StyleOverrides } from '@shared/captions/style'
-import { STEP_TEXT, type CardClipRecord } from '@shared/bestclips/cardClip'
+import { STEP_TEXT, graphicsResultText, type CardClipRecord } from '@shared/bestclips/cardClip'
 import type { BestClipCard, BestClipsResult } from '@shared/bestclips/run'
 import type { MediaAsset, Project } from '@shared/timeline'
 import type { Transcript } from '@shared/transcript'
@@ -44,6 +44,9 @@ import { FFMPEG, outputDir, run, writeNote } from './output'
  *     centred crop's columns (218.75, 320, 421.25) within 4 columns: a
  *     letterboxed whole frame reads 16 and 235 at its edges, an uncentred crop
  *     another middle;
+ *   - captions: the empty project's captions are turned OFF before Clip it
+ *     (a new project's are on already, so step 4 would otherwise change
+ *     nothing), and step 4 must turn them on in one undo step of its own;
  *   - the captions, libass ('pop', a new project's style, flat on Latin
  *     words), against the same edit exported without them: the first line's
  *     first frame within one frame of the frame showing its first word, and
@@ -233,6 +236,8 @@ interface StoreView {
   clipItFromCard(card: BestClipCard): Promise<void>
   collectIngest(jobId: string): Promise<void>
   setReframeHelper(helper: 'missing' | 'ready' | 'unknown'): void
+  setCaptionsEnabled(enabled: boolean): void
+  past: unknown[]
 }
 
 let store: { getState(): StoreView; setState(next: unknown): void; getInitialState(): unknown } | null = null
@@ -469,6 +474,9 @@ describe('Clip it from a card, exported: portrait, the centred crop, the card’
     notes.push(`- the card: ${card.windowId} ${card.startMs}–${card.endMs} ms, ${card.words} words, from word ${k0} (source frame ${frameAt(wordMs(k0))}); ${result!.cards.length} cards`)
 
     expect(state().project.clips, 'an empty timeline').toHaveLength(0)
+    // A new project's captions are on already, so step 4 would change nothing to see: off first, and step 4 must turn them on.
+    state().setCaptionsEnabled(false)
+    expect(state().project.captions.enabled).toBe(false)
     const before = jobSeq
     await state().clipItFromCard(card)
     expect(jobSeq, 'one download').toBe(before + 1)
@@ -479,9 +487,18 @@ describe('Clip it from a card, exported: portrait, the centred crop, the card’
     expect.soft(state().aspect, 'the empty timeline set to 9:16').toBe('9:16')
 
     await downloads.get(id)
-    await state().collectIngest(id)
+    // The undo stack's depth as each step's line ends (the record is keyed once the download is asked).
     const key = Object.keys(state().bestClipsClipped).find((k) => state().bestClipsClipped[k].jobId === id)!
+    const depthAt: Record<string, number> = {}
+    const readDepth = (): void => {
+      for (const step of state().bestClipsClipped[key]?.steps ?? []) {
+        if (depthAt[step.name] === undefined && ['done', 'skipped', 'failed'].includes(step.state)) depthAt[step.name] = state().past.length
+      }
+    }
+    const unwatch = (store as unknown as { subscribe(f: () => void): () => void }).subscribe(readDepth)
+    await state().collectIngest(id)
     await until(() => ['done', 'skipped', 'failed'].includes(state().bestClipsClipped[key]?.steps.find((s) => s.name === 'graphics')?.state ?? ''), 60_000, 'the graphics step ending')
+    unwatch()
     const record = state().bestClipsClipped[key]
     const line = (name: string): string => {
       const s = record.steps.find((x) => x.name === name)
@@ -492,7 +509,17 @@ describe('Clip it from a card, exported: portrait, the centred crop, the card’
     expect.soft(line('shape')).toBe(`done: ${STEP_TEXT.shapeSet}`)
     expect.soft(line('reframe')).toBe(`skipped: ${STEP_TEXT.reframeNoHelper}`)
     expect.soft(line('captions')).toBe(`done: ${STEP_TEXT.captionsOn}`)
-    expect.soft(['done', 'failed']).toContain(record.steps.find((s) => s.name === 'graphics')?.state)
+    // The line says what is THERE: counted here independently, every graphic clip being over the one footage clip. The talk has
+    // no number, so nothing waits for Keep; the baseline's keywords are placed (measured: two on this talk).
+    const placedHere = state().project.clips.filter((c) => c.graphic !== undefined).length
+    const waitingHere = (state().project.graphicProposals ?? []).length
+    expect.soft(waitingHere, 'nothing waits for Keep on a talk with no number').toBe(0)
+    expect.soft(placedHere, 'the baseline placed its keywords').toBeGreaterThan(0)
+    expect.soft(line('graphics')).toBe(`done: ${graphicsResultText(placedHere, waitingHere)}`)
+    // Step 4 turned the captions on, in one undo step of its own (the follow, skipped, wrote none).
+    notes.push(`- undo depth as each line ended: ${JSON.stringify(depthAt)}`)
+    expect.soft(depthAt.captions - depthAt.reframe, 'step 4’s own undo steps').toBe(1)
+    expect.soft(depthAt.reframe - depthAt.download, 'the skipped follow’s undo steps').toBe(0)
 
     const project = state().project
     expect.soft(project.captions.enabled, 'captions on').toBe(true)
@@ -508,6 +535,7 @@ describe('Clip it from a card, exported: portrait, the centred crop, the card’
     const s = project.settings
     const canvas = { width: Math.max(2, Math.round((s.width * OUT_H) / s.height / 2) * 2), height: OUT_H }
     const edit: Project = { ...project, clips: project.clips.filter((c) => c.graphic === undefined) }
+    notes.push(`- graphics placed: ${project.clips.filter((c) => c.graphic !== undefined).map((c) => JSON.stringify(c.graphic!.data ?? null).slice(0, 80)).join('; ') || 'none'}`)
     notes.push(`- the project: ${s.width}×${s.height}, exported at ${canvas.width}×${canvas.height}; ${project.clips.length - edit.clips.length} graphic clips left out`)
     const plainFile = join(dir, 'card-plain.mp4')
     const plainPlan = buildRenderPlan({ project: { ...edit, captions: { ...edit.captions, enabled: false } }, outputPath: plainFile, canvas })
@@ -563,6 +591,8 @@ describe('Clip it from a card, exported: portrait, the centred crop, the card’
         `the words' frames ${wordFrames.join(', ')}`
     )
     expect(seen.lines.length, 'a caption line in the first seconds').toBeGreaterThan(0)
+    // The clip starts on the card's first word, so this is frame 0 against frame 0: it holds that the captions start with the
+    // clip. A shift of the range or the words is caught by the per-word onsets below (mutations I1, I2).
     expect(Math.abs(seen.lines[0] - wordFrames[0]), `the first line at ${seen.lines[0]}, its word at ${wordFrames[0]}`).toBeLessThanOrEqual(1)
     for (const [i, frame] of wordFrames.entries()) {
       expect.soft(Math.abs((seen.words[i] ?? Infinity) - frame), `word ${inView[i]}'s caption at ${seen.words[i]}, its word at ${frame}`).toBeLessThanOrEqual(1)

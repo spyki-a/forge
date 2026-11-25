@@ -29,7 +29,7 @@ import { LIBRARY_GRAPHICS } from '@shared/graphics/library'
 import { HARNESS_HELPER_PACK, HARNESS_LINKS, harnessHelperStatus } from './bridge'
 import { harnessSubjectTrack } from './reframeStub'
 import { harnessDropsTranscript, harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
-import { stubComplete } from './bestClipsStub'
+import { stubComplete, STUB_READY } from './bestClipsStub'
 import { useCatalog } from '../catalog'
 import { usePacks } from '../packs'
 import { SHELF_TOOLS } from '../components/shelf/tools'
@@ -2432,7 +2432,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     const forge = window.forge as unknown as Record<string, unknown>
     const kept = { directorStatus: forge.directorStatus, directorComplete: forge.directorComplete }
     Object.assign(forge, {
-      directorStatus: async () => [{ id: 'openai', label: 'the harness’s model stub', kind: 'local', ready: true, reason: null }],
+      directorStatus: async () => STUB_READY,
       directorComplete: stubComplete('good', { transcript, heatmap: meta?.heatmap ?? null, language: meta?.language ?? '', targetMs: editor().bestClips.targetMs })
     })
     try {
@@ -2473,7 +2473,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   /*
    * A card clipped, its record filled in (CLIPS.md §7.5): landed, the project
    * set to 9:16, the follow skipped for want of the AI helper, captions on,
-   * graphics listed. Written through the store: the harness's downloads never
+   * graphics run, none found. Written through the store: the harness's downloads never
    * land (bridge.ts `harnessStartIngest`). The record's clip is a real clip on
    * the timeline (the census video placed): a record whose clip is not on the
    * timeline is not shown, and the card offers Clip it again.
@@ -2495,7 +2495,7 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     record = { ...withStep(record, 'download', 'done', STEP_TEXT.landed), clipId }
     record = withStep(record, 'reframe', 'skipped', STEP_TEXT.reframeNoHelper)
     record = withStep(record, 'captions', 'done', STEP_TEXT.captionsOn)
-    record = withStep(record, 'graphics', 'done', STEP_TEXT.graphicsDone)
+    record = withStep(record, 'graphics', 'done', STEP_TEXT.graphicsNone)
     useEditor.setState({ bestClipsClipped: { [record.key]: record } })
     return {}
   },

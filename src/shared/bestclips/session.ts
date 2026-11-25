@@ -54,13 +54,14 @@ export const SCORED_BY_LABEL: Readonly<Record<BestClipCard['scoredBy'], string>>
   signals: "Picked from the talk's own signals"
 }
 
-/** With no caption track and no AI helper to listen (§7.5). */
-export const BEST_CLIPS_NO_CAPTIONS = 'This video has no captions; Best clips needs the AI helper to listen to it.'
 /**
- * With no caption track while the AI helper is there (or starting, or without
- * its speech model). M0's Listen to it is still greyed ("soon"), so this line
- * names no button the user cannot press; when Listen to it is built, it can
- * point there (tests/renderer/bestClipsPanel.test.tsx holds the two together).
+ * With no caption track, the AI helper there or not. M0's Listen to it is
+ * still greyed ("soon"), so this line names no button the user cannot press
+ * and promises nothing the helper cannot do: §7.5's "needs the AI helper to
+ * listen" was true only once Listen to it is built, and installing the helper
+ * for it would have led to this line anyway. When Listen to it is built, it
+ * can point there (tests/renderer/bestClipsPanel.test.tsx holds the two
+ * together).
  */
 export const BEST_CLIPS_CANNOT_LISTEN = 'This video has no captions, and Best clips cannot listen to a video yet.'
 /** Before Get transcript has words: Analyse downloads nothing, so it points there. */

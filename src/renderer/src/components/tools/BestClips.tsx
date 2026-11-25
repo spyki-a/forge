@@ -3,7 +3,6 @@ import { Loader2, Scissors, Smartphone, Sparkles } from 'lucide-react'
 import { useEditor, urlSourceFor } from '../../store'
 import { parseLink } from '@shared/ingest/url'
 import { formatMark } from '@shared/ingest/section'
-import { transcribeGate } from '@shared/sidecar/row'
 import type { BestClipCard } from '@shared/bestclips/run'
 import {
   ADD_KEEPS_SHAPE,
@@ -33,7 +32,6 @@ import {
   BEST_CLIPS_LENGTHS,
   BEST_CLIPS_CANNOT_LISTEN,
   BEST_CLIPS_NEEDS_TRANSCRIPT,
-  BEST_CLIPS_NO_CAPTIONS,
   BEST_CLIPS_RUNNING,
   BEST_CLIPS_RUNNING_ELSEWHERE,
   cardRange,
@@ -201,8 +199,6 @@ export function BestClips(): ReactNode {
   const state = useEditor((s) => s.bestClips)
   const setLength = useEditor((s) => s.setBestClipsLength)
   const analyse = useEditor((s) => s.analyseBestClips)
-  const helperStatus = useEditor((s) => s.helperStatus)
-  const speechModel = useEditor((s) => s.speechModel)
   const vertical = useEditor((s) => s.bestClipsVertical)
   const setVertical = useEditor((s) => s.setBestClipsVertical)
   const question = useEditor((s) => s.bestClipsQuestion)
@@ -226,10 +222,10 @@ export function BestClips(): ReactNode {
   const result = shownBestClips(state, source)
   const fetching = source?.status === 'meta' || source?.status === 'captions'
   const pointer =
+    // No captions: Best clips cannot listen yet with the AI helper or without it (Listen to it is not built), so
+    // no line sends the user to install the helper for it.
     source?.status === 'none'
-      ? transcribeGate(helperStatus, speechModel) === 'no-helper'
-        ? BEST_CLIPS_NO_CAPTIONS
-        : BEST_CLIPS_CANNOT_LISTEN
+      ? BEST_CLIPS_CANNOT_LISTEN
       : noWords && !fetching
         ? BEST_CLIPS_NEEDS_TRANSCRIPT
         : null

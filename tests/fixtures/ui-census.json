@@ -5875,14 +5875,14 @@
     "note": "Before the link has words (here the fetch failed), Analyse is greyed and points at Get transcript."
   },
   {
-    "label": "This video has no captions; Best clips needs the AI helper to listen to it.",
+    "label": "This video has no captions, and Best clips cannot listen to a video yet.",
     "match": "text",
     "home": "url",
     "needs": "link-no-captions",
     "file": "src/shared/bestclips/session.ts",
-    "line": 58,
+    "line": 66,
     "newHome": "Shelf tile URL",
-    "note": "CLIPS.md §7.5: no caption track and the AI helper not there (the harness page’s own helper fails)."
+    "note": "CLIPS.md §7.5: no caption track and the AI helper not there (the harness page’s own helper fails). The same line as with the helper: Listen to it is not built, so no line sends the user to install the helper for Best clips."
   },
   {
     "label": "This video has no captions, and Best clips cannot listen to a video yet.",
@@ -6129,14 +6129,14 @@
     "note": "Step 4: captions on, with no subject track to keep them off."
   },
   {
-    "label": "listed in the Transcript tile, each with Drop.",
+    "label": "none found in this stretch.",
     "match": "text",
     "home": "url",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 213,
+    "line": 257,
     "newHome": "Shelf tile URL",
-    "note": "Step 5 ran."
+    "note": "Step 5 ran and found nothing in the stretch: the line says what is there (graphicsResultText), never that graphics are listed when none are."
   },
   {
     "label": "Click a row to pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",

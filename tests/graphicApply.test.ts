@@ -11,6 +11,7 @@ import { SOUND_LANE_NAME } from '@shared/director/sound'
 import { SOUND_ROLES, type SoundPack } from '@shared/director/soundRoles'
 import type { GraphicCandidate, GraphicData, KeptGraphic } from '@shared/graphics/template'
 import type { Transcript } from '@shared/transcript'
+import { STEP_TEXT, cardGraphicsCount, graphicsResultText } from '@shared/bestclips/cardClip'
 
 /*
  * docs/CLIPS.md §6.6 "The rules": applyGraphics lands a run in the plan's
@@ -531,5 +532,31 @@ describe('the two Clears over both rules’ graphics (§6.6, §6.14)', () => {
     // Only proposals of Direct's: the Clear still runs (and takes them) with no Director clip on the timeline.
     const onlyProposal = { ...setup(), graphicProposals: p.graphicProposals }
     expect(clearDirector(onlyProposal).graphicProposals!.map((g) => g.rule)).toEqual([CLIPS_GRAPHIC_RULE])
+  })
+})
+
+describe('a Best clips card’s graphics line counts what Find graphics left (CLIPS.md §7.5 step 5)', () => {
+  it('none, placed, waiting for Keep: the line says which, and never claims graphics that are not there', () => {
+    expect(graphicsResultText(0, 0)).toBe(STEP_TEXT.graphicsNone)
+    expect(graphicsResultText(0, 0)).not.toMatch(/listed|Drop/u)
+    expect(graphicsResultText(2, 0)).toBe('2 placed: listed in the Transcript tile.')
+    expect(graphicsResultText(0, 1)).toBe('1 waiting for Keep: listed in the Transcript tile.')
+    expect(graphicsResultText(1, 2)).toBe('1 placed and 2 waiting for Keep: listed in the Transcript tile.')
+  })
+
+  it('counts the graphic clips over the card’s clip and its proposals under the clips rule, and nothing else', () => {
+    const project = setup()
+    expect(cardGraphicsCount(project, 'c')).toEqual({ placed: 0, waiting: 0 })
+    const out = applyGraphics(project, [keptOn('c', 'a', COUNTER), keptOn('c', 'a', PROPOSED)], ['c'], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: ids() })
+    // Independently: every graphic clip here is over 'c' (the only footage clip), and the counter's number waits for Keep.
+    const graphics = out.project.clips.filter((c) => c.graphic !== undefined).length
+    expect(graphics).toBeGreaterThan(0)
+    expect(out.project.graphicProposals).toHaveLength(1)
+    expect(cardGraphicsCount(out.project, 'c')).toEqual({ placed: graphics, waiting: 1 })
+    // Another clip's count, and the Director's own rule's graphics, are not this card's.
+    expect(cardGraphicsCount(out.project, 'elsewhere')).toEqual({ placed: 0, waiting: 0 })
+    const director = applyGraphics(project, [keptOn('c', 'a', COUNTER), keptOn('c', 'a', PROPOSED)], ['c'], GRAPHIC_RULE, { fps: FPS, newId: ids() })
+    expect(director.project.clips.some((c) => c.graphic !== undefined)).toBe(true)
+    expect(cardGraphicsCount(director.project, 'c')).toEqual({ placed: 0, waiting: 0 })
   })
 })

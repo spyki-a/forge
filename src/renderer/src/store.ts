@@ -273,9 +273,11 @@ import {
   cardClipPlan,
   cardClippable,
   cardDownloadsIn,
+  cardGraphicsCount,
   cardKey,
   cardRun,
   graphicsMayStart,
+  graphicsResultText,
   isPortrait,
   newCardRecord,
   NOT_SAVED_NOTE,
@@ -7833,6 +7835,8 @@ async function cardGraphicsStep(chain: CardChain): Promise<void> {
   const before = editor().lastGraphics
   await editor().findGraphics(clip.id)
   const after = editor().lastGraphics
-  if (after !== before && after?.clipId === clip.id) markCardStep(chain, 'graphics', 'done', STEP_TEXT.graphicsDone)
-  else markCardStep(chain, 'graphics', 'failed', STEP_TEXT.graphicsFailed)
+  if (after !== before && after?.clipId === clip.id) {
+    const { placed, waiting } = cardGraphicsCount(editor().project, clip.id)
+    markCardStep(chain, 'graphics', 'done', graphicsResultText(placed, waiting))
+  } else markCardStep(chain, 'graphics', 'failed', STEP_TEXT.graphicsFailed)
 }

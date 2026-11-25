@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { basename } from 'node:path'
-import { escapeHtml, exitFileName, exitPage, parseExitLinks, sideOf, timeLink, type ExitRecord } from './fixtures/bestClipsExit'
+import { escapeHtml, exitFileName, exitPage, MAX_NAME_UNITS, modelPicked, parseExitLinks, sideOf, timeLink, type ExitRecord } from './fixtures/bestClipsExit'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import type { BestClipCard } from '@shared/bestclips/run'
 import { SCORED_BY_LABEL } from '@shared/bestclips/session'
@@ -45,6 +45,15 @@ describe('the owner’s links file', () => {
     expect(problems).toContain('line 8: the same link at the same length as line 7')
     expect(links.map((l) => l.line)).toEqual([7, 9])
     expect(problems).toHaveLength(7)
+  })
+
+  it('reads "2 mins" as a length and a language in capitals as lower case; names a length it cannot read', () => {
+    const { links, problems } = parseExitLinks([`${A} 2 mins`, `${B} 3mins HI`, `https://youtu.be/CCCCCCCCCCC two`].join('\n'))
+    expect(links.map((l) => [l.targetMs, l.language])).toEqual([
+      [120_000, null],
+      [180_000, 'hi']
+    ])
+    expect(problems).toEqual(['line 3: "two" is not a length (write 1, 2, 3 or 4, in minutes)'])
   })
 
   it('an empty file is a problem, not ten links that pass', () => {
@@ -95,6 +104,22 @@ describe('a Windows-safe file name from a title', () => {
     // Made-up Mkhedruli runs (code points, not anyone's words).
     const caseless = String.fromCharCode(0x10d0, 0x10d1, 0x10d2, 0x10d3, 0x10d4)
     expect(exitFileName(caseless, 'x', 3)).toBe(caseless.slice(0, 3))
+  })
+})
+
+describe('a file name the file system takes, whatever the script', () => {
+  it('is cut by UTF-16 units as well as graphemes, never inside a grapheme', () => {
+    // A made-up six-unit cluster: a Latin letter and five combining marks with no precomposed form (one grapheme).
+    const cluster = 'x\u0301\u0302\u0303\u0304\u0305'
+    expect(cluster).toHaveLength(6)
+    const name = exitFileName(cluster.repeat(60), 'x')
+    expect(name.length).toBeLessThanOrEqual(MAX_NAME_UNITS)
+    expect(name).toBe(cluster.repeat(Math.floor(MAX_NAME_UNITS / 6)))
+    // With the recorder's '<nn>-' and '.json', under 255 bytes in UTF-8 too.
+    expect(Buffer.byteLength(`10-${name}.json`, 'utf8')).toBeLessThan(255)
+    // An emoji family is eight units: cut whole.
+    const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}'
+    expect(exitFileName(family.repeat(30), 'x')).toBe(family.repeat(Math.floor(MAX_NAME_UNITS / family.length)))
   })
 })
 
@@ -174,6 +199,29 @@ describe('the page the owner rates', () => {
     expect(html).toContain('<input type="radio" name="signals-1-1" value="yes">')
     expect(html).toContain('With the model (gemma)')
     expect(html).toContain(escapeHtml(SCORED_BY_LABEL.model))
+  })
+
+  it('a link the model did not answer has no model side to rate: the signals’ fallback is never counted as the model’s', () => {
+    const fallback = sideOf({ cards: [card({})], note: null, modelNote: 'The model did not answer.' }, false)
+    expect(modelPicked(fallback)).toBe(false)
+    const html = exitPage([record({ model: fallback })], { ranAt: 'now', ytdlp: 'v', model: 'gemma' })
+    expect(html).toContain('The model did not answer for this link')
+    expect(html).not.toContain('name="model-1-1"')
+    expect(html).toContain('The model (gemma) picked cards for 0 of the 1')
+    // The signals' side is still rated.
+    expect(html).toContain('name="signals-1-1"')
+  })
+
+  it('on the model’s side, a card the signals filled in is shown but not rated; the model’s own picks are', () => {
+    const side = sideOf({ cards: [card({ scoredBy: 'model', windowId: 'w1' }), card({ windowId: 'w5', startMs: 300_000, endMs: 360_000 })], note: null, modelNote: null }, true)
+    expect(modelPicked(side)).toBe(true)
+    const html = exitPage([record({ model: side })], { ranAt: 'now', ytdlp: 'v', model: 'gemma' })
+    expect(html).toContain('name="model-1-1"')
+    expect(html).not.toContain('name="model-1-2"')
+    expect(html).toContain('Filled in from the signals, not picked by the model')
+    expect(html).toContain('picked cards for 1 of the 1')
+    // Answered but every card the signals': nothing of the model's.
+    expect(modelPicked(sideOf({ cards: [card({})], note: null, modelNote: null }, true))).toBe(false)
   })
 
   it('a link with no captions says so and offers nothing to rate; a link that is not http gets no href', () => {

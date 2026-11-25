@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { bestClips, bestClipsRequest } from '@shared/bestclips/run'
-import { bestClipsAskOver } from '@shared/bestclips/session'
+import { bestClipsAskOver, modelReady } from '@shared/bestclips/session'
 import { candidatesFor } from '@shared/bestclips/signals'
 import {
+  BEST_CLIPS_CHECK_CASES,
   BEST_CLIPS_STUB_CASES,
   caseFailures,
+  CLIP_IT_CASE_NAMES,
+  STUB_READY,
   seenOf,
   stubComplete,
   stubCount,
@@ -58,4 +61,18 @@ describe('every harness case holds on bestClips’ own result', () => {
       if (k.twice) expect(seenOf(await run()).cards.map((x) => x.windowId)).toEqual(seen.cards.map((x) => x.windowId))
     })
   }
+})
+
+describe('what the page check runs', () => {
+  it('is 29 card cases and 7 Clip it cases, 36 in all: the number the session reads', () => {
+    // Pinned here, not derived on the page from the same arrays (emptied arrays would read { ok: true, cases: [] } there).
+    expect(BEST_CLIPS_STUB_CASES).toHaveLength(29)
+    expect(CLIP_IT_CASE_NAMES).toHaveLength(7)
+    expect(BEST_CLIPS_CHECK_CASES).toBe(36)
+    expect(new Set([...BEST_CLIPS_STUB_CASES.map((k) => k.name), ...CLIP_IT_CASE_NAMES]).size).toBe(36)
+  })
+
+  it('the stub’s status is a ready model whatever the director setting is', () => {
+    for (const choice of ['auto', 'ollama', 'openai'] as const) expect(modelReady(STUB_READY, choice), choice).toBe(true)
+  })
 })
