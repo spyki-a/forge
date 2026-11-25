@@ -22,7 +22,7 @@ import {
 } from '@shared/graphics/items'
 import { drawListAt, graphicBox, needsCompositor, onsetTargetsAt } from '@shared/graphics/drawList'
 import { MAX_GLOW_BATCHES, MAX_PLANES, cameraIsFlat, compositorRoute, flatItems, focusRadius, glowBatches, glowItemsOf, isFlat } from '@shared/graphics/compositor'
-import { DEPTH_DOLLY_FROM, DEPTH_FOCUS_BLUR_PX, DEPTH_MOVES, DEPTH_PARALLAX_YAW_FROM, DEPTH_PLANES, DEPTH_TILT_FROM, depthOf } from '@shared/graphics/templates/depth'
+import { DEPTH_DOLLY_FROM, DEPTH_FOCUS_BLUR_PX, DEPTH_FOCUS_LABEL_Z, DEPTH_MOVES, DEPTH_PARALLAX_YAW_FROM, DEPTH_PLANES, DEPTH_TEMPLATES, DEPTH_TILT_FROM, depthOf, heroGlow } from '@shared/graphics/templates/depth'
 import { DRAWERS } from '@shared/graphics/templates/index'
 import { drawTimeline } from '@shared/graphics/templates/timeline'
 import { drawBeforeAfter } from '@shared/graphics/templates/beforeAfter'
@@ -536,8 +536,8 @@ describe('graphicDrawList: needsCompositor', () => {
  * added `counter` and `ring` (their 2.5D variants and the hero's glow).
  */
 describe('graphicDrawList: which drawers ask for the compositor (MAY_ASK, ALWAYS_ASK, MAY_GLOW)', () => {
-  /** The templates whose depth variants or hero glow may ask for the compositor: piece 3 adds 'counter' and 'ring'. */
-  const MAY_ASK = new Set<GraphicTemplateId>(['counter', 'ring'])
+  /** The templates whose depth variants or hero glow may ask for the compositor: piece 3 adds 'counter' and 'ring'; the 3D templates' piece 3 (§9) adds step 6's three. */
+  const MAY_ASK = new Set<GraphicTemplateId>(['counter', 'ring', 'timeline', 'before-after', 'versus'])
   /** The templates whose plain specs ask too, their motion being a camera or a glow of its own: piece 4 adds 'screen-card'. */
   const ALWAYS_ASK = new Set<GraphicTemplateId>(['screen-card'])
   const fixtures = (
@@ -646,7 +646,7 @@ describe('graphicDrawList: which drawers ask for the compositor (MAY_ASK, ALWAYS
     }
   })
 
-  it('a depth or a hero asks only on a template in MAY_ASK (counter and ring since piece 3)', () => {
+  it('a depth or a hero asks only on a template in MAY_ASK (counter and ring since piece 3; step 6’s three since the 3D templates’ piece 3)', () => {
     for (const f of fixtures) {
       if (MAY_ASK.has(f.spec.data.template) || ALWAYS_ASK.has(f.spec.data.template)) continue
       for (const variant of [{ hero: true as const }, ...(['tilt', 'parallax', 'dolly', 'focus'] as const).map((depth) => ({ depth }))]) {
@@ -886,6 +886,200 @@ describe('graphicDrawList: the 2.5D variants of counter and ring (§6.16)', () =
     const counter = plain(fixtures.find((f) => f.id === 'counter-en')!.spec)
     for (const frame of [0, 5, 20]) {
       expect(drawListAt({ ...counter, depth: 'flat' }, style(), frame, FPS, SIZE, fake)).toEqual(drawListAt(counter, style(), frame, FPS, SIZE, fake))
+    }
+  })
+})
+
+/*
+ * Step 6's three in depth (docs/CLIPS.md §9, "The 3D templates"; §6.16; the
+ * 3D templates' piece 3): `timeline`, `before-after` and `versus`, every
+ * specs.json fixture of theirs (English today; the owner's Hindi and Telugu
+ * join by membership), under every style, at both shapes, with each depth,
+ * against the flat variant (the same spec with no depth), on every frame.
+ */
+describe('graphicDrawList: the depth variants of timeline, before-after and versus (§9, §6.16)', () => {
+  const STEP_SIX = ['timeline', 'before-after', 'versus'] as const
+  type StepSix = (typeof STEP_SIX)[number]
+  const fixtures = (
+    JSON.parse(readFileSync(new URL('./fixtures/graphics/specs.json', import.meta.url), 'utf8')) as { specs: { id: string; spec: GraphicSpec }[] }
+  ).specs.filter((f) => (STEP_SIX as readonly string[]).includes(f.spec.data.template))
+  const fake: TextMeasure = (t, look) => ({ width: t.length * look.px * 0.55, ascent: look.px * 0.8, descent: look.px * 0.2 })
+  const SHAPES = [SIZE, { width: SIZE.height, height: SIZE.width }]
+  const plain = (s: GraphicSpec): GraphicSpec => {
+    const { depth: _depth, hero: _hero, ...rest } = s
+    return rest
+  }
+  const framesOf = (s: GraphicSpec): number[] => Array.from({ length: Math.max(1, Math.round(s.seconds * FPS)) }, (_, f) => f)
+  const unplaned = (item: DrawItem): DrawItem => {
+    const { z: _z, ...rest } = item
+    return rest as DrawItem
+  }
+  const byId = (items: readonly DrawItem[]): DrawItem[] => [...items].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  const textsOf = (list: DrawList): Record<string, { text: string; look: TextLook }> =>
+    Object.fromEntries(list.items.filter((i): i is TextItem => i.kind === 'text').map((i) => [i.id, { text: i.text, look: i.look }]))
+  const lastBeatOf = (s: GraphicSpec): number => Math.max(0, ...s.beats)
+  /** A field's id from an item's, worked here apart from depth.ts: every trailing number off (`when-2-1` is `when`, `before-label-1` is `before-label`). */
+  const field = (id: string): string => id.replace(/(?:-\d+)+$/u, '')
+
+  it('reads at least the three English fixtures, and the three are depth templates whose threeD is true', () => {
+    const ids = fixtures.map((f) => f.id)
+    for (const id of ['timeline-en', 'before-after-en', 'versus-en']) expect(ids, id).toContain(id)
+    for (const t of STEP_SIX) {
+      expect(DEPTH_TEMPLATES, t).toContain(t)
+      expect(depthOf({ depth: 'parallax', data: fixtures.find((f) => f.spec.data.template === t)!.spec.data }), t).toBe('parallax')
+    }
+  })
+
+  it('every frame’s text items (text and look) equal the flat variant’s, and its every item but for z; from the last beat every camera field and the focus blur are exactly 0; at most MAX_PLANES distinct z; each move off flat on some frame', () => {
+    for (const f of fixtures) {
+      for (const size of SHAPES) {
+        for (const st of GRAPHIC_STYLES) {
+          const flatSpec = plain(f.spec)
+          const settledFrom = Math.ceil(lastBeatOf(flatSpec) * FPS - 1e-6)
+          for (const depth of DEPTH_MOVES) {
+            const s: GraphicSpec = { ...flatSpec, depth }
+            let moved = false
+            for (const frame of framesOf(s)) {
+              const where = `${f.id} ${size.width}x${size.height} ${depth} ${st.id} @${frame}`
+              const twin = drawListAt(flatSpec, st, frame, FPS, size, fake)
+              const list = drawListAt(s, st, frame, FPS, size, fake)
+              expect(textsOf(list), where).toEqual(textsOf(twin))
+              expect(byId(list.items.map(unplaned)), where).toEqual(byId(twin.items))
+              const zs = list.items.filter((i) => i.kind !== 'dim').map((i) => i.z ?? 0)
+              expect(zs, where).toEqual([...zs].sort((a, b) => a - b))
+              expect(new Set(zs).size, where).toBeLessThanOrEqual(MAX_PLANES)
+              if (depth === 'tilt') expect(list.items.some((i) => i.z !== undefined), where).toBe(false)
+              expect(list.camera, where).toBeDefined()
+              const camera = list.camera!
+              if (frame >= settledFrom) {
+                expect(camera.tilt, where).toBe(0)
+                expect(camera.yaw, where).toBe(0)
+                expect(camera.dolly, where).toBe(0)
+                if (camera.focus) expect(camera.focus.px, where).toBe(0)
+                expect(isFlat(list), where).toBe(true)
+                // At rest, the flat variant's own list in its own order: route one's picture.
+                expect(list.items, where).toEqual(twin.items)
+              } else if (!cameraIsFlat(camera)) moved = true
+            }
+            expect(moved, `${f.id} ${size.width}x${size.height} ${depth} ${st.id} never moves`).toBe(true)
+          }
+        }
+      }
+    }
+  })
+
+  it('a variant bakes no more frames than its flat twin, and its last moving frame is the twin’s own list, route one, no z', () => {
+    for (const f of fixtures) {
+      for (const size of SHAPES) {
+        for (const st of GRAPHIC_STYLES) {
+          const flatSpec = plain(f.spec)
+          const total = Math.max(1, Math.round(flatSpec.seconds * FPS))
+          const moving = graphicMovingFrames(flatSpec, st, FPS, total)
+          for (const depth of DEPTH_MOVES) {
+            const where = `${f.id} ${size.width}x${size.height} ${depth} ${st.id}`
+            const s: GraphicSpec = { ...flatSpec, depth }
+            expect(graphicMovingFrames(s, st, FPS, total), where).toBe(moving)
+            const last = drawListAt(s, st, moving - 1, FPS, size, fake)
+            expect(compositorRoute(last), where).toBe('flat')
+            expect(last.items, where).toEqual(drawListAt(flatSpec, st, moving - 1, FPS, size, fake).items)
+            expect(last.items.length, where).toBeGreaterThan(0)
+          }
+        }
+      }
+    }
+  })
+
+  it('while it moves, every item sits on its DEPTH_PLANES row (every field named, none falling back to 0 unlisted); parallax has three planes, dolly and focus two; values before labels before backing; no backing nearer than a word it lies under', () => {
+    const SHAPE_IDS = /panel|reveal/u
+    const overlaps = (a: Rect, b: Rect): boolean => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height
+    const planesSeen: Record<string, Set<number>> = {}
+    for (const f of fixtures) {
+      const template = f.spec.data.template as StepSix
+      for (const size of SHAPES) {
+        for (const st of GRAPHIC_STYLES) {
+          for (const depth of ['parallax', 'dolly', 'focus'] as const) {
+            const table = DEPTH_PLANES[template][depth]
+            let read = 0
+            for (const frame of framesOf(f.spec)) {
+              const list = drawListAt({ ...plain(f.spec), depth }, st, frame, FPS, size, fake)
+              if (cameraIsFlat(list.camera)) continue
+              read++
+              const where = `${f.id} ${size.width}x${size.height} ${depth} ${st.id} @${frame}`
+              for (const item of list.items) {
+                if (item.kind === 'dim') continue
+                expect(Object.keys(table), `${where} ${item.id}: its field is in the table`).toContain(field(item.id))
+                expect(item.z, `${where} ${item.id}`).toBe(table[field(item.id)])
+                ;(planesSeen[`${template} ${depth}`] ??= new Set()).add(item.z!)
+              }
+              const words = list.items.filter((i): i is TextItem => i.kind === 'text')
+              const valueZ = words.filter((w) => /value|when/u.test(field(w.id))).map((w) => w.z!)
+              const labelZ = words.filter((w) => /label/u.test(field(w.id))).map((w) => w.z!)
+              for (const v of valueZ) for (const l of labelZ) expect(v, `${where}: a value or when behind a label`).toBeGreaterThanOrEqual(l)
+              for (const b of list.items.filter((i) => i.kind === 'shape' && SHAPE_IDS.test(i.id))) {
+                if (b.kind !== 'shape') continue
+                for (const w of words) if (overlaps(b.box, w.box)) expect(b.z!, `${where}: ${b.id} nearer than ${w.id} over it`).toBeLessThanOrEqual(w.z!)
+              }
+            }
+            expect(read, `${f.id} ${depth} ${st.id}: frames off flat read`).toBeGreaterThan(0)
+          }
+        }
+      }
+    }
+    const count = (k: string): number => planesSeen[k]?.size ?? 0
+    for (const t of STEP_SIX) {
+      expect(count(`${t} parallax`), t).toBe(3)
+      expect(count(`${t} dolly`), t).toBe(2)
+      expect(count(`${t} focus`), t).toBe(2)
+      // Focus: the values on the plane in focus, the labels behind it.
+      expect(Object.entries(DEPTH_PLANES[t].focus).filter(([k]) => /value|when/u.test(k)).every(([, z]) => z === 0), t).toBe(true)
+      expect(Object.entries(DEPTH_PLANES[t].focus).filter(([k]) => /label/u.test(k)).every(([, z]) => z === DEPTH_FOCUS_LABEL_Z[t]), t).toBe(true)
+    }
+  })
+
+  it('without WebGL (painter A, flatItems, camera and z ignored) each variant draws its flat twin’s items on every frame, the settled one in the twin’s order', () => {
+    for (const f of fixtures) {
+      for (const size of SHAPES) {
+        for (const st of GRAPHIC_STYLES) {
+          const flatSpec = plain(f.spec)
+          const total = Math.max(1, Math.round(flatSpec.seconds * FPS))
+          const moving = graphicMovingFrames(flatSpec, st, FPS, total)
+          for (const depth of DEPTH_MOVES) {
+            for (const frame of framesOf(flatSpec)) {
+              const where = `${f.id} ${size.width}x${size.height} ${depth} ${st.id} @${frame}`
+              const twin = drawListAt(flatSpec, st, frame, FPS, size, fake).items
+              const painted = flatItems(drawListAt({ ...flatSpec, depth }, st, frame, FPS, size, fake)).map(unplaned)
+              expect(byId(painted), where).toEqual(byId(twin))
+              if (frame >= moving - 1) expect(painted, where).toEqual(twin)
+            }
+          }
+        }
+      }
+    }
+  })
+
+  it('the focus variant: the label plane reads DEPTH_FOCUS_BLUR_PX at the start, above 0 the frame before the LAST beat and exactly 0 on it; the values are in focus throughout', () => {
+    const st = resolveGraphicStyle('clean')
+    for (const t of STEP_SIX) {
+      const f = fixtures.find((x) => x.id === `${t}-en`)!
+      const s: GraphicSpec = { ...plain(f.spec), depth: 'focus' }
+      const first = drawListAt(s, st, 0, FPS, SIZE, fake)
+      expect(focusRadius(first.camera, DEPTH_FOCUS_LABEL_Z[t]), t).toBeCloseTo(DEPTH_FOCUS_BLUR_PX, 3)
+      expect(focusRadius(first.camera, 0), t).toBe(0)
+      const last = Math.ceil(lastBeatOf(s) * FPS - 1e-6)
+      expect(last, t).toBeGreaterThan(Math.ceil(s.beats[0] * FPS - 1e-6))
+      expect(focusRadius(drawListAt(s, st, last - 1, FPS, SIZE, fake).camera, DEPTH_FOCUS_LABEL_Z[t]), t).toBeGreaterThan(0)
+      expect(focusRadius(drawListAt(s, st, last, FPS, SIZE, fake).camera, DEPTH_FOCUS_LABEL_Z[t]), t).toBe(0)
+    }
+  })
+
+  it('no hero: a `hero` on one of the three (a project file may carry one) glows nothing under any style, and heroGlow names no item for them', () => {
+    const neon = resolveGraphicStyle('neon')
+    for (const t of STEP_SIX) {
+      const spec = fixtures.find((x) => x.id === `${t}-en`)!.spec
+      expect(heroGlow(t, { hero: true, data: spec.data }, neon, SIZE), t).toBeUndefined()
+      for (const st of GRAPHIC_STYLES) {
+        for (const frame of [0, 10, 60]) expect(drawListAt({ ...plain(spec), depth: 'tilt', hero: true }, st, frame, FPS, SIZE, fake).glow, `${t} ${st.id} @${frame}`).toBeUndefined()
+      }
     }
   })
 })

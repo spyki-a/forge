@@ -514,6 +514,8 @@ describe('the options are independent', () => {
       // Phase 2's (T4): the Indic half over the templates rides indic's guard, after phase 1's sites.
       checkIndicTemplates: 'indic',
       checkTemplates: 'templates',
+      // §9 (3D templates piece 3): parity's half over the templates rides templates' guard, after its row, and only when parity ran.
+      checkParityTemplates: 'templates',
       checkCurves: 'curves',
       checkLook: 'look'
     }

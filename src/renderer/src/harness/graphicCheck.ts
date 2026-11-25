@@ -25,6 +25,7 @@
  *   await window.__forgeGraphicCheck({ strokes: { widths: [1, 2, 3] } })          M19's PNGs, for graphic.int's read
  *   await window.__forgeGraphicCheck({ templates: ['counter', 'bars'] })        phase 2's exit: each template's specs.json fixtures
  *   await window.__forgeGraphicCheck({ indic: true, templates: [...] })      and the Indic render check over their Hindi and Telugu
+ *   await window.__forgeGraphicCheck({ parity: true, templates: ['timeline', 'before-after', 'versus'] })   step 6 (§9): flat at both shapes and with each depth
  *   const r = await window.__forgeGraphicCheck({ curves: { names: [...], clipId: '<id>' } })     M14, blind (§6.10)
  *   const r = await window.__forgeGraphicCheck({ look: { clipIds: ['<id>', ...] } })        the look rating, blind (§6.10)
  *   await window.__forgeGraphicCheck({ find: ['timeline', 'before-after', 'versus'] })   3D templates piece 2: Find with the stubbed answer
@@ -95,6 +96,9 @@ import specsText from '../../../../tests/fixtures/graphics/specs.json?raw'
 import { checkCompositor, type CompositorResult } from './compositorCheck'
 import { checkFocus, checkGlow, type FocusResult, type GlowResult } from './glowCheck'
 import { checkDepth, type DepthResult } from './depthCheck'
+import { checkDepthTemplates } from './depthTemplatesCheck'
+import { WEBGL_MISSING_NOTE } from '../graphicCompositor'
+import { FLAT_PARITY_WIDE, depthTemplatesVerdict, isDepthTemplate, type DepthTemplateCase, type FlatParityRow } from './depthTemplatesMeasure'
 import { checkScreenCard, type ScreenCardResult } from './screenCardCheck'
 import { checkScreenCardRecording, type ScreenCardRecordingResult } from './screenCardRecordingCheck'
 import { checkReadback, type ReadbackResult } from './readbackCheck'
@@ -189,7 +193,16 @@ export interface GraphicCheckOptions {
   segments?: boolean
   /** M5: a ten-word line, every word under `blur(px)` every frame (60 frames when absent). */
   blur?: { words?: number; px?: number; frames?: number }
-  /** M6's phase-0 parts: the §51 clusters through a `CanvasTexture`, and colour, with colour management on and off. */
+  /**
+   * M6's phase-0 parts: the §51 clusters through a `CanvasTexture`, and colour,
+   * with colour management on and off. With `templates` too (docs/CLIPS.md
+   * §9, "Measure in the harness"; the 3D templates' piece 3), its phase-3 half
+   * over the named templates, after the `templates` row: each fixture's flat
+   * preview against the export at 9:16 (the `templates` row's own cases) and
+   * 16:9 (read here, 1920×1080), and with each depth at 540×960 and 960×540,
+   * its settled frame against the flat one, its text items against the flat
+   * ones, and WebGL missing (`depthTemplatesCheck.ts`, `result.parity.templates`).
+   */
   parity?: boolean
   /**
    * Phase 3's piece 1 (§6.16): hand-made lists through each of the
@@ -474,6 +487,8 @@ export interface ParitySetting {
 export interface ParityResult {
   rig: string
   settings: ParitySetting[]
+  /** With `templates` (§9's "Measure in the harness"; the 3D templates' piece 3): the named templates flat and with each depth (`checkParityTemplates`). */
+  templates?: ParityTemplatesResult
 }
 
 export interface FontCandidate {
@@ -3235,6 +3250,42 @@ function templateIds(asked: unknown): string[] {
   return asked.map((id) => String(id))
 }
 
+/**
+ * One specs.json fixture read as the `templates` row reads it (`readGraphicCase`
+ * judged by `templateVerdict`), at `size`: the `templates` option's 9:16 case,
+ * and the `parity` option's phase-3 half's 16:9 one (3D templates piece 3).
+ * `run` names the bakes' clip ids apart.
+ */
+async function readTemplateFixture(
+  f: TemplateFixture,
+  style: GraphicStyle,
+  fps: number,
+  size: { width: number; height: number },
+  run: string,
+  frames: Frames,
+  notes: string[]
+): Promise<{ layout: TemplateFrames; read: Omit<CaseRead, 'at'>; reading: TemplateReading; verdict: TemplateVerdict }> {
+  const layout = templateFrames(f.spec, style, fps)
+  const targets = fixtureTargets(f.spec, size)
+  const { at, ...read } = await readGraphicCase(
+    {
+      label: `templates ${f.id}`,
+      liveId: `graphic-check-template-${f.id}`,
+      bakeId: (route) => `graphic-check-templates-${run}-${f.id}-${route}`,
+      spec: f.spec,
+      style,
+      layout,
+      fps,
+      size,
+      targetsAt: () => targets
+    },
+    frames,
+    notes
+  )
+  const reading: TemplateReading = { ...read.reading, ...startReadings(layout, at, size.width), total: layout.total }
+  return { layout, read, reading, verdict: templateVerdict(reading) }
+}
+
 async function checkTemplates(option: GraphicTemplateId[], frames: Frames, summary: string[], notes: string[]): Promise<TemplatesResult> {
   const asked = templateIds(option)
   const style = resolveGraphicStyle('clean')
@@ -3250,25 +3301,7 @@ async function checkTemplates(option: GraphicTemplateId[], frames: Frames, summa
 
   const cases: TemplateCaseResult[] = []
   for (const f of fixtures) {
-    const layout = templateFrames(f.spec, style, fps)
-    const targets = fixtureTargets(f.spec, size)
-    const { at, ...read } = await readGraphicCase(
-      {
-        label: `templates ${f.id}`,
-        liveId: `graphic-check-template-${f.id}`,
-        bakeId: (route) => `graphic-check-templates-${run}-${f.id}-${route}`,
-        spec: f.spec,
-        style,
-        layout,
-        fps,
-        size,
-        targetsAt: () => targets
-      },
-      frames,
-      notes
-    )
-    const reading: TemplateReading = { ...read.reading, ...startReadings(layout, at, size.width), total: layout.total }
-    const verdict = templateVerdict(reading)
+    const { layout, read, reading, verdict } = await readTemplateFixture(f, style, fps, size, `${run}`, frames, notes)
     cases.push({ id: f.id, shape: f.shape, template: f.spec.data.template, language: f.language, beat: layout.beat, ...read, reading, verdict })
     const failed = (Object.keys(verdict) as (keyof TemplateVerdict)[]).filter((k) => k !== 'pass' && !verdict[k])
     const worst = (list: PixelDiff[]): string => (list.length ? `mean ${Math.max(...list.map((d) => d.mean)).toFixed(3)}, max ${Math.max(...list.map((d) => d.max))}` : 'not read')
@@ -3319,6 +3352,85 @@ async function checkTemplates(option: GraphicTemplateId[], frames: Frames, summa
       'The bar is TEMPLATES_BAR (§6.12\'s phase 2 exit, "preview = export within 1/255"): frame 0 differs from the first beat\'s frame and from the last moving frame, the last moving frame equals the held end (mean 0), no alpha outside the box, the same spec twice identical, both routes within 1 level over the ink; ' +
       'beside it, as for primitives, the live Preview equal, the box even and the bake\'s, and each bake writing exactly the moving frames. A part with nothing read passes nothing; a template with no fixture and an id no drawer draws are each FAIL and named. ' +
       'Yours: the run on the Mac and the Surface in the development app (§6.12).'
+  }
+}
+
+/* ------------------------------- §9: parity's phase-3 half over the named templates */
+
+export interface ParityTemplatesResult {
+  /** The ids asked for, as given; those read in depth; those asked with no depth, no fixture or no drawer, named. */
+  asked: string[]
+  depth: string[]
+  notDepth: string[]
+  noSpec: string[]
+  unknown: string[]
+  /** The flat preview against the export, per fixture and shape (`TEMPLATES_BAR`). */
+  flat: FlatParityRow[]
+  /** Each fixture at each shape with its four depths. */
+  cases: DepthTemplateCase[]
+  byTemplate: Record<string, boolean>
+  verdict: { pass: boolean; failures: string[] }
+  /** `verdict.pass`, for the session's one look. */
+  ok: boolean
+  ms: number
+  note: string
+}
+
+let parityTemplatesRun = 0
+
+/** The `templates` row's worst mean over either bake route against the preview (levels), from its reading. */
+const worstBakeMean = (r: TemplateReading): number => Math.max(0, ...[...r.bakeAgainstPreview, ...r.canvasAgainstPreview].map((d) => d.mean))
+
+async function checkParityTemplates(option: GraphicTemplateId[], templates: TemplatesResult, frames: Frames, summary: string[], notes: string[]): Promise<ParityTemplatesResult> {
+  const began = performance.now()
+  const asked = templateIds(option)
+  const { cases: fixtures, unknown, noSpec } = templateCasesFor(asked, TEMPLATE_FIXTURES, DRAWN_TEMPLATES)
+  const named = [...new Set(asked)].filter((id) => !unknown.includes(id) && !noSpec.includes(id))
+  const depth = named.filter(isDepthTemplate)
+  const notDepth = named.filter((id) => !isDepthTemplate(id))
+  const ours = fixtures.filter((f) => depth.includes(f.spec.data.template))
+
+  // Flat, 9:16: the templates row's own cases. 16:9: read here at the export's 1920×1080, as that row reads.
+  const style = resolveGraphicStyle('clean')
+  const run = `${++parityTemplatesRun}-wide`
+  const flat: FlatParityRow[] = []
+  for (const f of ours) {
+    const tall = templates.cases.find((c) => c.id === f.id)
+    if (tall) {
+      const failed = (Object.keys(tall.verdict) as (keyof TemplateVerdict)[]).filter((k) => k !== 'pass' && !tall.verdict[k])
+      flat.push({ fixture: f.id, template: f.spec.data.template, shape: '9:16', width: templates.width, height: templates.height, pass: tall.verdict.pass, failed, worstMean: worstBakeMean(tall.reading) })
+    }
+    const { reading, verdict } = await readTemplateFixture(f, style, TEMPLATES_FPS, FLAT_PARITY_WIDE, `parity-${run}`, frames, notes)
+    const failed = (Object.keys(verdict) as (keyof TemplateVerdict)[]).filter((k) => k !== 'pass' && !verdict[k])
+    flat.push({ fixture: f.id, template: f.spec.data.template, shape: '16:9', width: FLAT_PARITY_WIDE.width, height: FLAT_PARITY_WIDE.height, pass: verdict.pass, failed, worstMean: worstBakeMean(reading) })
+  }
+  for (const row of flat) summary.push(`parity templates ${row.fixture} flat at ${row.shape} (${row.width}x${row.height}): preview against export ${row.pass ? 'PASS' : `FAIL (${row.failed.join(', ')})`}, worst mean ${row.worstMean.toFixed(3)} levels`)
+
+  const cases = ours.length > 0 ? await checkDepthTemplates(ours, frames, summary) : []
+  const verdict = depthTemplatesVerdict({ depth, notDepth, noSpec, unknown }, flat, cases, WEBGL_MISSING_NOTE)
+  const verdicts = Object.entries(verdict.byTemplate).map(([k, v]) => `${k} ${v ? 'PASS' : 'FAIL'}`).join(', ')
+  summary.push(`parity templates by template: ${verdicts}`)
+  summary.push(`parity templates verdict: ${verdict.pass ? 'PASS' : `FAIL: ${verdict.failures.join('; ')}`}`)
+  if (!verdict.pass) notes.push(...verdict.failures.map((f) => `parity templates: ${f}`))
+  return {
+    asked,
+    depth,
+    notDepth,
+    noSpec,
+    unknown,
+    flat,
+    cases,
+    byTemplate: verdict.byTemplate,
+    verdict: { pass: verdict.pass, failures: verdict.failures },
+    ok: verdict.pass,
+    ms: Math.round(performance.now() - began),
+    note:
+      'Parity\'s phase-3 half over the named templates (docs/CLIPS.md §9, "Measure in the harness"; the 3D templates\' piece 3), under clean. ' +
+      'Flat: the preview against the export at 9:16 is the templates row\'s own case (1080x1920), at 16:9 the same reading at 1920x1080 (TEMPLATES_BAR, within 1/255). ' +
+      'Depth, at 540x960 and 960x540 for each of tilt, parallax, dolly and focus: the last moving frame\'s camera exactly flat, a frame off flat and not all, every text item of every moving frame the flat twin\'s, the settled list the twin\'s; ' +
+      'the settled frame through paintDrawList3d against the twin by painter A max 0; the first inked frame at least DEPTH_BAR.firstMinMax from the twin; ' +
+      'WebGL pretended missing: createCompositor null, the one note, the moving frame painter A\'s own picture and the settled one the twin\'s (max 0), and the Preview marking its clip drawn flat. ' +
+      'No hero is read: these templates are never a hero.'
   }
 }
 
@@ -3808,7 +3920,11 @@ export async function runGraphicCheck(options: GraphicCheckOptions = {}): Promis
   if (options.primitives) result.primitives = await checkPrimitives(frames, summary, notes)
   if (options.pathLength) result.pathLength = checkPathLength(summary)
   if (options.strokes) result.strokes = await checkStrokes(options.strokes, frames, summary, notes)
-  if (options.templates) result.templates = await checkTemplates(options.templates, frames, summary, notes)
+  if (options.templates) {
+    result.templates = await checkTemplates(options.templates, frames, summary, notes)
+    // Parity's phase-3 half over the named templates (§9), when parity ran: after the templates row, whose 9:16 cases are its flat 9:16 reading.
+    if (result.parity) result.parity.templates = await checkParityTemplates(options.templates, result.templates, frames, summary, notes)
+  }
   const blind: BlindShown[] = []
   if (options.curves) result.curves = await checkCurves(options.curves, result.date, summary, notes, blind)
   if (options.look) result.look = await checkLook(options.look, result.date, summary, notes, blind)

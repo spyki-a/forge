@@ -939,6 +939,29 @@ describe('applyGraphics, phase 3: the hero of each footage clip (§6.16)', () =>
     expect([spec('later').hero, spec('later').depth]).toEqual([true, 'tilt'])
   })
 
+  it('the hero rule is not widened to step 6’s three (3D templates piece 3): a timeline, a before-and-after and a versus landed ahead of a counter on one footage clip get no depth and no hero; the counter does', () => {
+    // apply.ts keys the rule by HERO_TEMPLATES AND threeD; the three are threeD, so only HERO_TEMPLATES keeps them out (§9 does not widen it).
+    for (const t of ['timeline', 'before-after', 'versus']) expect(GRAPHIC_TEMPLATES[t as GraphicTemplateId]?.threeD, t).toBe(true)
+    const { p, kept } = twoClips()
+    let n = 0
+    const once = applyGraphics(p, kept.filter((k) => k.clipId === 'fa' && k.candidate.data.template === 'counter'), [], CLIPS_GRAPHIC_RULE, { fps: FPS, newId: (prefix) => `${prefix}-${++n}` }).project
+    const landed = once.clips.find((c) => c.graphic?.data.template === 'counter')!
+    const { hero: _hero, depth: _depth, ...plainSpec } = landed.graphic!
+    const fb = p.clips.find((c) => c.id === 'fb')!
+    const datas: Record<string, GraphicSpec['data']> = {
+      tl: { template: 'timeline', items: [{ when: '2019', label: 'a' }, { when: '2021', label: 'b' }] },
+      ba: { template: 'before-after', before: { label: 'a', value: '1' }, after: { label: 'b', value: '2' } },
+      vs: { template: 'versus', left: { label: 'a', value: '1' }, right: { label: 'b', value: '2' } }
+    }
+    const ahead: Clip[] = Object.entries(datas).map(([id, data], i) => ({ ...landed, id, start: fb.start + 5 + i * 5, graphic: { ...plainSpec, data } }))
+    const later: Clip = { ...landed, id: 'later', start: fb.start + 40, graphic: plainSpec }
+    const q: Project = { ...once, clips: [...once.clips, ...ahead, later] }
+    const out = withHeroes(q, [...ahead.map((c) => c.id), 'later'])
+    const spec = (id: string): GraphicSpec => out.clips.find((c) => c.id === id)!.graphic!
+    for (const id of Object.keys(datas)) expect([spec(id).hero, spec(id).depth], id).toEqual([undefined, undefined])
+    expect([spec('later').hero, spec('later').depth]).toEqual([true, 'tilt'])
+  })
+
   it('HERO_RULE is on, the one line that turns the rule off; a footage clip with no counter or ring has no hero', () => {
     expect(HERO_RULE).toBe(true)
     const { p, kept } = twoClips()

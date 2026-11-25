@@ -1102,6 +1102,57 @@ describe('graphicCanvas: the compositor seam', () => {
     expect(frameRenders().length).toBe(tilted)
   })
 
+  /** Step 6's three (docs/CLIPS.md §9), their English fixtures; the owner's Hindi and Telugu join by membership. */
+  const STEP_SIX_SPECS = (JSON.parse(readFileSync(resolve(__dirname, '../fixtures/graphics/specs.json'), 'utf8')) as { specs: { id: string; spec: GraphicSpec }[] }).specs.filter((f) =>
+    ['timeline', 'before-after', 'versus'].includes(f.spec.data.template)
+  )
+
+  it('step 6’s three with a depth (DRAWERS, 3D templates piece 3): the canvas region though the box was allowed, as many frames as the flat twin, WebGL only on the frames off flat; with WebGL missing, painter A every frame, the note once, the Preview marked', async () => {
+    const clean = resolveGraphicStyle('clean')
+    const measure = G.graphicMeasure()
+    for (const id of ['timeline-en', 'before-after-en', 'versus-en']) expect(STEP_SIX_SPECS.map((f) => f.id), id).toContain(id)
+    let n = 0
+    for (const f of STEP_SIX_SPECS) {
+      const total = Math.round(f.spec.seconds * 30)
+      const flat = await G.bakeGraphicSequence(f.spec, clean, `s6-${++n}`, SIZE.width, SIZE.height, total, 30, NO_TARGETS, true)
+      expect(flat!.box, f.id).toBeDefined()
+      for (const depth of ['tilt', 'parallax', 'dolly', 'focus'] as const) {
+        const where = `${f.id} ${depth}`
+        renders.length = 0
+        const spec: GraphicSpec = { ...f.spec, depth }
+        const run = await G.bakeGraphicSequence(spec, clean, `s6-${++n}`, SIZE.width, SIZE.height, total, 30, NO_TARGETS, true)
+        expect(run!.box, where).toBeUndefined()
+        expect(run!.frames, where).toBe(flat!.frames)
+        const off = Array.from({ length: run!.frames }, (_, fr) => drawListAt(spec, clean, fr, 30, SIZE, measure)).filter((l) => !cameraIsFlat(l.camera)).length
+        expect(off, where).toBeGreaterThan(0)
+        expect(off, where).toBeLessThan(run!.frames)
+        expect(frameRenders().length, where).toBe(off)
+      }
+    }
+    expect(G.takeGraphicBakeNotes()).toEqual([])
+    made.length = 0
+
+    webgl.mode = 'throw'
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    renders.length = 0
+    for (const f of STEP_SIX_SPECS) {
+      for (const depth of ['tilt', 'parallax', 'dolly', 'focus'] as const) {
+        const run = await G.bakeGraphicSequence({ ...f.spec, depth }, clean, `s6-${++n}`, SIZE.width, SIZE.height, Math.round(f.spec.seconds * 30), 30, NO_TARGETS, true)
+        expect(run, `${f.id} ${depth}`).not.toBeNull()
+      }
+      // The Preview: marked drawn flat on the frame its compositor lands null.
+      const live = `s6-live-${f.id}`
+      G.graphicPreviewCanvas(live, { ...f.spec, depth: 'parallax' }, clean, SIZE.width, SIZE.height, { frame: 2, total: 90, fps: 30 }, {})
+      await settle()
+      expect(G.graphicDrawnFlat(live), f.id).toBe(true)
+      G.forgetGraphicPreview(live)
+    }
+    expect(renders).toHaveLength(0)
+    expect(made).toEqual([])
+    expect(G.takeGraphicBakeNotes()).toEqual([C.WEBGL_MISSING_NOTE])
+    warn.mockRestore()
+  })
+
   it('the harness frames (graphicFrameCanvases) keep one compositor and dispose it in their finally', async () => {
     const frames = await G.graphicFrameCanvases(SPEC, STYLE, SIZE.width, SIZE.height, 30, 30, [0, 5, 29], NO_TARGETS, tilting)
     expect(frames).toHaveLength(3)

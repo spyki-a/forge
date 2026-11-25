@@ -27,6 +27,11 @@
  * nothing at all to draw (every string empty) draws nothing; too long for its
  * place at `FIT_MIN`, nothing (the too-big rule).
  *
+ * Depth (3D templates piece 3, templates/depth.ts `depthOut`): with a
+ * `depth`, the same items on their planes (`DEPTH_PLANES.versus`) with a
+ * camera over the left's entrance; under `focus` the labels and panels blur
+ * until the right lands. A plain spec's list is unchanged.
+ *
  * Pure, as every drawer (§6.2).
  */
 
@@ -34,6 +39,7 @@ import type { DrawItem, DrawOut, Drawer, StrokeItem } from '../items'
 import { DURATIONS, progress } from '../motion'
 import { LAYOUT_SIZES, beatOf, centreOf, dimFor, drawOnEase, enterMove, moved, panelFor, strokePx, withDim } from './layout'
 import { layoutSides, sideOf } from './sides'
+import { depthOut } from './depth'
 
 export const drawVersus: Drawer = (spec, style, clock, size, measure, targets): DrawOut => {
   const data = spec.data
@@ -77,5 +83,6 @@ export const drawVersus: Drawer = (spec, style, clock, size, measure, targets): 
     for (const item of [...half.label, ...half.value]) items.push(moved(item, move, about, size))
   })
 
-  return { items: withDim(dimFor(style, t, targets, size), items) }
+  // 3D templates piece 3 (§9, §6.16, templates/depth.ts): with a depth, the same items on their planes with a camera, settling flat by the right's beat.
+  return depthOut('versus', spec, style, t, beats[0], size, withDim(dimFor(style, t, targets, size), items), beats[1])
 }

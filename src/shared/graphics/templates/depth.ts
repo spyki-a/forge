@@ -34,6 +34,17 @@
  * (compositor.ts `compensation`), so dropping `z` there changes no geometry,
  * only the painting order, back to the flat graphic's.
  *
+ * **Step 6's three** (docs/CLIPS.md §9, "The 3D templates"): `timeline`,
+ * `before-after` and `versus` take the same four moves through this file,
+ * each its own rows in `DEPTH_PLANES` (3D templates piece 3). The camera
+ * moves over the entrance ending no later than the FIRST beat (the card's
+ * entrance, as the table says "over the entrance"); the focus blur falls
+ * over the whole list to exactly 0 on the LAST beat (`depthOut`'s
+ * `lastBeat`), so every move is flat from the last beat on and the settled
+ * frame is the flat variant's own, as for counter and ring. No hero: the
+ * three have no `HERO_GLOW_ITEM` row, so `heroGlow` gives them none, and
+ * graphics/apply.ts `HERO_TEMPLATES` stays counter and ring.
+ *
  * Pure: no clock, no random, no DOM, no `node:path`.
  */
 
@@ -81,7 +92,11 @@ export const DEPTH_FOV = DEFAULT_FOV
  *   flat twin's. The ring's track and arc stay on z 0 ("the arc and value
  *   sharp").
  */
-export const DEPTH_PLANES: Readonly<Record<'counter' | 'ring', Readonly<Record<Exclude<DepthMove, 'tilt'>, Readonly<Record<string, number>>>>>> = Object.freeze({
+/** The templates this file draws in depth: counter and ring (phase 3's piece 3), and step 6's three (§9). */
+export type DepthTemplate = 'counter' | 'ring' | 'timeline' | 'before-after' | 'versus'
+export const DEPTH_TEMPLATES: readonly DepthTemplate[] = Object.freeze(['counter', 'ring', 'timeline', 'before-after', 'versus'] as DepthTemplate[])
+
+export const DEPTH_PLANES: Readonly<Record<DepthTemplate, Readonly<Record<Exclude<DepthMove, 'tilt'>, Readonly<Record<string, number>>>>>> = Object.freeze({
   counter: Object.freeze({
     parallax: Object.freeze({ panel: 0, label: 0.02, value: 0.05 }),
     dolly: Object.freeze({ panel: 0, label: 0, value: 0.05 }),
@@ -91,11 +106,49 @@ export const DEPTH_PLANES: Readonly<Record<'counter' | 'ring', Readonly<Record<E
     parallax: Object.freeze({ track: 0, arc: 0.03, value: 0.05, label: 0 }),
     dolly: Object.freeze({ track: 0, arc: 0, value: 0.05, label: 0 }),
     focus: Object.freeze({ track: DEPTH_FOCUS_Z, arc: DEPTH_FOCUS_Z, value: DEPTH_FOCUS_Z, label: -0.02 })
+  }),
+  /*
+   * Step 6's three (3D templates piece 3), each read as the counter is: its
+   * backing (the timeline's rail, edges and dots; a panel; the before-after's
+   * reveal; the versus' divider) is the counter's panel, its labels the
+   * counter's label, its values (a timeline row's when) the counter's value.
+   * So parallax puts backing 0, labels 0.02, values 0.05; dolly brings the
+   * values forward to 0.05 and leaves the rest on 0; focus keeps the values
+   * sharp on 0 and puts the labels on −0.02 with every backing a label sits
+   * on (a panel, the reveal), since a backing on 0 would be painted over a
+   * label behind it (the counter's focus panel, above). The rail and the
+   * divider back no text and stay on 0, sharp, as the ring's track. A text
+   * item is never on a plane nearer than the backing behind it, and never
+   * behind a backing that would cover it. At most three distinct `z`.
+   */
+  timeline: Object.freeze({
+    parallax: Object.freeze({ edge: 0, dot: 0, label: 0.02, when: 0.05 }),
+    dolly: Object.freeze({ edge: 0, dot: 0, label: 0, when: 0.05 }),
+    focus: Object.freeze({ edge: DEPTH_FOCUS_Z, dot: DEPTH_FOCUS_Z, when: DEPTH_FOCUS_Z, label: -0.02 })
+  }),
+  'before-after': Object.freeze({
+    parallax: Object.freeze({ panel: 0, reveal: 0, 'before-label': 0.02, 'after-label': 0.02, 'before-value': 0.05, 'after-value': 0.05 }),
+    dolly: Object.freeze({ panel: 0, reveal: 0, 'before-label': 0, 'after-label': 0, 'before-value': 0.05, 'after-value': 0.05 }),
+    focus: Object.freeze({ panel: -0.02, reveal: -0.02, 'before-label': -0.02, 'after-label': -0.02, 'before-value': DEPTH_FOCUS_Z, 'after-value': DEPTH_FOCUS_Z })
+  }),
+  versus: Object.freeze({
+    parallax: Object.freeze({ 'left-panel': 0, 'right-panel': 0, divider: 0, 'left-label': 0.02, 'right-label': 0.02, 'left-value': 0.05, 'right-value': 0.05 }),
+    dolly: Object.freeze({ 'left-panel': 0, 'right-panel': 0, divider: 0, 'left-label': 0, 'right-label': 0, 'left-value': 0.05, 'right-value': 0.05 }),
+    focus: Object.freeze({ 'left-panel': -0.02, 'right-panel': -0.02, divider: DEPTH_FOCUS_Z, 'left-label': -0.02, 'right-label': -0.02, 'left-value': DEPTH_FOCUS_Z, 'right-value': DEPTH_FOCUS_Z })
   })
 })
 
-/** The item a hero's glow names (§6.16, "What glows"): the counter's value, the ring's arc. */
-export const HERO_GLOW_ITEM: Readonly<Record<'counter' | 'ring', string>> = Object.freeze({ counter: 'value', ring: 'arc' })
+/** The item a hero's glow names (§6.16, "What glows"): the counter's value, the ring's arc. Step 6's three have none: they are never a hero. */
+export const HERO_GLOW_ITEM: Readonly<Partial<Record<DepthTemplate, string>>> = Object.freeze({ counter: 'value', ring: 'arc' })
+
+/** Under `focus`, the plane that reads `DEPTH_FOCUS_BLUR_PX`: each template's label plane (−0.02 for all five). */
+export const DEPTH_FOCUS_LABEL_Z: Readonly<Record<DepthTemplate, number>> = Object.freeze({
+  counter: DEPTH_PLANES.counter.focus.label,
+  ring: DEPTH_PLANES.ring.focus.label,
+  timeline: DEPTH_PLANES.timeline.focus.label,
+  'before-after': DEPTH_PLANES['before-after'].focus['before-label'],
+  versus: DEPTH_PLANES.versus.focus['left-label']
+})
 
 /** −0 as 0: a camera field must read exactly 0 at rest, and `Object.is(−0, 0)` is false. */
 const zero = (v: number): number => v + 0
@@ -110,16 +163,22 @@ export function depthOf(spec: Pick<GraphicSpec, 'depth' | 'data'>): DepthMove | 
   return GRAPHIC_TEMPLATES[spec.data.template]?.threeD === true ? depth : null
 }
 
-/** A field's id from an item's: a wrapped line's `label-1` is `label`'s. */
-const fieldOf = (id: string): string => id.replace(/-\d+$/u, '')
+/**
+ * A field's id from an item's: a wrapped line's `label-1` is `label`'s; a
+ * timeline row's `when-2` and its wrapped `when-2-1` are `when`'s (every
+ * trailing number taken off). Counter's and ring's ids carry at most one.
+ */
+export const fieldOf = (id: string): string => id.replace(/(?:-\d+)+$/u, '')
 
 /**
  * The camera of `move` at `t` (§6.16's table): tilt, yaw or dolly from its
  * start to 0 on the style's curve over the entrance, ending no later than
  * `beat`; `focus` flat throughout, its blur falling on the value's own
- * draw-on curve (`drawOnEase`, the count's) to exactly 0 on `beat`.
+ * draw-on curve (`drawOnEase`, the count's) to exactly 0 on `lastBeat`
+ * (`beat` itself for counter and ring, which have one; a list's last beat
+ * for step 6's three).
  */
-export function depthCamera(move: DepthMove, style: GraphicStyle, t: number, beat: number, labelZ = DEPTH_PLANES.counter.focus.label): Camera {
+export function depthCamera(move: DepthMove, style: GraphicStyle, t: number, beat: number, labelZ = DEPTH_PLANES.counter.focus.label, lastBeat = beat): Camera {
   const span = Math.min(DURATIONS.entrance, Math.max(0, beat))
   const rest = 1 - progress(t, 0, span, style.motion.ease)
   const camera: Camera = { tilt: 0, yaw: 0, dolly: 0, fov: DEPTH_FOV }
@@ -127,7 +186,7 @@ export function depthCamera(move: DepthMove, style: GraphicStyle, t: number, bea
   if (move === 'parallax') camera.yaw = zero(DEPTH_PARALLAX_YAW_FROM * rest)
   if (move === 'dolly') camera.dolly = zero(DEPTH_DOLLY_FROM * rest)
   if (move === 'focus') {
-    const blur = 1 - progress(t, 0, beat, drawOnEase(style))
+    const blur = 1 - progress(t, 0, lastBeat, drawOnEase(style))
     camera.focus = { z: DEPTH_FOCUS_Z, px: zero((DEPTH_FOCUS_BLUR_PX * blur) / Math.abs(labelZ - DEPTH_FOCUS_Z)) }
   }
   return camera
@@ -140,7 +199,7 @@ export function depthCamera(move: DepthMove, style: GraphicStyle, t: number, bea
  * asks for depth emits its items in ascending `z`"). `tilt` leaves the items
  * as they are: one plane.
  */
-export function onPlanes(template: 'counter' | 'ring', move: DepthMove, items: readonly DrawItem[]): DrawItem[] {
+export function onPlanes(template: DepthTemplate, move: DepthMove, items: readonly DrawItem[]): DrawItem[] {
   if (move === 'tilt') return [...items]
   const table = DEPTH_PLANES[template][move]
   const dims = items.filter((item) => item.kind === 'dim')
@@ -157,31 +216,37 @@ export function onPlanes(template: 'counter' | 'ring', move: DepthMove, items: r
  * other sizes are, style.ts) in frame pixels, in `palette.accent`. Undefined
  * otherwise, and on a template that is not `threeD`.
  */
-export function heroGlow(template: 'counter' | 'ring', spec: Pick<GraphicSpec, 'hero' | 'data'>, style: GraphicStyle, size: { width: number; height: number }): GlowRequest[] | undefined {
+export function heroGlow(template: DepthTemplate, spec: Pick<GraphicSpec, 'hero' | 'data'>, style: GraphicStyle, size: { width: number; height: number }): GlowRequest[] | undefined {
   if (spec.hero !== true || !style.glow) return undefined
   if (GRAPHIC_TEMPLATES[spec.data.template]?.threeD !== true) return undefined
-  return [{ item: HERO_GLOW_ITEM[template], radius: style.glow.radius * shortSide(size), strength: style.glow.strength, color: style.palette.accent }]
+  // A template with no glowing item is never a hero (step 6's three): a `hero` a project file carries on one glows nothing.
+  const item = HERO_GLOW_ITEM[template]
+  if (item === undefined) return undefined
+  return [{ item, radius: style.glow.radius * shortSide(size), strength: style.glow.strength, color: style.palette.accent }]
 }
 
 /**
- * A counter's or ring's `DrawOut` from its flat items (the dim first, as
+ * A depth template's `DrawOut` from its flat items (the dim first, as
  * `withDim` returns them): on its planes with its camera when its spec asks
  * for a move, with the hero's glow when it is the hero; the flat items alone
- * otherwise, so a plain graphic's list is phase 2's exactly.
+ * otherwise, so a plain graphic's list is phase 2's exactly. `beat` is the
+ * first beat (the camera's end), `lastBeat` the last (the focus blur's end;
+ * `beat` for counter and ring).
  */
 export function depthOut(
-  template: 'counter' | 'ring',
+  template: DepthTemplate,
   spec: GraphicSpec,
   style: GraphicStyle,
   t: number,
   beat: number,
   size: { width: number; height: number },
-  items: DrawItem[]
+  items: DrawItem[],
+  lastBeat = beat
 ): DrawOut {
   const move = depthOf(spec)
   const out: DrawOut = { items }
   if (move) {
-    const camera = depthCamera(move, style, t, beat, move === 'focus' ? DEPTH_PLANES[template].focus.label : undefined)
+    const camera = depthCamera(move, style, t, beat, move === 'focus' ? DEPTH_FOCUS_LABEL_Z[template] : undefined, lastBeat)
     out.camera = camera
     // The planes while the camera moves or the label blurs; at rest the flat variant's own list (see the file's head).
     if (!cameraIsFlat(camera)) out.items = onPlanes(template, move, items)

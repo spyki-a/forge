@@ -28,6 +28,11 @@
  * An empty `when` or `label` draws no text for it (the row keeps its dot and
  * its beat); no items at all draws nothing.
  *
+ * Depth (3D templates piece 3, templates/depth.ts `depthOut`): with a
+ * `depth`, the same items on their planes (`DEPTH_PLANES.timeline`) with a
+ * camera over the first row's entrance; under `focus` the labels blur until
+ * the last row lands. A plain spec's list is unchanged.
+ *
  * Pure, as every drawer (§6.2): never paints, measures only through
  * `measure`, curves only from `motion.ts`.
  */
@@ -55,6 +60,7 @@ import {
   withDim,
   wrapWidth
 } from './layout'
+import { depthOut } from './depth'
 
 export const drawTimeline: Drawer = (spec, style, clock, size, measure, targets): DrawOut => {
   const data = spec.data
@@ -150,5 +156,6 @@ export const drawTimeline: Drawer = (spec, style, clock, size, measure, targets)
     for (const item of [dot, ...words]) items.push(moved(item, move, centreOf(box), size))
   })
 
-  return { items: withDim(dimFor(style, t, targets, size), items) }
+  // 3D templates piece 3 (§9, §6.16, templates/depth.ts): with a depth, the same items on their planes with a camera, settling flat by the last beat.
+  return depthOut('timeline', spec, style, t, beatOf(spec, 0), size, withDim(dimFor(style, t, targets, size), items), beatOf(spec, l.laid.length - 1))
 }

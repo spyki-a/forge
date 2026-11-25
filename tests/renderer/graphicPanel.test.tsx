@@ -478,6 +478,26 @@ describe('the dock’s graphic panel (§6.6)', () => {
     expect(clipById('r').graphic!.depth).toBe('flat')
   })
 
+  it('step 6’s three keep your Depth as counter and ring do (3D templates piece 3): each choice saved in one undo step, pressed after, no hero made', () => {
+    const three: GraphicData[] = [
+      { template: 'timeline', items: [{ when: '2019', label: 'a' }, { when: '2021', label: 'b' }] },
+      { template: 'before-after', before: { label: 'a', value: '1' }, after: { label: 'b', value: '2' } },
+      { template: 'versus', left: { label: 'a', value: '1' }, right: { label: 'b', value: '2' } }
+    ]
+    for (const data of three) {
+      start([graphicClip('s', data, { beats: [0.5, 1.5] })])
+      expect(pressed('s'), data.template).toEqual(['Flat'])
+      for (const [label, depth] of [['Tilt', 'tilt'], ['Parallax', 'parallax'], ['Dolly', 'dolly'], ['Focus', 'focus'], ['Flat', 'flat']] as const) {
+        const past = state().past.length
+        choose('s', label)
+        expect(clipById('s').graphic!.depth, `${data.template} ${label}`).toBe(depth)
+        expect('hero' in clipById('s').graphic!, `${data.template} ${label}`).toBe(false)
+        expect(state().past.length, `${data.template} ${label}`).toBe(past + 1)
+        expect(pressed('s'), `${data.template} ${label}`).toEqual([label])
+      }
+    }
+  })
+
   it('a Speaker field shows the asset’s Speaker and editing it calls setSpeaker', () => {
     start([graphicClip('lt', FIXTURES['lower-third']), graphicClip('q', { template: 'quote', text: 'We signed 40 clients', speaker: 'Ana' }, { beats: [0.8] })])
     const calls: [string, string][] = []
