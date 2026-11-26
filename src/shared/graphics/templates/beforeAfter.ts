@@ -1,8 +1,9 @@
 /**
  * `before-after` (docs/CLIPS.md §9, "The 3D templates"): one card, the
  * "before" said first on its left half, then the "after" revealed on its
- * right: the after's panel box growing over the before's card from the
- * middle out (a `shape` item's box on §6.13's curve; no mask kind).
+ * right: a tinted box growing from the card's middle over the after's half
+ * only, never over the before's (a `shape` item's box on §6.13's curve; no
+ * mask kind).
  *
  * Items, in order: the dim when the style dims; `panel` (rounded, the whole
  * card, `palette.panel` at `palette.panelOpacity`, only when that is above 0,

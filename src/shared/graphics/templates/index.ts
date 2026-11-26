@@ -37,7 +37,7 @@ export const DRAWERS: Partial<Record<GraphicTemplateId, Drawer>> = Object.freeze
   'lower-third': drawLowerThird,
   // Phase 3's piece 4 (§6.16): drawn only with its `targets.screen`, which the app gives a card made by the dock's Screen card.
   'screen-card': drawScreenCard,
-  // Step 6's three (docs/CLIPS.md §9): flat through painter A; their depth variants are this step's next piece.
+  // Step 6's three (docs/CLIPS.md §9): flat through painter A; with a depth, on their planes through templates/depth.ts `depthOut`.
   timeline: drawTimeline,
   'before-after': drawBeforeAfter,
   versus: drawVersus
