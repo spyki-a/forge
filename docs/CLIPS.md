@@ -654,7 +654,8 @@
 > record, `03937b4..6e8fcb9`; origin = main = `6e8fcb9`. **The session's
 > readings at `8730ff7`, on the Mac**: typecheck 0; the suite 391 files
 > passed and 6 skipped (397), 6470 tests passed and 67 skipped (6537),
-> against 384 and 6364 before the lane; build 0 (after `1c1dba0`:
+> against 384 and 6364 before the lane (read at `f06d083`, the same tree
+> as `03937b4` but for a comment); build 0 (after `1c1dba0`:
 > typecheck 0 and the two template test files, 26 tests, 0; the full suite
 > not run again). On the harness page (the development Mac, not the app):
 > `__forgeLookCheck()` `ok: true`, "14 of 14 cases pass"; the census
@@ -683,8 +684,10 @@
 > §16.106-111, all open, beside §16.99-105. **Not built**: §10's second
 > bullet, the saved template with slots (no slot, no template file); §10
 > says it "waits for Stage 0, or moves to §17", §16.28's answer of
-> 2026-10-05 has it wait for Stage 0, and the session's list has it next
-> before the beta: which is yours, §16.111.
+> 2026-10-05 has it wait for Stage 0, your answer to §16.86 (2026-11-18)
+> keeps it before the beta, and the session's list has it next: which
+> holds is yours, §16.111. One question was put to you that evening and
+> is not answered: whether the licence line gets a default (§16.107).
 > **Next, by the session's list of 2026-11-25** (you have not
 > contradicted it): the saved template (2.5 days, its gate §16.111), then
 > Florence-2's caption placement (1g, 3, gated by its own measurement,
@@ -1100,8 +1103,10 @@ this and will get back to the beta". **This plan comes first**, then
   once with the 3D lane's docs record as `03937b4..6e8fcb9`, green on both
   runners at `6e8fcb9`; the status block at the top). It went ahead of
   §10's gate, as §10 allows the creator style. Only §10's first bullet is
-  built; the saved template is not, and whether it waits for `MARKET.md`
-  Stage 0 or comes next is §16.111. Nothing of the creator style was
+  built; the saved template is not: §10 and §16.28's answer of
+  2026-10-05 have it wait for `MARKET.md` Stage 0, your answer to §16.86
+  (2026-11-18) keeps it before the beta, the session's list has it next;
+  which holds is §16.111. Nothing of the creator style was
   read in the development app or on the Surface, and its Electron half
   never ran; its decisions are §16.106-111. No day figure or total in this
   section changes: the creator style's 2 days stand as planned (the build
@@ -26790,10 +26795,11 @@ build took about 75 minutes of an eight-agent run (workflow run
 `wf_8a76753c-14f`), then the session's checks and the push
 (`03937b4..6e8fcb9`). It was built ahead of this gate, as the sentence
 above allows the creator style; the saved template's gate is unchanged,
-and whether it holds or the saved template comes next before the beta is
-yours, §16.111. **The second bullet, the saved template with slots, is not
-built.** You have not tried the creator style; its decisions are
-§16.106-111.)
+and §16.28's answer of 2026-10-05 has it wait for Stage 0, your answer to
+§16.86 (2026-11-18) keeps it before the beta, and the session's list has
+it next: which holds is yours, §16.111. **The second bullet, the saved
+template with slots, is not built.** You have not tried the creator style;
+its decisions are §16.106-111.)
 
 - **A creator style** is a caption style and a graphic style saved together
   as "my look". It is exported and imported as JSON (`{author, version,
@@ -28228,6 +28234,8 @@ what is needed, where the answer waits on something not yet in hand.
     **Answer (2026-10-05):** taken as §10 writes it unless you say
     otherwise: the saved template waits for Stage 0, and the creator style
     stays in step 7 unless you ask for it with step 3's styles.
+    (2026-11-25: the creator style is built; whether the saved template
+    still waits is §16.111.)
 29. **Clip it into a project that already holds an edit**: a new 9:16
     project per clip (recommended), or appended to this one with its aspect
     unchanged. Clip it asks either way and never re-crops the existing edit.
@@ -29840,22 +29848,23 @@ the readings are attributed where they stand.
 
 **Added 2026-11-25 (late), from step 7's creator style, "My look" (§10,
 `5ce2cb3..8730ff7`); OPEN.** Each is a rule, a constant, a word or a
-behaviour the session's design or the lane's builders, critics and
-fixers chose and left to you (the eight agents' reports and the session's
+behaviour the session's design or the lane's builders, critics and fixers
+chose and left to you (the eight agents' reports and the session's
 record); you decided none, and you have not seen or tried "My look". A
 recommendation is given only where a report states one, and is written as
 theirs. What was read was read in the session's suite and on the harness
-page on the Mac (its file and settings in memory), and in CI at
-`6e8fcb9`; nothing in the development app or on the Surface, and the
-Electron half (the real dialogs, a real file, the real `settings.json`)
-never ran. Every cap, range and line below is a proposal, unrated.
+page on the Mac (its file and settings in memory), in CI at `6e8fcb9` and,
+where an entry says so, by an agent; nothing in the development app or on
+the Surface, and the Electron half (the real dialogs, a real file, the
+real `settings.json`) never ran. Every cap, range and line below is a
+proposal, unrated.
 
 106. **What a look holds, and what Import does.** As built
      (`src/shared/look.ts`, the session's design): a look is the caption
-     style (preset, overrides, Smart placement) and the graphic style
-     (preset, overrides), and nothing else. Not in a look: whether
-     captions are on, the "Graphic sounds" switch, any text, clip, media,
-     path or font file. `applyLook` replaces both styles whole (the
+     style (preset, overrides, whether Smart placement is on) and the
+     graphic style (preset, overrides), and nothing else. Not in a look:
+     whether captions are on, the "Graphic sounds" switch, any text, clip,
+     media, path or font file. `applyLook` replaces both styles whole (the
      project's own overrides are not kept), leaves captions on or off and
      the sounds as they were, and is one undo step. **Import a look** adds
      the look to the list under a free name and does NOT apply it (piece
@@ -29884,49 +29893,59 @@ never ran. Every cap, range and line below is a proposal, unrated.
      `forgelook` and the file says `"kind": "forge-look"` (the session's
      design): both carry the code's name, Forge, not 3dit, and the
      extension is on screen, in the proposed file name (`Bride
-     530pm.forgelook` for "Bride 5:30pm", `lookFileBase`) and in two of
-     the refusals ("… Choose a file that ends in .forgelook."). The
-     choices: the licence box as built, or a default line the app writes
-     (whose words are §10 item 3's); the extension and kind as built, or
-     renamed before any file leaves a machine. What a rename costs:
-     `LOOK_EXTENSION`, `LOOK_KIND`, the two refusals and their census
-     rows, the dialogs' filter, the tests that read them; a file already
-     exported under the old name no longer matches the "Look" filter
-     ("All files" still opens it) and is refused by its `kind` unless both
-     are read. No recommendation.
+     530pm.forgelook` for "Bride 5:30pm", `lookFileBase`), in the
+     "Exported as …" note (`lookExportedNote`, the written file's name)
+     and in two of the refusals ("… Choose a file that ends in
+     .forgelook."); without the bridge, Export and Import say "restart
+     Forge" (§10's "Left open"). The choices: the licence box as built, or
+     a default line the app writes (whose words are §10 item 3's); the
+     extension and kind as built, or renamed before any file leaves a
+     machine. What a rename costs: `LOOK_EXTENSION`, `LOOK_KIND`, the
+     exported note, the two refusals and their census rows, the dialogs'
+     filter, the tests that read them; a file already exported under the
+     old name no longer matches the "Look" filter ("All files" still opens
+     it) and is refused by its `kind` unless both are read. No
+     recommendation.
 
      **Answer (2026-11-25): OPEN.** Yours.
 108. **How far a stranger's look may go.** As built (`CAPTION_ACCEPTS`,
-     piece 1's builder): a caption override in a file is kept within the
-     ranges the resolver accepts, which reach past what the OUTPUT strip's
-     controls write: `fontSize` 1..1080 where Size stops at 30 % of 1080
-     (324), `wordsPerLine` 1..50 where Words stops at 8, `marginV` 0..1080
-     where Margin stops at 40 % (432), `outlineWidth` and `shadowDepth`
-     0..100, which no control sets; a value outside is dropped, never
-     clamped. A graphic override is kept wherever `resolveGraphicStyle`
-     would draw it, out-of-range numbers included, since the resolver
-     clamps them (`graphicOverrideAccepted`). **The font family rule** for
-     a file is stricter than the project's own reads: no control
-     character, none of `, ; " { } \ < >`, no edge spaces, at most 100 code
-     points, no direction control or lone surrogate half. The choices and
-     their costs: as built, a stranger's look can push captions off the
-     frame or draw full-height letters, and the sliders then show a
-     clamped value (piece 1's first critic); bounded at the controls'
-     maxima (324, 8, 432), the frame is protected, but a look saved from a
-     project already holding larger values (a hand edit, an older build)
-     would resolve differently when read back (piece 1's fixer, who
-     declined it as "a product call for the owner"). The font rule as
-     built drops from a look made in this app a project family carrying
-     one of those characters, so that look then draws differently from its
-     source (piece 1's builder; the round trip is exact for every value
-     the app's controls write). No recommendation.
+     piece 1's builder): a caption override in a file is kept within
+     `CAPTION_ACCEPTS`'s ranges, piece 1's builder's own: the floors at or
+     below `resolveStyle`'s, which clamps only from below (`fontSize` to
+     8, `wordsPerLine` to 1, `highlightScale` to 0.1, `outlineWidth` to
+     0); the upper bounds are the builder's, since the resolver has none.
+     Both reach past what the OUTPUT strip's controls write: `fontSize`
+     1..1080 where Size stops at 30 % of 1080 (324), `wordsPerLine` 1..50
+     where Words stops at 8, `marginV` 0..1080 where Margin stops at 40 %
+     (432), `outlineWidth` and `shadowDepth` 0..100, which no control
+     sets; a value outside is dropped, never clamped. A graphic override
+     is kept wherever `resolveGraphicStyle` would draw it, out-of-range
+     numbers included, since the resolver clamps them
+     (`graphicOverrideAccepted`). **The font family rule** for a file is
+     stricter than the project's own reads: no control character, none of
+     `, ; " { } \ < >`, no edge spaces, at most 100 code points, no
+     direction control or lone surrogate half. The choices and their
+     costs: as built, a stranger's look can push captions off the frame or
+     draw full-height letters, and the sliders then show a clamped value
+     (piece 1's first critic); bounded at the controls' maxima (324, 8,
+     432), the frame is protected, but a look saved from a project already
+     holding larger values (a hand edit, an older build) would resolve
+     differently when read back (piece 1's fixer, who declined it as "a
+     product call for the owner"). The font rule as built drops from a
+     look made in this app a project family carrying one of those
+     characters, so that look then draws differently from its source
+     (piece 1's builder; the round trip is exact for every value the app's
+     controls write); a looser rule lets a comma break the ASS style line,
+     and a quote or semicolon the canvas font string (piece 1's builder).
+     No recommendation.
 
      **Answer (2026-11-25): OPEN.** Yours.
 109. **The section on screen.** As built (`LookSection`,
      `OutputStrip.tsx`), each the session's or piece 2's, none seen by
      you:
      - Its place: the OUTPUT strip's last section, after Graphics (the
-       session's design).
+       session's design); another place is a move of the section within
+       `OutputStrip.tsx`, and the map and `WINDOW.md` follow it.
      - The notes: inline under the buttons, all in one colour (a refusal,
        a font warning and "Exported as …" look alike), no dismiss, kept
        until the next look action, New or Open. A colour for refusals was
@@ -29934,7 +29953,10 @@ never ran. Every cap, range and line below is a proposal, unrated.
        `lookNotes` is `string[]`, a shape the census recipes and
        `lookCheck` read.
      - Remove asks nothing, as forgetting an export preset does; its title
-       says how to have the look back.
+       says how to have the look back. As built, a removal has no undo
+       beyond importing the file again or saving the look again; a confirm
+       is one more click per removal and one more census row for its
+       question.
      - Two saved looks that draw alike are both lit: the mark is a pure
        comparison of the resolved styles (piece 2's fixer kept it as the
        rule). Marking only the first changes that rule and its tests.
@@ -29945,7 +29967,11 @@ never ran. Every cap, range and line below is a proposal, unrated.
      - The caps: 50 saved looks (piece 1's builder: fifty rows "is already
        long for a 240 px column"); a name 60, maker 80, licence line 200
        code points, which the boxes enforce in UTF-16 units, so a name in
-       characters outside the BMP gets half as many; 64 KB a file.
+       characters outside the BMP gets half as many; 64 KB a file. A
+       change to any is one constant in `look.ts` and the tests that read
+       it (`SAVED_LOOKS_MAX`, `LOOK_NAME_MAX`, `LOOK_AUTHOR_MAX`,
+       `LOOK_LICENCE_MAX`, `LOOK_FILE_MAX_BYTES`); a higher cap on looks
+       makes the column's list longer still.
      No recommendation; each is for your eye on the page in the development
      app.
 
@@ -29977,7 +30003,9 @@ never ran. Every cap, range and line below is a proposal, unrated.
      Phase C measured with Phase D, and a music library with
      redistribution rights or the `filler-supplies` policy alone; §10's
      head, written 2026-10-05, says its prerequisites are not met; this
-     record did not re-check them). The status block's 2026-11-18 note
+     record checked only that `FIX.md` marks A7 and A8 DONE, and that the
+     head names Phase C and the music library as the unmet ones).
+     §16.86's answer (2026-11-18; the status block's note of that date)
      says you keep the saved template before the beta, and the session's
      list of 2026-11-25 has it next, before Florence-2 and the R list.
      What building it now would include, by §10's bullet: a Clip it
@@ -29990,7 +30018,14 @@ never ran. Every cap, range and line below is a proposal, unrated.
      store (Stage 2 onward, `MARKET.md`'s). The choices: (a) build it
      next, before the beta, Stage 0 or not; (b) wait for Stage 0, as §10
      and §16.28 say, and go on to Florence-2 and the R list; (c) move it to
-     §17. 2.5 days as planned either way. No recommendation.
+     §17. What each costs: (a) spends the 2.5 days as planned before 25
+     December and fixes a template file's format before §10's head's
+     Phase C and music library hold, with `SCHEMA_VERSION` becoming "a
+     promise the day a template leaves its machine" (`MARKET.md` §3,
+     A7), and with no B-roll shapes (§16.75); (b) frees those 2.5 days
+     before the beta and leaves step 7 half built at it; (c) takes the 2.5
+     days out of this plan. 2.5 days as planned when it is built. No
+     recommendation.
 
      **Answer (2026-11-25): OPEN.** Yours.
 

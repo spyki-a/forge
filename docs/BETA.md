@@ -66,8 +66,8 @@
 > itself). So what is left of `CLIPS.md` before the beta, in `CLIPS.md`
 > §2's order (2026-11-14, standing): 1g, Florence-2's caption placement
 > (gated, free to slip behind M3), step 6's three 3D templates (built
-> later that day, below), step 7's
-> creator style (built later that day, below) and saved template, then R1–R12, R13 and R14 here; the
+> later that day, below), step 7's creator style (built later that day,
+> below) and saved template, then R1–R12, R13 and R14 here; the
 > session's list of 2026-11-25 puts 1g last, which the user has not
 > decided (`CLIPS.md` §16.96). Beside them, the user's exit readings for
 > phase 2, phase 3 and step 4. The deadline is unchanged, 25 December
@@ -79,58 +79,60 @@
 > while a text box has the keyboard, the Edit menu's Cut, Copy, Paste,
 > Delete and Select All act on the box, and a right-click in a text box
 > gives Cut, Copy, Paste and Select All; the user tried it in the
-> development app on the Mac: "perfect everything is good landed well"
-> (no figure; not read on the Surface). The user's "lets continue the
-> next" the session read as its recommended order (`CLIPS.md` §16.96, not
+> development app on the Mac: "perfect everything is good landed well" (no
+> figure; not read on the Surface). The user's "lets continue the next"
+> the session read as its recommended order (`CLIPS.md` §16.96, not
 > answered in terms), and step 6's three 3D templates (`timeline`,
 > `before-after`, `versus`; `CLIPS.md` §9) were built in three pieces,
-> `8786882..03937b4`, and pushed once (the paste fix had been pushed
-> alone earlier that day, its own CI run 45672761395); CI green on
-> both runners at `03937b4` (run 45712905904), the first macOS job to
-> complete since `e70c9e9`, so step 4 and the paste fix passed macOS CI
-> inside it. They are done on the build side only: §9's exit is read on
-> the Mac's harness page and in CI only, not met; its readings in the
-> development app and on the Surface, the Hindi and Telugu fixtures, a
-> real model's answers and the look are the user's, and the decisions are
-> `CLIPS.md` §16.99-105. Step 6's retrieved-fact cards stay after the
-> beta. So what is left of `CLIPS.md` before the beta, by the session's
-> list of 2026-11-25 (the user has not contradicted it): step 7's creator
-> style, then its saved template (gated on `MARKET.md` Stage 0), then 1g,
-> Florence-2's caption placement (gated, last; `CLIPS.md` §16.96 open),
-> then R1–R12, R13 and R14 here. Beside them, the user's exit readings
-> for phase 2, phase 3, step 4 and step 6's 3D half. The deadline is
-> unchanged, 25 December 2026; a feature freeze about 10 December is the
-> session's suggestion, not confirmed by the user. Captions on the
+> `8786882..03937b4`, and pushed once (the paste fix had been pushed alone
+> earlier that day, its own CI run 45672761395); CI green on both runners
+> at `03937b4` (run 45712905904), the first macOS job to complete since
+> `e70c9e9`, so step 4 and the paste fix passed macOS CI inside it. They
+> are done on the build side only: §9's exit is read on the Mac's harness
+> page and in CI only, not met; its readings in the development app and on
+> the Surface, the Hindi and Telugu fixtures, a real model's answers and
+> the look are the user's, and the decisions are `CLIPS.md` §16.99-105.
+> Step 6's retrieved-fact cards stay after the beta. So what is left of
+> `CLIPS.md` before the beta, by the session's list of 2026-11-25 (the
+> user has not contradicted it): step 7's creator style (built later that
+> day, below), then its saved template (gated on `MARKET.md` Stage 0),
+> then 1g, Florence-2's caption placement (gated, last; `CLIPS.md` §16.96
+> open), then R1–R12, R13 and R14 here. Beside them, the user's exit
+> readings for phase 2, phase 3, step 4 and step 6's 3D half. The deadline
+> is unchanged, 25 December 2026; a feature freeze about 10 December is
+> the session's suggestion, not confirmed by the user. Captions on the
 > timeline come after the beta, and traditional keyframing too (the
-> session's recommendation, above). The R list and
-> its estimates are unchanged.
+> session's recommendation, above). The R list and its estimates are
+> unchanged.
 >
 > **2026-11-25, late: step 7's creator style, "My look", is built**
 > (`CLIPS.md` §10's two Built notes; the status block at its top), on the
 > user's "lets continue now", in two pieces, `5ce2cb3..8730ff7`, pushed
 > once with the 3D lane's docs record as `03937b4..6e8fcb9`; CI green on
-> both runners at `6e8fcb9` (run 45729819708); the session's suite, look
-> check (14 of 14) and census (1058 checked) green on the Mac, on the
-> harness page with its in-memory file and settings. It is done on the
-> build side only: the Electron half (the real Save and Open dialogs, a
-> real `.forgelook` file written and read, the real settings file) never
-> ran and is covered by node tests with fakes; nothing was read in the
+> both runners at `6e8fcb9` (run 45729819708); the session's suite green
+> on the Mac (391 files, 6470 tests passed at `8730ff7`); its look check
+> (14 of 14) and census (1058 checked, missing []) on the harness page,
+> with the harness's in-memory file and settings. It is done on the build
+> side only: the Electron half (the real Save and Open dialogs, a real
+> `.forgelook` file written and read, the real settings file) never ran
+> and is covered by node tests with fakes; nothing was read in the
 > development app or on the Surface; the user has not tried it (export a
 > look named "Bride 5:30pm" on the Mac and on the Surface and import it
 > back), and its decisions are `CLIPS.md` §16.106-111. The user will
 > answer §16.99-105 after trying this build, by their word that evening.
 > Step 7's other half, the saved template with slots, is not built:
-> `CLIPS.md` §10 and §16.28 have it wait for `MARKET.md` Stage 0, the
-> session's list has it next, and which is the user's (`CLIPS.md`
-> §16.111). So what is left of `CLIPS.md` before the beta, by the
-> session's list of 2026-11-25 (the user has not contradicted it): the
-> saved template (its gate §16.111), then 1g, Florence-2's caption
-> placement (gated, last; §16.96 open), then R1–R12, R13 and R14 here.
-> Beside them, the user's exit readings for phase 2, phase 3, step 4 and
-> step 6's 3D half, and their try of the creator style. The deadline is
-> unchanged, 25 December 2026; a feature freeze about 10 December is the
-> session's suggestion, not confirmed by the user. The R list and its
-> estimates are unchanged.
+> `CLIPS.md` §10 and §16.28's answer of 2026-10-05 have it wait for
+> `MARKET.md` Stage 0, the user's answer to `CLIPS.md` §16.86 (2026-11-18)
+> keeps it before the beta, the session's list has it next; which holds is
+> the user's (`CLIPS.md` §16.111). So what is left of `CLIPS.md` before
+> the beta, by the session's list of 2026-11-25 (the user has not
+> contradicted it): the saved template (its gate `CLIPS.md` §16.111), then
+> 1g, Florence-2's caption placement (gated, last; `CLIPS.md` §16.96
+> open), then R1–R12, R13 and R14 here. Beside them, the user's exit
+> readings for phase 2, phase 3, step 4 and step 6's 3D half, and their
+> try of the creator style. The deadline is unchanged, 25 December 2026; a
+> feature freeze about 10 December is the session's suggestion, not
+> confirmed by the user. The R list and its estimates are unchanged.
 
 ## 0. What "beta" means
 
