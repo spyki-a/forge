@@ -29692,7 +29692,11 @@ the readings are attributed where they stand.
      eval trap per talk (the camera and the lens) worth adding; nothing
      else is recommended.
 
-     **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): OPEN, with your word that evening.** "ill test
+     first, will keep hindi and telugu for later": you try the three in
+     English first (the session gave you a script for it, below §16.111's
+     answer); the Hindi and Telugu cue words, fixtures and eval talks stay
+     yours, later. The English cue lists are still unrated.
 101. **The look of the three, to rate.** Each a proposal of piece 1's,
      one named constant each:
      - `before-after`'s reveal: a rounded shape in the style's accent at
@@ -29804,7 +29808,8 @@ the readings are attributed where they stand.
      draws something the speaker did not say in that shape (a fall drawn as
      a rise, a price against a share). No recommendation.
 
-     **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): KEEP AS BUILT.** Your words that evening: "will
+     keep the drop rule". Every rule in this entry stays as it is.
 105. **The rest the lane left to you.**
      - Questions are not refused: 'Did I charge $1,500 before and $4,000
        after?' gives a kept before-and-after (rule 7, every template;
@@ -30027,7 +30032,29 @@ proposal, unrated.
      days out of this plan. 2.5 days as planned when it is built. No
      recommendation.
 
-     **Answer (2026-11-25): OPEN.** Yours.
+     **Answer (2026-11-25): (a), AS A RECIPE FOR CLIP IT.** The session put
+     the design question to you that evening: what "use a template" does,
+     either a recipe for Clip it (the shape, follow the subject and stack
+     two people, captions on with their look and placement, the graphic
+     style, and a list of graphic slots: which graphic, where, how long,
+     which depth, filled by Find graphics from the new video's own words),
+     or a project file with its media taken out (which `project.ts`'s
+     loader refuses: a clip whose media is not in the file; it would need
+     `MARKET.md` §1's slot type across the editor). The session recommended
+     the recipe. Your words: "yes for the recipe for the clip it only". The
+     session reads that as (a) in the recipe's form, with nothing of the
+     project-file form built before the beta. Not started: the session
+     holds the build until you have tried the creator style and the three
+     graphics from this checkout (try-out 3: a 19-sentence English script
+     with one moment each for the timeline, the before-and-after and the
+     versus, which the session ran through `runGraphicsPass` with a
+     stand-in answer: all three offered only at their own sentence, kept
+     and landed; with no model the baseline makes two counters and none of
+     the three, so your model must be on). §16.99, 101, 102, 103 and 105
+     stay open until you have tried it; the session's suggestions, given
+     when you asked ("what do you suggest ?"): §16.99, keep the year-only
+     rule for the beta; §16.102, keep the depth as built unless the later
+     rows look dead to your eye.
 
 ---
 
