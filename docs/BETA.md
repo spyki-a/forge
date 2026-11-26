@@ -21,7 +21,8 @@
 > 6's retrieved-fact cards (§9; the session's reading, not the user's
 > words). So "CLIPS.md's plan runs first" means its part before the beta:
 > phase 2's exit, phase 3, step 4, 1g, step 6's three 3D templates (built
-> 2026-11-25, below) and step 7 (`CLIPS.md` §2's 2026-11-14 note: 81.75–85.25 days with Step P,
+> 2026-11-25, below) and step 7 (its creator style built 2026-11-25,
+> below; `CLIPS.md` §2's 2026-11-14 note: 81.75–85.25 days with Step P,
 > was 100.25–103.75), then R1–R12, R13 and R14 here; the moved parts
 > (18.5 days, 24.5 with phase 4) come after. On 2026-11-15 the user also
 > put captions as items on the timeline after the beta (`CLIPS.md`
@@ -42,7 +43,8 @@
 > done on the build side, 2026-11-20**, pushed through `49c836e`. So what
 > is left of `CLIPS.md` before the beta: phase 2's and phase 3's exit
 > readings, step 4, 1g, step 6's three 3D templates (built 2026-11-25,
-> below) and step 7, then R1–R12, R13 and R14 here.
+> below) and step 7 (its creator style built 2026-11-25, below), then
+> R1–R12, R13 and R14 here.
 >
 > **2026-11-25: step 4, Best clips, is built** (`CLIPS.md` §7, built
 > 2026-11-23 to 25 in five pieces, `e354cd8..d6000ed`, pushed once on
@@ -65,7 +67,7 @@
 > §2's order (2026-11-14, standing): 1g, Florence-2's caption placement
 > (gated, free to slip behind M3), step 6's three 3D templates (built
 > later that day, below), step 7's
-> creator style and saved template, then R1–R12, R13 and R14 here; the
+> creator style (built later that day, below) and saved template, then R1–R12, R13 and R14 here; the
 > session's list of 2026-11-25 puts 1g last, which the user has not
 > decided (`CLIPS.md` §16.96). Beside them, the user's exit readings for
 > phase 2, phase 3 and step 4. The deadline is unchanged, 25 December
@@ -102,6 +104,33 @@
 > timeline come after the beta, and traditional keyframing too (the
 > session's recommendation, above). The R list and
 > its estimates are unchanged.
+>
+> **2026-11-25, late: step 7's creator style, "My look", is built**
+> (`CLIPS.md` §10's two Built notes; the status block at its top), on the
+> user's "lets continue now", in two pieces, `5ce2cb3..8730ff7`, pushed
+> once with the 3D lane's docs record as `03937b4..6e8fcb9`; CI green on
+> both runners at `6e8fcb9` (run 45729819708); the session's suite, look
+> check (14 of 14) and census (1058 checked) green on the Mac, on the
+> harness page with its in-memory file and settings. It is done on the
+> build side only: the Electron half (the real Save and Open dialogs, a
+> real `.forgelook` file written and read, the real settings file) never
+> ran and is covered by node tests with fakes; nothing was read in the
+> development app or on the Surface; the user has not tried it (export a
+> look named "Bride 5:30pm" on the Mac and on the Surface and import it
+> back), and its decisions are `CLIPS.md` §16.106-111. The user will
+> answer §16.99-105 after trying this build, by their word that evening.
+> Step 7's other half, the saved template with slots, is not built:
+> `CLIPS.md` §10 and §16.28 have it wait for `MARKET.md` Stage 0, the
+> session's list has it next, and which is the user's (`CLIPS.md`
+> §16.111). So what is left of `CLIPS.md` before the beta, by the
+> session's list of 2026-11-25 (the user has not contradicted it): the
+> saved template (its gate §16.111), then 1g, Florence-2's caption
+> placement (gated, last; §16.96 open), then R1–R12, R13 and R14 here.
+> Beside them, the user's exit readings for phase 2, phase 3, step 4 and
+> step 6's 3D half, and their try of the creator style. The deadline is
+> unchanged, 25 December 2026; a feature freeze about 10 December is the
+> session's suggestion, not confirmed by the user. The R list and its
+> estimates are unchanged.
 
 ## 0. What "beta" means
 

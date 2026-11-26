@@ -623,6 +623,77 @@
 > feature freeze about 10 December is the session's suggestion, not
 > confirmed by you.
 >
+> **The evening of 2026-11-25: a hold, then "lets continue now".** With
+> the 3D lane pushed and its CI running you said "hold it, after the
+> commit and will continue later", then "let me know when its done": the
+> session held everything but the read-only CI watch and told you when CI
+> was green. Then "lets continue now": the session started the 3D lane's
+> docs record and, beside it, step 7's creator style, the next item of its
+> own list (creator style, the saved template, Florence-2 gated and last,
+> then `BETA.md`'s R list), which you have not contradicted and have not
+> confirmed in terms. On §16.99-105 you said: "so for those 7 ill wait for
+> the step 7 completion, when the build lands ill check and answer those
+> okay? thank you". So §16.99-105 stay open until you have tried this
+> build, and nothing waits on them. **The 3D lane's docs record** is on
+> main: four docs-only commits, `fcb6016`, `22326ef`, `d728ff5` and
+> `6e8fcb9`, written in a separate clone while step 7 built and put on top
+> of main by cherry-pick (in the clone they were `fa8475a`, `25ef8b3`,
+> `beba42d` and `acd3a51`, and the text that names `fa8475a` or `beba42d`
+> names the clone's hashes); they went out in step 7's push.
+>
+> **Step 7's creator style, "My look", is built and pushed, 2026-11-25**
+> (§10's two Built notes of that date; the map is `WHERE-THINGS-ARE.md`'s
+> OUTPUT strip, `WINDOW.md` §3.16 and §3.22): §10's first bullet only, in
+> two pieces, each built by one agent, read by two critics and fixed by
+> one (workflow run `wf_8a76753c-14f`, eight Opus agents, about 75
+> minutes): piece 1, the look, its file and the store, `5ce2cb3`, fix
+> `6ac4db0`; piece 2, the OUTPUT strip's "My look" section and its checks,
+> `00bf867`, fix `8730ff7`. Then the session's `1c1dba0`, two comments of
+> the 3D lane brought to what was built (which closes the two stale
+> comments in §9's "Left open"). Pushed once with the 3D lane's docs
+> record, `03937b4..6e8fcb9`; origin = main = `6e8fcb9`. **The session's
+> readings at `8730ff7`, on the Mac**: typecheck 0; the suite 391 files
+> passed and 6 skipped (397), 6470 tests passed and 67 skipped (6537),
+> against 384 and 6364 before the lane; build 0 (after `1c1dba0`:
+> typecheck 0 and the two template test files, 26 tests, 0; the full suite
+> not run again). On the harness page (the development Mac, not the app):
+> `__forgeLookCheck()` `ok: true`, "14 of 14 cases pass"; the census
+> missing [], 1058 checked, 12 skipped (1029 before the lane); by eye, a
+> real click on a saved look's row set both styles, one `undo()` put both
+> back and `redo()` both again, a damaged file's Import showed its
+> sentence, and Save this look opened its three boxes; not rated. The
+> file and settings there are the harness's, in memory. **CI at
+> `6e8fcb9`** (run 45729819708): job 139608744007 `windows-latest` and job
+> 139608744430 `macos-15` success, no annotation; the installer job
+> skipped: **green on both runners**, `look.int` on the 2018 Windows
+> ffmpeg among it, no figure read (the job's log needs a sign-in). **Not
+> read, by anyone**: **the Electron half never ran**: the real Save and
+> Open dialogs, a real `.forgelook` written by `look:export` and read by
+> `look:import`, the real `settings.json`; node tests with fakes
+> (`tests/lookIpc.test.ts`) and nothing more cover it, and CI never runs
+> it. Nothing was read in the development app or on the Surface; on
+> Windows the bounded read on an NTFS path, the Save dialog's default name
+> and the atomic write are measured by no one; no exported clip with a look
+> was watched, and a missing font's note was not seen. Yours to try: export
+> a look named "Bride 5:30pm" on the Mac and on the Surface and import it
+> back; the section in the development app, by keyboard and empty; a clip
+> exported with a look. **You have not seen or tried "My look"**: every
+> choice in it is the session's or an agent's. §10 has no exit paragraph,
+> so nothing is marked met. The decisions the lane left to you are
+> §16.106-111, all open, beside §16.99-105. **Not built**: §10's second
+> bullet, the saved template with slots (no slot, no template file); §10
+> says it "waits for Stage 0, or moves to §17", §16.28's answer of
+> 2026-10-05 has it wait for Stage 0, and the session's list has it next
+> before the beta: which is yours, §16.111.
+> **Next, by the session's list of 2026-11-25** (you have not
+> contradicted it): the saved template (2.5 days, its gate §16.111), then
+> Florence-2's caption placement (1g, 3, gated by its own measurement,
+> last; §16.96 open), then `BETA.md`'s R1–R12, R13 and R14. Still open
+> beside them, yours: phase 2's and phase 3's exit readings (§6.12),
+> §7.8's and §9's, and your try of "My look". **The deadline is
+> unchanged: 25 December 2026.** A feature freeze about 10 December is
+> the session's suggestion, not confirmed by you.
+>
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
@@ -1023,6 +1094,24 @@ this and will get back to the beta". **This plan comes first**, then
   1g (3, gated, last, as the slip clause allows), then `BETA.md` R1–R12 →
   R13 → R14. Still open beside them, all yours: phase 2's and phase 3's
   exit readings (§6.12), §7.8's and §9's. **The deadline is unchanged: 25
+  December 2026.**
+- **2026-11-25, late: step 7's creator style is built** (§10's two Built
+  notes and its dated note under §10's head, `5ce2cb3..8730ff7`, pushed
+  once with the 3D lane's docs record as `03937b4..6e8fcb9`, green on both
+  runners at `6e8fcb9`; the status block at the top). It went ahead of
+  §10's gate, as §10 allows the creator style. Only §10's first bullet is
+  built; the saved template is not, and whether it waits for `MARKET.md`
+  Stage 0 or comes next is §16.111. Nothing of the creator style was
+  read in the development app or on the Surface, and its Electron half
+  never ran; its decisions are §16.106-111. No day figure or total in this
+  section changes: the creator style's 2 days stand as planned (the build
+  took about 75 minutes of an eight-agent run, then the session's checks
+  and the push), and the saved template's 2.5 with them. **Next, by the
+  session's list of 2026-11-25**: the saved template (2.5, its gate
+  §16.111), then 1g (3, gated, last, as the slip clause allows; §16.96
+  open), then `BETA.md` R1–R12 → R13 → R14. Still open beside them, all
+  yours: phase 2's and phase 3's exit readings (§6.12), §7.8's and §9's,
+  and your try of the creator style. **The deadline is unchanged: 25
   December 2026.**
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
@@ -26694,6 +26783,18 @@ paused), and a music library with redistribution rights or the
 style below needs neither and can land with step 3's styles if you want it
 sooner; the saved template waits for Stage 0, or moves to §17.
 
+(2026-11-25: **the first bullet, the creator style, is built**, in two
+pieces, `5ce2cb3`, `6ac4db0`, `00bf867` and `8730ff7`: the two Built notes
+below, with what was read where and what was not. Planned at 2 days; the
+build took about 75 minutes of an eight-agent run (workflow run
+`wf_8a76753c-14f`), then the session's checks and the push
+(`03937b4..6e8fcb9`). It was built ahead of this gate, as the sentence
+above allows the creator style; the saved template's gate is unchanged,
+and whether it holds or the saved template comes next before the beta is
+yours, §16.111. **The second bullet, the saved template with slots, is not
+built.** You have not tried the creator style; its decisions are
+§16.106-111.)
+
 - **A creator style** is a caption style and a graphic style saved together
   as "my look". It is exported and imported as JSON (`{author, version,
   licence}` header, `MARKET.md` §1), and applied in one click from the
@@ -29734,6 +29835,162 @@ the readings are attributed where they stand.
        `editSubmenu`).
 
      No recommendation for any of them.
+
+     **Answer (2026-11-25): OPEN.** Yours.
+
+**Added 2026-11-25 (late), from step 7's creator style, "My look" (§10,
+`5ce2cb3..8730ff7`); OPEN.** Each is a rule, a constant, a word or a
+behaviour the session's design or the lane's builders, critics and
+fixers chose and left to you (the eight agents' reports and the session's
+record); you decided none, and you have not seen or tried "My look". A
+recommendation is given only where a report states one, and is written as
+theirs. What was read was read in the session's suite and on the harness
+page on the Mac (its file and settings in memory), and in CI at
+`6e8fcb9`; nothing in the development app or on the Surface, and the
+Electron half (the real dialogs, a real file, the real `settings.json`)
+never ran. Every cap, range and line below is a proposal, unrated.
+
+106. **What a look holds, and what Import does.** As built
+     (`src/shared/look.ts`, the session's design): a look is the caption
+     style (preset, overrides, Smart placement) and the graphic style
+     (preset, overrides), and nothing else. Not in a look: whether
+     captions are on, the "Graphic sounds" switch, any text, clip, media,
+     path or font file. `applyLook` replaces both styles whole (the
+     project's own overrides are not kept), leaves captions on or off and
+     the sounds as they were, and is one undo step. **Import a look** adds
+     the look to the list under a free name and does NOT apply it (piece
+     1's builder: "Applying stays the row's click"); saving under a name
+     already saved replaces that look, while an import under a taken name
+     gets " 2", " 3", …. The choices: as built; a look that also carries
+     captions on or off, or the sounds switch; an import that also applies.
+     What a change costs: a new field is the `Look` type, `parseLook`,
+     `serializeLook`, `applyLook` and their tests (a file without it reads
+     as today); an applying import is one more undo step on every import,
+     and `lookCheck`'s import cases change. No recommendation.
+
+     **Answer (2026-11-25): OPEN.** Yours.
+107. **The file: its header, its extension and its name.** As built: the
+     header is three top-level keys, `author`, `version` and `licence`,
+     between `name` and `captions` (no `header` object; piece 1's builder,
+     after `MARKET.md` §1's table). `author` and `licence` are optional
+     free text ("Made by (optional)", "Licence line (optional)"), kept as
+     typed and capped; **the app writes no licence wording of its own**,
+     and an empty licence stays empty. `version` is the app's: 1, then + 1
+     for each save over the name, never typed; an import keeps the file's.
+     The session told you on 2026-11-25 that the two are optional boxes
+     with no wording of the app's and asked whether you want a default;
+     not answered. The wording itself hangs on `MARKET.md` §10 item 3
+     ("Licence wording for buyers"), open and yours. The extension is
+     `forgelook` and the file says `"kind": "forge-look"` (the session's
+     design): both carry the code's name, Forge, not 3dit, and the
+     extension is on screen, in the proposed file name (`Bride
+     530pm.forgelook` for "Bride 5:30pm", `lookFileBase`) and in two of
+     the refusals ("… Choose a file that ends in .forgelook."). The
+     choices: the licence box as built, or a default line the app writes
+     (whose words are §10 item 3's); the extension and kind as built, or
+     renamed before any file leaves a machine. What a rename costs:
+     `LOOK_EXTENSION`, `LOOK_KIND`, the two refusals and their census
+     rows, the dialogs' filter, the tests that read them; a file already
+     exported under the old name no longer matches the "Look" filter
+     ("All files" still opens it) and is refused by its `kind` unless both
+     are read. No recommendation.
+
+     **Answer (2026-11-25): OPEN.** Yours.
+108. **How far a stranger's look may go.** As built (`CAPTION_ACCEPTS`,
+     piece 1's builder): a caption override in a file is kept within the
+     ranges the resolver accepts, which reach past what the OUTPUT strip's
+     controls write: `fontSize` 1..1080 where Size stops at 30 % of 1080
+     (324), `wordsPerLine` 1..50 where Words stops at 8, `marginV` 0..1080
+     where Margin stops at 40 % (432), `outlineWidth` and `shadowDepth`
+     0..100, which no control sets; a value outside is dropped, never
+     clamped. A graphic override is kept wherever `resolveGraphicStyle`
+     would draw it, out-of-range numbers included, since the resolver
+     clamps them (`graphicOverrideAccepted`). **The font family rule** for
+     a file is stricter than the project's own reads: no control
+     character, none of `, ; " { } \ < >`, no edge spaces, at most 100 code
+     points, no direction control or lone surrogate half. The choices and
+     their costs: as built, a stranger's look can push captions off the
+     frame or draw full-height letters, and the sliders then show a
+     clamped value (piece 1's first critic); bounded at the controls'
+     maxima (324, 8, 432), the frame is protected, but a look saved from a
+     project already holding larger values (a hand edit, an older build)
+     would resolve differently when read back (piece 1's fixer, who
+     declined it as "a product call for the owner"). The font rule as
+     built drops from a look made in this app a project family carrying
+     one of those characters, so that look then draws differently from its
+     source (piece 1's builder; the round trip is exact for every value
+     the app's controls write). No recommendation.
+
+     **Answer (2026-11-25): OPEN.** Yours.
+109. **The section on screen.** As built (`LookSection`,
+     `OutputStrip.tsx`), each the session's or piece 2's, none seen by
+     you:
+     - Its place: the OUTPUT strip's last section, after Graphics (the
+       session's design).
+     - The notes: inline under the buttons, all in one colour (a refusal,
+       a font warning and "Exported as …" look alike), no dismiss, kept
+       until the next look action, New or Open. A colour for refusals was
+       declined by piece 2's fixer: it needs a kind per note, and
+       `lookNotes` is `string[]`, a shape the census recipes and
+       `lookCheck` read.
+     - Remove asks nothing, as forgetting an export preset does; its title
+       says how to have the look back.
+     - Two saved looks that draw alike are both lit: the mark is a pure
+       comparison of the resolved styles (piece 2's fixer kept it as the
+       rule). Marking only the first changes that rule and its tests.
+     - The three boxes are named only by their placeholders, as the Upload
+       panel's folder box is; an `aria-label` on each would add three
+       census rows (the census counts `aria-label` as a carrier), declined
+       by piece 2's fixer.
+     - The caps: 50 saved looks (piece 1's builder: fifty rows "is already
+       long for a 240 px column"); a name 60, maker 80, licence line 200
+       code points, which the boxes enforce in UTF-16 units, so a name in
+       characters outside the BMP gets half as many; 64 KB a file.
+     No recommendation; each is for your eye on the page in the development
+     app.
+
+     **Answer (2026-11-25): OPEN.** Yours.
+110. **Two behaviours the lane kept from before.** (1) The settings
+     failures are swallowed as the export presets' are: if reading the
+     settings fails at start, the next save, import or remove writes a
+     short list over `creatorLooks`, and a failed write is silent, so a
+     look can look saved and not be written (`store.ts`, `setSetting(…)
+     .catch(() => undefined)` in `saveLook`, `removeSavedLook` and
+     `importLookFile`). Piece 1's second critic: a lost list of a
+     creator's looks is worse than lost export presets; a "loaded" guard
+     or a note was declined by the fixer, since it "would change how every
+     look action behaves before the first load, which tests and the
+     harness rely on". (2) Undo and redo after a graphic-style change, a
+     look's included, do not rebake the frames shown while editing, as
+     `setGraphicsStyle` and `setGraphicsOverride` do not: after an undo
+     the graphic frames baked on disk keep the look's style, while the
+     project holds the old one, until the next bake; the export rebakes from the spec, so the file is right.
+     The fix a critic named: undo and redo call `rebakeGraphicClips` when
+     `graphicsStyleChanged`, for every graphic-style change, not only a
+     look's. Both declined in the lane, as not new. No recommendation.
+
+     **Answer (2026-11-25): OPEN.** Yours.
+111. **The saved template: wait for Stage 0, or next.** §10 says the
+     saved template "waits for Stage 0, or moves to §17", and §16.28's
+     answer (2026-10-05) has it wait for Stage 0 (`MARKET.md` §3: A8's
+     relative paths and relink, A7's stable, migrated project format,
+     Phase C measured with Phase D, and a music library with
+     redistribution rights or the `filler-supplies` policy alone; §10's
+     head, written 2026-10-05, says its prerequisites are not met; this
+     record did not re-check them). The status block's 2026-11-18 note
+     says you keep the saved template before the beta, and the session's
+     list of 2026-11-25 has it next, before Florence-2 and the R list.
+     What building it now would include, by §10's bullet: a Clip it
+     result's reframe rules, caption look and graphic style (a look, as
+     built) and its graphic templates with their data emptied into slots,
+     saved as `MARKET.md`'s Stage 1 local template, with no network; the
+     author's own footage stripped on save, no third-party marks, no
+     likenesses. What it would not include: B-roll shapes, since step 5
+     comes after the beta (§16.75), so none exists to save; any sharing or
+     store (Stage 2 onward, `MARKET.md`'s). The choices: (a) build it
+     next, before the beta, Stage 0 or not; (b) wait for Stage 0, as §10
+     and §16.28 say, and go on to Florence-2 and the R list; (c) move it to
+     §17. 2.5 days as planned either way. No recommendation.
 
      **Answer (2026-11-25): OPEN.** Yours.
 
