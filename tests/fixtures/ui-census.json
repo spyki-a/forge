@@ -9218,6 +9218,302 @@
     "note": "The switch beside the graphic style tiles (§6.14, \"Off per project\"): Project.graphics.sound, on when absent; calls setGraphicSounds. Written as GRAPHIC_SOUNDS in OutputStrip.tsx. Count 1 reasoned from the code: the only other 'Graphic sounds' the app writes is the audio track's name (GRAPHIC_SOUND_LANE_NAME), on the timeline, not in OUTPUT, and an empty project has no such track. Read on screen 2026-11-11 by the harness census at 69e677c: missing [], 892 checked, 8 skipped."
   },
   {
+    "label": "My look",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/shared/look.ts",
+    "line": 124,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The section's heading, after Graphics in the open OUTPUT strip. Written as LOOK_SECTION_LABEL in shared/look.ts. Count 1 reasoned from the code: no other 'My look' text in OUTPUT."
+  },
+  {
+    "label": "A look is your caption style and graphic style kept together, to use again on any project. Set both above, then save them here.",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 302,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The one line the section shows with no saved look: what a look is and how to save one. Written as LOOK_EMPTY in OutputStrip.tsx. A freshly loaded harness page has no saved look; once one is saved the line is LOOK_HINT instead."
+  },
+  {
+    "label": "Save this look",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 305,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "Opens the save form (the store's startLookSave). Written as LOOK_SAVE_OPEN; hidden while the form is open."
+  },
+  {
+    "label": "Import a look",
+    "match": "text",
+    "home": "output",
+    "needs": "none",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 306,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "Import a look through the Open dialog (importLookFile); the harness reads its in-memory look file. Written as LOOK_IMPORT."
+  },
+  {
+    "label": "Click a look to use it on this project.",
+    "match": "text",
+    "home": "output",
+    "needs": "looks-saved",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 304,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The line over the saved rows, in place of LOOK_EMPTY. The rows' own text and title are the looks' names (data, not rowed)."
+  },
+  {
+    "label": "Export this look to a file you can share",
+    "match": "title",
+    "home": "output",
+    "needs": "looks-saved",
+    "count": 2,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 312,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The Export icon on each saved row. Count 2: the recipe saves two looks."
+  },
+  {
+    "label": "Remove this look from the list. To have it back, save it again or import its file.",
+    "match": "title",
+    "home": "output",
+    "needs": "looks-saved",
+    "count": 2,
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 314,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The Remove icon on each saved row; asks nothing, as forgetting an export preset asks nothing, and says how to have it back. Count 2: the recipe saves two looks."
+  },
+  {
+    "label": "Name this look",
+    "match": "placeholder",
+    "home": "output",
+    "needs": "look-form",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 307,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The save form's name box (startLookSave)."
+  },
+  {
+    "label": "Made by (optional)",
+    "match": "placeholder",
+    "home": "output",
+    "needs": "look-form",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 308,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The save form's maker box: the header's author line (MARKET.md §1)."
+  },
+  {
+    "label": "Licence line (optional)",
+    "match": "placeholder",
+    "home": "output",
+    "needs": "look-form",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 309,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The save form's licence box: the maker's own words; the app writes none (MARKET.md §10 item 3)."
+  },
+  {
+    "label": "Save",
+    "match": "text",
+    "home": "output",
+    "needs": "look-form",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 310,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The save form's Save. Count 1 reasoned from the code: no other whole 'Save' text in OUTPUT (EXPORT's '+ Save current' is another strip)."
+  },
+  {
+    "label": "Cancel",
+    "match": "text",
+    "home": "output",
+    "needs": "look-form",
+    "file": "src/renderer/src/components/OutputStrip.tsx",
+    "line": 311,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "The save form's Cancel; no other whole 'Cancel' text in OUTPUT."
+  },
+  {
+    "label": "This file is not a saved look. Choose a file that ends in .forgelook.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-refused-not-a-look",
+    "file": "src/shared/look.ts",
+    "line": 126,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported file whose kind is not a look's. Shown inline under the section (lookNotes). Written as LOOK_NOT_A_LOOK in shared/look.ts."
+  },
+  {
+    "label": "This file is too large to be a saved look. Choose a file that ends in .forgelook.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-refused-large",
+    "file": "src/shared/look.ts",
+    "line": 128,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported file over 65536 bytes, refused before it is read. Shown inline under the section (lookNotes). Written as LOOK_TOO_LARGE in shared/look.ts."
+  },
+  {
+    "label": "This file could not be read. It may be damaged: ask for it again, or choose another file.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-refused-damaged",
+    "file": "src/shared/look.ts",
+    "line": 130,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported file that does not read at all. Shown inline under the section (lookNotes). Written as LOOK_UNREADABLE in shared/look.ts."
+  },
+  {
+    "label": "This look was made by a newer version of the app. Update the app, then import it again.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-refused-newer",
+    "file": "src/shared/look.ts",
+    "line": 132,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported file with a schema newer than this app's. Shown inline under the section (lookNotes). Written as LOOK_NEWER in shared/look.ts."
+  },
+  {
+    "label": "This look uses a caption style this version of the app does not have. Update the app, then import it again.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-refused-caption-style",
+    "file": "src/shared/look.ts",
+    "line": 134,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported look naming a caption preset this app lacks. Shown inline under the section (lookNotes). Written as LOOK_UNKNOWN_CAPTION_STYLE in shared/look.ts."
+  },
+  {
+    "label": "This look uses a graphic style this version of the app does not have. Update the app, then import it again.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-refused-graphic-style",
+    "file": "src/shared/look.ts",
+    "line": 137,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported look naming a graphic preset this app lacks. Shown inline under the section (lookNotes). Written as LOOK_UNKNOWN_GRAPHIC_STYLE in shared/look.ts."
+  },
+  {
+    "label": "A text style in this look is not in this version of the app, so the style’s own is used.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-import-changed",
+    "file": "src/shared/look.ts",
+    "line": 140,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported look's unknown text style, dropped. Shown inline under the section (lookNotes). Written as LOOK_NOTE_TEXT_STYLE in shared/look.ts."
+  },
+  {
+    "label": "An animation in this look is not in this version of the app, so the style’s own is used.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-import-changed",
+    "file": "src/shared/look.ts",
+    "line": 142,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported look's unknown animation, dropped. Shown inline under the section (lookNotes). Written as LOOK_NOTE_ANIMATION in shared/look.ts."
+  },
+  {
+    "label": "A name, maker or licence line in this look was too long and was shortened.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-import-changed",
+    "file": "src/shared/look.ts",
+    "line": 144,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported look's author line past its cap, shortened. Shown inline under the section (lookNotes). Written as LOOK_NOTE_SHORTENED in shared/look.ts."
+  },
+  {
+    "label": "A saved look already had this name, so a number was added after it.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-import-changed",
+    "file": "src/shared/look.ts",
+    "line": 146,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An import under a name already saved: a number added. Shown inline under the section (lookNotes). Written as LOOK_NOTE_RENAMED in shared/look.ts."
+  },
+  {
+    "label": "Type a name to save this look.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-name-needed",
+    "file": "src/shared/look.ts",
+    "line": 148,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "Save with no name. Shown inline under the section (lookNotes). Written as LOOK_NAME_NEEDED in shared/look.ts."
+  },
+  {
+    "label": "The look could not be written. Choose another folder and try again.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-export-failed",
+    "file": "src/shared/look.ts",
+    "line": 152,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An export that could not be written (the harness bridge's failWrite plays main's failure). Shown inline under the section (lookNotes). Written as LOOK_EXPORT_FAILED in shared/look.ts."
+  },
+  {
+    "label": "saved looks. Remove one to save or import another.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-list-full",
+    "part": true,
+    "file": "src/shared/look.ts",
+    "line": 150,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "Save with the list at SAVED_LOOKS_MAX (50): 'You have 50 saved looks. Remove one…'. Matched as the template's static tail."
+  },
+  {
+    "label": "1 setting in this look could not be used and was left out.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-import-dropped-one",
+    "file": "src/shared/look.ts",
+    "line": 157,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported look with one override value that would not be used (lookDroppedNote(1))."
+  },
+  {
+    "label": "settings in this look could not be used and were left out.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-import-changed",
+    "part": true,
+    "file": "src/shared/look.ts",
+    "line": 158,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "An imported look with two override values that would not be used (lookDroppedNote(2)); the template's static tail."
+  },
+  {
+    "label": "Exported as",
+    "match": "text",
+    "home": "output",
+    "needs": "look-exported",
+    "part": true,
+    "file": "src/shared/look.ts",
+    "line": 168,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "After an export: 'Exported as Census look.forgelook.', the file's name only (lookExportedNote)."
+  },
+  {
+    "label": "is not on this computer, so another face is drawn in its place until it is added.",
+    "match": "text",
+    "home": "output",
+    "needs": "look-font-missing",
+    "part": true,
+    "file": "src/shared/look.ts",
+    "line": 163,
+    "newHome": "output strip (My look section, docs/CLIPS.md §10)",
+    "note": "A look applied whose caption font this computer lacks (lookFontMissingNote), known once the catalogue has loaded."
+  },
+  {
     "label": "Graphics",
     "match": "text",
     "home": "transcript",

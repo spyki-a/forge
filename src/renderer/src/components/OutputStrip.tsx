@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Download, Sparkles, X } from 'lucide-react'
 import type { TextSpec } from '@shared/timeline'
 import { CAPTION_STYLES, resolveStyle, type StyleOverrides } from '@shared/captions/style'
 import { REFERENCE_HEIGHT } from '@shared/captions/ass'
@@ -15,6 +15,7 @@ import { textSpecOf, type DrawList, type TextMeasure } from '@shared/graphics/it
 import { drawListAt } from '@shared/graphics/drawList'
 import { graphicMovingFrames } from '@shared/graphics/frame'
 import { paintDrawList2d } from '@shared/graphics/paint'
+import { LOOK_AUTHOR_MAX, LOOK_LICENCE_MAX, LOOK_NAME_MAX, LOOK_SECTION_LABEL, lookIsApplied } from '@shared/look'
 import { graphicMeasure } from '../graphicCanvas'
 import { useEditor } from '../store'
 import { HelperPointer } from './SettingsPanel'
@@ -291,6 +292,193 @@ export function GraphicsSection(): ReactNode {
           onPick={(id) => setGraphicsOverride('textStyleId', id)}
         />
       </div>
+    </div>
+  )
+}
+
+/* ----------------------------------------------------------------- my look */
+
+/** "My look"'s words (docs/CLIPS.md §10, step 7's first bullet); the census rows match them. The refusals and notes are shared/look.ts's. */
+export const LOOK_EMPTY =
+  'A look is your caption style and graphic style kept together, to use again on any project. Set both above, then save them here.'
+export const LOOK_HINT = 'Click a look to use it on this project.'
+export const LOOK_SAVE_OPEN = 'Save this look'
+export const LOOK_IMPORT = 'Import a look'
+export const LOOK_NAME_PLACEHOLDER = 'Name this look'
+export const LOOK_AUTHOR_PLACEHOLDER = 'Made by (optional)'
+export const LOOK_LICENCE_PLACEHOLDER = 'Licence line (optional)'
+export const LOOK_SAVE = 'Save'
+export const LOOK_CANCEL = 'Cancel'
+export const LOOK_EXPORT_TITLE = 'Export this look to a file you can share'
+/** Remove asks nothing, as forgetting an export preset asks nothing; the title says how to have it back. */
+export const LOOK_REMOVE_TITLE = 'Remove this look from the list. To have it back, save it again or import its file.'
+
+/**
+ * OUTPUT's "My look" section (docs/CLIPS.md §10; creator style, piece 2),
+ * after Graphics: the saved looks as rows (a click applies one, in ONE undo
+ * step for both styles, `applySavedLook`; the row whose resolved styles are
+ * the project's is lit, `lookIsApplied`, a comparison, never a stored flag),
+ * each with Export and Remove; "Save this look" opens a form of three boxes
+ * (the name, and the header's two optional lines; Enter saves, Escape
+ * leaves; an empty name stays open and says why); "Import a look". What
+ * the last look action had to say (`lookNotes`: a refused file's reason, a
+ * changed file's notes, an export's file name) is shown under it, inline,
+ * as the Upload panel's folder name says its problem. A long name is cut
+ * with an ellipsis and whole in the row's title. No state of its own (the
+ * form's is the store's `lookDraft`), so a test can call it.
+ */
+export function LookSection(): ReactNode {
+  const project = useEditor((s) => s.project)
+  const looks = useEditor((s) => s.savedLooks)
+  const notes = useEditor((s) => s.lookNotes)
+  const draft = useEditor((s) => s.lookDraft)
+  const applySavedLook = useEditor((s) => s.applySavedLook)
+  const exportSavedLook = useEditor((s) => s.exportSavedLook)
+  const removeSavedLook = useEditor((s) => s.removeSavedLook)
+  const importLookFile = useEditor((s) => s.importLookFile)
+  const startLookSave = useEditor((s) => s.startLookSave)
+  const setLookDraft = useEditor((s) => s.setLookDraft)
+  const commitLookDraft = useEditor((s) => s.commitLookDraft)
+  const cancelLookSave = useEditor((s) => s.cancelLookSave)
+
+  const keys = (e: { key: string; preventDefault: () => void; stopPropagation: () => void }): void => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      void commitLookDraft()
+    } else if (e.key === 'Escape') {
+      // Handled: leaving the form must not also leave full screen.
+      e.preventDefault()
+      e.stopPropagation()
+      cancelLookSave()
+    }
+  }
+  const box = 'w-full min-w-0 rounded border border-ink-600 bg-ink-900 px-1.5 py-1 text-[11px] text-ink-100 outline-none placeholder:text-ink-600 focus:border-accent-500'
+  const small = 'rounded px-2 py-1.5 text-[11px] transition-colors'
+
+  return (
+    <div data-look-section="" className="min-w-0">
+      <div className="mb-1 text-[11px] text-ink-400">{LOOK_SECTION_LABEL}</div>
+      <p className="mb-1.5 text-[10px] leading-snug text-ink-600">{looks.length === 0 ? LOOK_EMPTY : LOOK_HINT}</p>
+      {looks.length > 0 && (
+        <div className="mb-1 grid gap-1">
+          {looks.map((look) => {
+            const chosen = lookIsApplied(project, look)
+            return (
+              <div key={look.name} className="flex min-w-0 items-center gap-1">
+                <button
+                  type="button"
+                  data-look-row={look.name}
+                  aria-pressed={chosen}
+                  title={look.name}
+                  onClick={() => applySavedLook(look.name)}
+                  className={`flex min-w-0 flex-1 items-center ${small} text-left ${
+                    chosen ? 'bg-ink-700 text-ink-200' : 'bg-ink-800 text-ink-400 hover:bg-ink-700'
+                  }`}
+                >
+                  <span className="truncate">{look.name}</span>
+                </button>
+                <button
+                  type="button"
+                  data-look-export={look.name}
+                  title={LOOK_EXPORT_TITLE}
+                  onClick={() => void exportSavedLook(look.name)}
+                  className="shrink-0 rounded p-1 text-ink-600 hover:bg-ink-800 hover:text-ink-200"
+                >
+                  <Download size={11} />
+                </button>
+                <button
+                  type="button"
+                  data-look-remove={look.name}
+                  title={LOOK_REMOVE_TITLE}
+                  onClick={() => void removeSavedLook(look.name)}
+                  className="shrink-0 rounded p-1 text-ink-600 hover:bg-ink-800 hover:text-red-800"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            )
+          })}
+        </div>
+      )}
+      {draft !== null && (
+        <div data-look-form="" className="mb-1 grid gap-1 rounded bg-ink-850 p-1.5">
+          <input
+            data-look-name=""
+            autoFocus
+            value={draft.name}
+            maxLength={LOOK_NAME_MAX}
+            placeholder={LOOK_NAME_PLACEHOLDER}
+            onChange={(e) => setLookDraft({ name: e.target.value })}
+            onKeyDown={keys}
+            className={box}
+          />
+          <input
+            data-look-author=""
+            value={draft.author}
+            maxLength={LOOK_AUTHOR_MAX}
+            placeholder={LOOK_AUTHOR_PLACEHOLDER}
+            onChange={(e) => setLookDraft({ author: e.target.value })}
+            onKeyDown={keys}
+            className={box}
+          />
+          <input
+            data-look-licence=""
+            value={draft.licence}
+            maxLength={LOOK_LICENCE_MAX}
+            placeholder={LOOK_LICENCE_PLACEHOLDER}
+            onChange={(e) => setLookDraft({ licence: e.target.value })}
+            onKeyDown={keys}
+            className={box}
+          />
+          <div className="flex gap-1">
+            <button
+              type="button"
+              data-look-save=""
+              onClick={() => void commitLookDraft()}
+              className={`flex-1 ${small} bg-accent-500 text-ink-950 hover:bg-accent-400`}
+            >
+              {LOOK_SAVE}
+            </button>
+            <button
+              type="button"
+              data-look-cancel=""
+              onClick={cancelLookSave}
+              className={`flex-1 ${small} bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200`}
+            >
+              {LOOK_CANCEL}
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="flex gap-1">
+        {draft === null && (
+          <button
+            type="button"
+            data-look-save-open=""
+            onClick={startLookSave}
+            className={`min-w-0 flex-1 truncate ${small} bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100`}
+          >
+            {LOOK_SAVE_OPEN}
+          </button>
+        )}
+        <button
+          type="button"
+          data-look-import=""
+          onClick={() => void importLookFile()}
+          className={`min-w-0 flex-1 truncate ${small} bg-ink-800 text-ink-300 hover:bg-ink-700 hover:text-ink-100`}
+        >
+          {LOOK_IMPORT}
+        </button>
+      </div>
+      {notes.length > 0 && (
+        <div data-look-notes="" className="mt-1.5 space-y-0.5">
+          {notes.map((note, i) => (
+            <p key={i} className="break-words text-[10.5px] leading-snug text-ink-400">
+              {note}
+            </p>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -699,6 +887,8 @@ export function OutputStrip(): ReactNode {
         </div>
 
         <GraphicsSection />
+
+        <LookSection />
       </div>
     </Strip>
   )

@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { emptyProject } from '@shared/timeline'
 import {
   LOOK_CHANNELS,
+  LOOK_EXPORT_FAILED,
   LOOK_FILE_MAX_BYTES,
   LOOK_NEWER,
   LOOK_TOO_LARGE,
@@ -54,6 +55,7 @@ interface HarnessFile {
   name: string
   writes: number
   cancel: boolean
+  failWrite: boolean
   put: (text: string) => void
   reset: () => void
 }
@@ -110,6 +112,16 @@ describe('the harness bridge’s look file', () => {
     expect(file.writes).toBe(0)
     file.put(serializeLook(LOOK))
     expect(await harness.importLook()).toBeNull()
+  })
+
+  it('failWrite plays main’s failed write: the export throws main’s sentence and writes nothing; reset clears it', async () => {
+    file.failWrite = true
+    await expect(harness.exportLook(LOOK)).rejects.toThrow(LOOK_EXPORT_FAILED)
+    expect(file.writes).toBe(0)
+    expect(file.text).toBeNull()
+    file.reset()
+    expect(file.failWrite).toBe(false)
+    expect(await harness.exportLook(LOOK)).toBe('Bride 530pm.forgelook')
   })
 
   it('any text put there is tried as main tries a file: too large, not a look’s, newer', async () => {

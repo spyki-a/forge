@@ -26,7 +26,8 @@ import { FROM_WORDS_LISTED_NOTE } from '@shared/director/fromWords'
 import { LIBRARY_GRAPHIC_RULE } from '@shared/graphics/apply'
 import { ON_SCREEN_REASON } from '@shared/graphics/budget'
 import { LIBRARY_GRAPHICS } from '@shared/graphics/library'
-import { HARNESS_HELPER_PACK, HARNESS_LINKS, harnessHelperStatus } from './bridge'
+import { HARNESS_HELPER_PACK, HARNESS_LINKS, harnessHelperStatus, harnessLookFile } from './bridge'
+import { LOOKS_SETTING, LOOK_KIND, LOOK_SCHEMA, SAVED_LOOKS_MAX, lookFromProject, serializeLook } from '@shared/look'
 import { harnessSubjectTrack } from './reframeStub'
 import { harnessDropsTranscript, harnessGraphicsRun, type HarnessWordSource } from './graphicsStub'
 import { stubComplete, STUB_READY } from './bestClipsStub'
@@ -1387,6 +1388,40 @@ async function graphicsRun(env: Env, source: HarnessWordSource, link: boolean): 
   return { ids: { V } }
 }
 
+/**
+ * A "My look" state (OUTPUT, docs/CLIPS.md §10): `build` runs through the
+ * store's own look actions on the harness bridge's in-memory settings and
+ * look file, and `close` puts both back, since `fresh` restores the store
+ * but not the bridge. Assumes the page has no saved look of its own (a
+ * freshly loaded harness page has none): the 'none' rows count the empty
+ * section's line.
+ */
+async function lookState(build: () => Promise<void>): Promise<Built> {
+  const setting = (await window.forge.getSettings())[LOOKS_SETTING]
+  const file = { text: harnessLookFile.text, name: harnessLookFile.name, writes: harnessLookFile.writes, cancel: harnessLookFile.cancel }
+  const close = async (): Promise<void> => {
+    await window.forge.setSetting(LOOKS_SETTING, setting)
+    Object.assign(harnessLookFile, file, { failWrite: false })
+  }
+  try {
+    await build()
+  } catch (err) {
+    await close()
+    throw err
+  }
+  return { close }
+}
+
+/** A look file's text, written by hand: what a stranger's file may hold. */
+const lookText = (captions: Record<string, unknown>, graphics: Record<string, unknown>, header: Record<string, unknown> = {}): string =>
+  JSON.stringify({ kind: LOOK_KIND, schema: LOOK_SCHEMA, name: 'Census look', author: '', version: 1, licence: '', ...header, captions, graphics })
+
+/** The look file holds `text`, and Import a look reads it. */
+async function importText(text: string): Promise<void> {
+  harnessLookFile.put(text)
+  await editor().importLookFile()
+}
+
 const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   /* nothing at all: a new, empty project */
   none: async () => ({}),
@@ -2234,6 +2269,72 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     editor().setHelperStatus(harnessReadyHelper())
     return {}
   },
+  /*
+   * OUTPUT's "My look" (creator style, piece 2; docs/CLIPS.md §10). Two
+   * saved, the second the project's (marked); the save form open; and each
+   * note the section can show, from the import, save, apply or export that
+   * says it.
+   */
+  'looks-saved': async () =>
+    lookState(async () => {
+      await editor().saveLook({ name: 'Census look one' })
+      editor().setGraphicsStyle('neon')
+      await editor().saveLook({ name: 'Census look two' })
+    }),
+  'look-form': async () =>
+    lookState(async () => {
+      editor().startLookSave()
+    }),
+  'look-name-needed': async () =>
+    lookState(async () => {
+      await editor().saveLook({ name: '' })
+    }),
+  'look-list-full': async () =>
+    lookState(async () => {
+      for (let n = 1; n <= SAVED_LOOKS_MAX; n++) await editor().saveLook({ name: `Census look ${n}` })
+      await editor().saveLook({ name: 'Census look one more' })
+    }),
+  'look-exported': async () =>
+    lookState(async () => {
+      await editor().saveLook({ name: 'Census look' })
+      await editor().exportSavedLook('Census look')
+    }),
+  'look-export-failed': async () =>
+    lookState(async () => {
+      await editor().saveLook({ name: 'Census look' })
+      harnessLookFile.failWrite = true
+      await editor().exportSavedLook('Census look')
+    }),
+  /* a look naming a caption font this computer does not have, applied (the page's catalogue has loaded, so it is known) */
+  'look-font-missing': async () =>
+    lookState(async () => {
+      if (useCatalog.getState().catalog === null) throw new Error('the catalogue has not loaded, so a missing font cannot be known')
+      const look = lookFromProject({ captions: { enabled: true, styleId: 'pop', overrides: { fontFamily: 'Nowhere Census Sans' } } }, { name: 'Census look' })
+      await importText(serializeLook(look))
+      editor().applySavedLook('Census look')
+    }),
+  'look-refused-damaged': async () => lookState(() => importText('not a look')),
+  'look-refused-not-a-look': async () => lookState(() => importText(JSON.stringify({ kind: 'something else' }))),
+  'look-refused-newer': async () =>
+    lookState(() => importText(lookText({ styleId: 'pop' }, { styleId: 'clean' }, { schema: LOOK_SCHEMA + 1 }))),
+  'look-refused-large': async () => lookState(() => importText(`{"pad":"${'z'.repeat(70_000)}"}`)),
+  'look-refused-caption-style': async () => lookState(() => importText(lookText({ styleId: 'census-no-such' }, { styleId: 'clean' }))),
+  'look-refused-graphic-style': async () => lookState(() => importText(lookText({ styleId: 'pop' }, { styleId: 'census-no-such' }))),
+  /* a file under a taken name, its author line past the cap, an unknown text style and animation, and two settings that cannot be used */
+  'look-import-changed': async () =>
+    lookState(async () => {
+      await editor().saveLook({ name: 'Census look' })
+      await importText(
+        lookText(
+          { styleId: 'pop', overrides: { textStyleId: 'census-no-such', animationId: 'census-no-such', fontSize: 'big', wordsPerLine: -3 } },
+          { styleId: 'clean' },
+          { author: 'x'.repeat(200) }
+        )
+      )
+    }),
+  /* one setting that cannot be used */
+  'look-import-dropped-one': async () =>
+    lookState(() => importText(lookText({ styleId: 'pop', overrides: { fontSize: 'big' } }, { styleId: 'clean' }))),
   'captions-placement-starting': async () => {
     editor().setHelperStatus(null)
     return {}

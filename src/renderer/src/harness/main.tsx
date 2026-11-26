@@ -12,6 +12,7 @@ import { installBestClipsCheck } from './bestClipsCheck'
 import { installReframeCheck } from './reframeCheck'
 import { installHelperPackCheck } from './helperPackCheck'
 import { installGraphicCheck } from './graphicCheck'
+import { installLookCheck } from './lookCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -52,6 +53,9 @@ installHelperPackCheck()
 
 /* The graphics engine's forks, measured before anything relies on them (docs/CLIPS.md §6.15, §6.11). */
 installGraphicCheck()
+
+/* "My look": saved, applied, undone, exported, imported and refused, on the page's store and bridge (docs/CLIPS.md §10). */
+installLookCheck()
 
 /*
  * The store, reachable from a driving script.

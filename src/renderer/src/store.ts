@@ -762,6 +762,15 @@ export interface FolderMenuTarget {
  * tile's "New folder…") or a folder being renamed (`from` its name).
  * Window state, never saved.
  */
+/** The "save this look" form's three boxes, as typed (OUTPUT's "My look"). */
+export interface LookDraft {
+  name: string
+  /** Who made it: the header's author line; may be empty. */
+  author: string
+  /** The header's licence line, in the maker's words; may be empty. */
+  licence: string
+}
+
 export interface FolderEdit {
   from: string | null
   draft: string
@@ -1804,6 +1813,19 @@ interface EditorState {
   exportSavedLook: (name: string) => Promise<void>
   /** A look read from a file through the user's Open dialog and added to the list (a taken name gets a number); not applied. */
   importLookFile: () => Promise<void>
+  /**
+   * The OUTPUT strip's "save this look" form while it is open (creator style,
+   * piece 2): the name and the header's two optional lines as typed. Kept
+   * here, as a folder's name being typed is (`folderEdit`), so the section has
+   * no state of its own and the census opens it through the store.
+   */
+  lookDraft: LookDraft | null
+  /** Opens the form, empty, and clears the last notes. */
+  startLookSave: () => void
+  setLookDraft: (patch: Partial<LookDraft>) => void
+  /** Saves the draft through `saveLook`; the form closes only when it saved. */
+  commitLookDraft: () => Promise<boolean>
+  cancelLookSave: () => void
   exportPresets: ExportPreset[]
   loadPresets: () => Promise<void>
   savePreset: (preset: ExportPreset) => Promise<void>
@@ -1983,6 +2005,7 @@ export const useEditor = create<EditorState>((set, get) => ({
   recording: null,
   savedLooks: [],
   lookNotes: [],
+  lookDraft: null,
   exportPresets: BUILT_IN_PRESETS,
   exportChoice: DEFAULT_CHOICE,
   encoders: null,
@@ -6634,6 +6657,19 @@ export const useEditor = create<EditorState>((set, get) => ({
     const next = [...list, { ...read.look, name }]
     set({ savedLooks: next, lookNotes: notes })
     await window.forge.setSetting(LOOKS_SETTING, next).catch(() => undefined)
+  },
+
+  startLookSave: () => set({ lookDraft: { name: '', author: '', licence: '' }, lookNotes: [] }),
+  setLookDraft: (patch) => set((st) => (st.lookDraft ? { lookDraft: { ...st.lookDraft, ...patch } } : st)),
+  commitLookDraft: async () => {
+    const draft = get().lookDraft
+    if (!draft) return false
+    const saved = await get().saveLook(draft)
+    if (saved) set({ lookDraft: null })
+    return saved
+  },
+  cancelLookSave: () => {
+    if (get().lookDraft !== null) set({ lookDraft: null })
   },
 
   loadPresets: async () => {

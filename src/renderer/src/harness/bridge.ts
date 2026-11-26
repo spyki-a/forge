@@ -1,7 +1,7 @@
 import type { MediaAsset } from '@shared/timeline'
 import type { PackListing } from '@shared/assets/pack'
 import { LOOKS, cubeFor } from '@shared/render/looks'
-import { LOOK_EXTENSION, lookFileBase, lookSizeRefusal, parseLook, readLookText, serializeLook, type LookRead } from '@shared/look'
+import { LOOK_EXPORT_FAILED, LOOK_EXTENSION, lookFileBase, lookSizeRefusal, parseLook, readLookText, serializeLook, type LookRead } from '@shared/look'
 import type { Job } from '@shared/types'
 import { buildYtDlpArgs, captionKeys, outputStem, type IngestRequest, type LinkMeta } from '@shared/ingest/args'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
@@ -105,6 +105,8 @@ export const harnessLookFile = {
   writes: 0,
   /** While true, both dialogs answer as Cancel did. */
   cancel: false,
+  /** While true, an export fails to write, as main's does on a folder it cannot write to (LOOK_EXPORT_FAILED). */
+  failWrite: false,
   /** Put any text in the file, so a bad one can be tried on the page. */
   put(text: string): void {
     harnessLookFile.text = text
@@ -114,6 +116,7 @@ export const harnessLookFile = {
     harnessLookFile.name = ''
     harnessLookFile.writes = 0
     harnessLookFile.cancel = false
+    harnessLookFile.failWrite = false
   }
 }
 
@@ -122,6 +125,7 @@ async function harnessExportLook(look: unknown): Promise<string | null> {
   const read = parseLook(look)
   if (!read.ok) throw new Error(read.reason)
   if (harnessLookFile.cancel) return null
+  if (harnessLookFile.failWrite) throw new Error(LOOK_EXPORT_FAILED)
   harnessLookFile.text = serializeLook(read.look)
   harnessLookFile.name = `${lookFileBase(read.look.name)}.${LOOK_EXTENSION}`
   harnessLookFile.writes++
