@@ -8247,7 +8247,8 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 >   tooltip "keeps captions off faces, one position per shot". The store's
 >   `setCaptionPlacement('smart' | 'style')`; turning it off deletes the
 >   field (2026-11-25: a saved look carries this field too, and applying
->   one sets or deletes it with the caption style; §10's Built notes). Its states, from `smartPlacementState(project, helperStatus)`:
+>   one sets or deletes it with the caption style; §10's Built notes).
+>   Its states, from `smartPlacementState(project, helperStatus)`:
 >
 > | state | when | the switch | said |
 > |---|---|---|---|
@@ -12371,7 +12372,10 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   `setCaptionStyle`'s rule); `setGraphicsOverride` writes one key and
 >   deletes it on `undefined`, as `setCaptionOverride` does; a project
 >   with no `graphics` is written as `clean` with sound true, what its
->   absence means. **The rebake** a change asks for joins with
+>   absence means. (2026-11-25: a saved look's apply is a third writer of
+>   the graphic style and replaces the overrides whole with the look's,
+>   keeping none of the project's;
+>   §10's Built notes.) **The rebake** a change asks for joins with
 >   `rebakeGraphic` (§6.3, lane C's), which does not exist yet; the
 >   comment above the two actions says so (`store.ts:4960-4968`). (Since
 >   `1a681c7`, 2026-11-11: both actions rebake every graphic clip through
@@ -26779,8 +26783,8 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 >   but a graphic may not use is counted, not noted. Strings (name,
 >   maker, licence) lose control characters, lone surrogate halves and the
 >   bidirectional controls U+061C, U+200E/F, U+202A-202E and U+2066-2069
->   (`NEVER_KEPT`, `6ac4db0`: an "ab<RLO>gpj" name made a file that showed
->   as a picture's), the joiners U+200C/D kept for Indic scripts and emoji;
+>   (`NEVER_KEPT`, `6ac4db0`: an "ab<RLO>gpj" name could make a file that
+>   shows as a picture's, critic 1's case), the joiners U+200C/D kept for Indic scripts and emoji;
 >   ends trimmed; cut in code points, never inside a pair.
 >   `readLookText(text)` checks the size in UTF-8 bytes again, drops a
 >   byte order mark and parses inside a guard: a text that is not JSON says
@@ -26855,7 +26859,9 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 >   `look:import`: the Open dialog (title "Import look", filters "Look" and
 >   "All files"); null on Cancel; then `stat`: not a regular file is
 >   `LOOK_NOT_A_LOOK` before any read (`6ac4db0`: a link to `/dev/zero`
->   reports size 0 and filled main's memory, a named pipe hung it); over the
+>   reports size 0 and would fill main's memory, a named pipe would hang
+>   it; critic 1's node probe: about 733 MB before the read threw, and a
+>   pipe read that never returned); over the
 >   cap `LOOK_TOO_LARGE` before any read; then `readLookBytes`, one handle
 >   opened `O_RDONLY | O_NONBLOCK` (`O_NONBLOCK` falls back to 0 where it is
 >   undefined, Windows), checked again as a regular file within the cap,
@@ -26906,7 +26912,8 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 >   (one, the link to a device and the named pipe, real on macOS and
 >   skipped on win32), `tests/renderer/lookStore.test.ts` 19,
 >   `tests/renderer/lookBridge.test.ts` 6 (one of them piece 2's), counted
->   in the code at `6e8fcb9`. The builder's 31 mutations, each caught; the
+>   in the code at `6e8fcb9`. The builder's 31 mutations, each caught (M27 after its test was
+>   strengthened); the
 >   fixer's 17, 16 caught, the survivor `lookFileBase`'s `'look'` guard,
 >   unreachable since the strip runs first and kept as a defence. The
 >   agents' suite readings: 388 files and 6428 tests passed at `5ce2cb3`,
@@ -26934,7 +26941,8 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 >   placeholders "Name this look", "Made by (optional)", "Licence line
 >   (optional)" (`maxLength` `LOOK_NAME_MAX`, `LOOK_AUTHOR_MAX`,
 >   `LOOK_LICENCE_MAX`: UTF-16 units, so a box never passes the code-point
->   cap), the name box focused; "Save" and "Cancel". Enter in any box
+>   cap, and a name in characters outside the BMP, emoji for one, gets
+>   half as many), the name box focused; "Save" and "Cancel". Enter in any box
 >   saves, except the Enter that confirms an input method's word
 >   (`nativeEvent.isComposing`, `8730ff7`); Escape leaves, with
 >   `stopPropagation` so full screen is not left too. "Import a look"
@@ -26958,7 +26966,9 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 >   `look-import-changed` (five notes), `look-import-dropped-one`,
 >   `look-name-needed`, `look-list-full`, `look-exported`,
 >   `look-export-failed`, `look-font-missing` (it throws, saying so, when
->   the catalogue has not loaded). **The session's reading, the harness
+>   the catalogue has not loaded). The recipes assume the page has no
+>   saved look of its own: run the census on a fresh load or right after
+>   `__forgeLookCheck()`, which restores the page. **The session's reading, the harness
 >   page, the Mac, 2026-11-25, at `8730ff7`**: `__forgeCensus()` missing [],
 >   1058 checked, 12 skipped, about 70 s (1029 checked, 12 skipped before
 >   the lane).
@@ -27082,7 +27092,8 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 >    `version` and `licence` are top-level keys between `name` and
 >    `captions`. `author` and `licence` are optional boxes ("Made by
 >    (optional)", "Licence line (optional)"), kept as typed; `version` is
->    the app's (1, then + 1 for each save over the name), never typed.
+>    the app's (1, then + 1 for each save over the name), never typed; an
+>    import keeps the file's (a whole number from 1 to 1 000 000).
 > 3. A look also carries Smart placement (`placement: 'smart'` or none),
 >    beside the two styles.
 > 4. The section does more than "applied in one click": it saves,
@@ -27101,7 +27112,7 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 > - Yours: whether a stranger's look may carry caption values beyond what
 >   the controls write (`fontSize` up to 1080, `wordsPerLine` up to 50,
 >   `marginV` up to 1080, outline and shadow up to 100, where the controls
->   stop at 324, 8 and 432); declined by piece 1's fixer, since a project
+>   for `fontSize`, `wordsPerLine` and `marginV` stop at 324, 8 and 432); declined by piece 1's fixer, since a project
 >   can already hold them and bounding would change a look read back.
 > - A look made from a project holding values no control writes (a
 >   caption font with a comma, `fontSize` over 1080) drops them, and then
@@ -27120,7 +27131,7 @@ sooner; the saved template waits for Stage 0, or moves to §17.
 > - The three boxes have no `aria-label` (it would add three census
 >   rows); declined.
 > - Two saved looks that resolve alike are both lit (the mark is a pure
->   comparison); kept as the rule, to be seen.
+>   comparison); kept as the rule; for your eye on the page.
 > - Without the bridge, Export and Import say "The app bridge did not load
 >   — restart Forge", which names "Forge", not 3dit (pre-existing).
 > - `FolderNameInput` (`MediaPool.tsx`) still saves on an input method's

@@ -1166,7 +1166,7 @@ them.)
 
 **My look** (`LookSection` in `OutputStrip.tsx`, since 2026-11-25; docs/CLIPS.md
 §10) — the strip's last section, after Graphics. A look is the caption style
-(preset, edits and Smart placement) and the graphic style (look and edits)
+(preset, edits and Smart placement) and the graphic style (preset and edits)
 kept together under a name, to use again on any project. With nothing
 saved, one line: "A look is your caption style and graphic style kept
 together, to use again on any project. Set both above, then save them
@@ -1178,15 +1178,16 @@ changed). The row whose styles are the project's is lit, so a look you
 just applied stays lit until you change a caption or graphic setting, and
 two looks that draw alike are both lit. On each row, always shown: a
 download icon, "Export this look to a file you can share" (your Save
-dialog; the file is named from the look, "Bride 5:30pm" as `Bride
-530pm.forgelook`), and an X, "Remove this look from the list. To have it
+dialog, which proposes a name made from the look, "Bride 5:30pm" as
+`Bride 530pm.forgelook`), and an X, "Remove this look from the list. To have it
 back, save it again or import its file." (no question asked). **Save this
-look** opens three boxes, "Name this look", "Made by (optional)" and
+look** (hidden while its form is open; Import a look stays beside the
+form) opens three boxes, "Name this look", "Made by (optional)" and
 "Licence line (optional)", with **Save** and **Cancel**; Enter saves, Escape
 leaves, an empty name keeps the form open with "Type a name to save this
 look."; saving under a name already saved replaces that look and adds 1 to
 its version. **Import a look** opens your Open dialog for a `.forgelook`
-file and adds the look to the list without applying it; a name already
+file (it also offers "All files") and adds the look to the list without applying it; a name already
 taken gets a number after it. What the last of these said shows in small
 lines under the buttons ("Exported as …", a refused file's reason such as
 "This file could not be read. It may be damaged: ask for it again, or
