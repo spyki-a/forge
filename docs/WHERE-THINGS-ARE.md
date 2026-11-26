@@ -1164,6 +1164,47 @@ graphics from speech, and since 2026-11-15 the Library's Graphics drawer
 places them by hand: the switch takes and puts back the sounds of all of
 them.)
 
+**My look** (`LookSection` in `OutputStrip.tsx`, since 2026-11-25; docs/CLIPS.md
+§10) — the strip's last section, after Graphics. A look is the caption style
+(preset, edits and Smart placement) and the graphic style (look and edits)
+kept together under a name, to use again on any project. With nothing
+saved, one line: "A look is your caption style and graphic style kept
+together, to use again on any project. Set both above, then save them
+here." With looks saved: "Click a look to use it on this project.", then
+one row per look, its name cut with an ellipsis when long and whole in its
+tooltip. **Clicking a row** puts both of its styles on the project as ONE
+undo step (and redraws the graphic clips once, only if the graphic style
+changed). The row whose styles are the project's is lit, so a look you
+just applied stays lit until you change a caption or graphic setting, and
+two looks that draw alike are both lit. On each row, always shown: a
+download icon, "Export this look to a file you can share" (your Save
+dialog; the file is named from the look, "Bride 5:30pm" as `Bride
+530pm.forgelook`), and an X, "Remove this look from the list. To have it
+back, save it again or import its file." (no question asked). **Save this
+look** opens three boxes, "Name this look", "Made by (optional)" and
+"Licence line (optional)", with **Save** and **Cancel**; Enter saves, Escape
+leaves, an empty name keeps the form open with "Type a name to save this
+look."; saving under a name already saved replaces that look and adds 1 to
+its version. **Import a look** opens your Open dialog for a `.forgelook`
+file and adds the look to the list without applying it; a name already
+taken gets a number after it. What the last of these said shows in small
+lines under the buttons ("Exported as …", a refused file's reason such as
+"This file could not be read. It may be damaged: ask for it again, or
+choose another file.", a font the look names that this computer lacks)
+until the next one replaces it, or New or Open clears it. At most 50 looks:
+then "You have 50 saved looks. Remove one to save or import another.",
+said by Import before any dialog opens. **Not in a look**: whether
+captions are on, Graphic sounds, any text, clip or media. The looks are
+kept by the app, in its settings under `creatorLooks`, not in the project,
+so every project sees the same list. Code: `src/shared/look.ts` (the look,
+its file, every line shown), `src/shared/lookChannels.ts`, `look:export` and
+`look:import` in `src/main/ipc.ts`, the store's `savedLooks`; the test
+harness keeps the file in memory as `window.__forgeLookFile` and checks the
+section with `window.__forgeLookCheck()`. (Not yet run anywhere as of
+2026-11-25: the real Save and Open dialogs, a real file written and read,
+the real settings file; read only on the test harness page on the Mac, not
+in the app and not on the Surface.)
+
 ## EXPORT — making the file
 
 The second strip (`ExportStrip.tsx`). **The Export button is in its header**,

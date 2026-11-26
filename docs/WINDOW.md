@@ -563,6 +563,22 @@ open.)
 | Collapsed summary ("30 fps · -14 LUFS · captions on") | none | output strip | build | so a closed strip still tells you what the file will be; the ASCII minus, as the Loudness buttons write the number (`shared/project/outputSummary.ts`) |
 | 3×3 caption style grid | none (sheet 11) | Shelf tile Narration | build | phase 2/3 |
 
+(2026-11-25, step 7's creator style, `docs/CLIPS.md` §10's Built notes:
+`5ce2cb3`, `6ac4db0`, `00bf867`, `8730ff7`. The strip gained a last section,
+**"My look"**, after Graphics: `LookSection` in `OutputStrip.tsx`, no state
+of its own (the form is the store's `lookDraft`). The saved looks as rows
+(a click applies both styles in one undo step; the row that matches the
+project lit), each with an always-visible download icon (Export) and X
+(Remove); "Save this look" opening three boxes with Save and Cancel;
+"Import a look" beside it; the last look action's notes inline under the
+buttons. Long names are cut with an ellipsis, whole in the row's title. At
+the 240 px column, as the session saw it on the Mac's harness page on
+2026-11-25 (viewport 1280×900, three looks, one named in 61 characters):
+the rows with their two icons, the long name cut, the two buttons side by
+side, no sideways scroll; not rated. The census: 29 rows in `output`,
+standing for 31 carriers; the session read `__forgeCensus()` there at
+1058 checked, 12 skipped, missing [] (1029 before).)
+
 ### 3.17 Export strip
 
 | control | today | new home | how | note |
@@ -782,6 +798,19 @@ unchanged from `0f87aa8` to `03937b4` (`git diff 7553972^ 03937b4`); the Library
 through the existing `placeLibraryGraphic`, and their fields and Depth
 through `setGraphic`. The paste fix's `textFocus` is reported to main with
 the menu's state from `App.tsx`, not kept in the store.)
+
+(2026-11-25, the store state step 7's creator style added (§3.16's note),
+by `store.ts` at `8730ff7`: `savedLooks` (`Look[]`, `src/shared/look.ts`),
+app-level, read at startup by `loadSavedLooks` (from `App.tsx`'s mount
+effect, beside `loadPresets`) and written to the settings file under the
+key `creatorLooks` by `saveLook`, `removeSavedLook` and `importLookFile`;
+`applySavedLook` and `exportSavedLook` beside them. `lookNotes`
+(`string[]`, what the last look action said) and `lookDraft` (`LookDraft
+| null`, the save form's three boxes) with `startLookSave`,
+`setLookDraft`, `commitLookDraft` and `cancelLookSave` are session state.
+None of it is saved in a project, and none is in the undo history (applying
+a look is, through the project). newProject and loadProject clear
+`lookNotes` and leave `savedLooks` and `lookDraft` alone.)
 
 ---
 

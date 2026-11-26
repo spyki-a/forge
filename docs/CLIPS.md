@@ -8246,7 +8246,8 @@ Where it goes, per `WHERE-THINGS-ARE.md`:
 >   (`role="switch"`, `aria-checked`, `data-smart-placement`) and the
 >   tooltip "keeps captions off faces, one position per shot". The store's
 >   `setCaptionPlacement('smart' | 'style')`; turning it off deletes the
->   field. Its states, from `smartPlacementState(project, helperStatus)`:
+>   field (2026-11-25: a saved look carries this field too, and applying
+>   one sets or deletes it with the caption style; §10's Built notes). Its states, from `smartPlacementState(project, helperStatus)`:
 >
 > | state | when | the switch | said |
 > |---|---|---|---|
@@ -12484,6 +12485,10 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   are on or off. "Graphic sounds" is §6.14's, T3's, and not built.
 >   (Built 2026-11-11 by lane T3, `e8f2a1f`: `GraphicSoundsToggle`,
 >   between the style rows and the sample tile; §6.14's Built note.)
+>   (2026-11-25: no longer the strip's last section: step 7's "My look"
+>   follows it, and a saved look's row sets the graphic preset and
+>   overrides together with the caption style in one undo step, outside
+>   these rows; §10's Built notes.)
 > - **The rebake** (`1a681c7`, fix `62f3c83`): `setGraphicsStyle` and
 >   `setGraphicsOverride` now call `rebakeGraphicClips` when the project
 >   changed: every graphic clip's id, one after the other, through
@@ -12493,7 +12498,10 @@ dropped from `graphicEligible` (the synthetic style passes).
 >   returns the project unchanged, so it is neither an undo step nor a
 >   rebake. Not covered: undo and redo of a graphics change do not rebake
 >   (the Preview's baked frames keep the newer style until the next bake;
->   the export rebakes); the plan does not word it.
+>   the export rebakes); the plan does not word it. (2026-11-25: the store's
+>   `applySavedLook` is a third caller, rebaking once and only when the
+>   graphic preset or overrides changed; its undo does not rebake either;
+>   §10's Built notes.)
 > - **The census** (`1a681c7`, `62f3c83`, `51e2f23`): rows in output/none
 >   for "Graphics", "Clean" (count 4), "Bold", "Editorial", "Neon",
 >   "Mono", "Accent", "Energetic", "Accent colour"; "Browse all", "Style"
@@ -26600,10 +26608,14 @@ The tests and render checks are §6.11's, extended per template.
 >   `graphic.int` (no figure).
 > - `src/shared/graphics/templates/index.ts`' comment on the three's
 >   `DRAWERS` rows still says "their depth variants are this step's next
->   piece"; they are built (piece 3). And `templates/beforeAfter.ts`' head
+>   piece"; they are built (piece 3). (2026-11-25: closed by `1c1dba0`,
+>   which now says "with a depth, on their planes through
+>   templates/depth.ts `depthOut`".) And `templates/beforeAfter.ts`' head
 >   still says the after's box grows "over the before's card from the
 >   middle out"; the code grows the reveal over the after's (right) half
->   only. Comments only.
+>   only. Comments only. (2026-11-25: closed by `1c1dba0`: the head now
+>   says a tinted box grows from the card's middle over the after's half
+>   only, never over the before's.)
 
 **Exit:** each of `timeline`, `before-after` and `versus` passes step 3's
 phase-2 bar (§6.12: the property test over its text items, the render check
@@ -26691,6 +26703,448 @@ sooner; the saved template waits for Stage 0, or moves to §17.
   there are no B-roll shapes to save; they join it when step 5 lands
   after the beta.)
 - Stage 2 onward (sharing, the store) is `MARKET.md`'s, not this plan's.
+
+> **Built 2026-11-25 (the creator style, piece 1: the look, its file and
+> the store).** `5ce2cb3`, then `6ac4db0` after two critics (workflow run
+> `wf_8a76753c-14f`, eight Opus agents, two pieces, each a builder, two
+> critics and a fixer; about 75 minutes). Pushed with piece 2 and the 3D
+> lane's docs record as `03937b4..6e8fcb9` on 2026-11-25; CI green on both
+> runners at `6e8fcb9` (run 45729819708). Only the first bullet above is
+> built: the saved template with slots is not (no slot, no template
+> file). Described from the code at `6e8fcb9` (the lane's code unchanged
+> since `8730ff7`).
+> - **`src/shared/look.ts`** (new, pure). `Look` = `LookHeader` (`author`
+>   string, may be empty; `version` a whole number from 1; `licence`
+>   string, may be empty, in the maker's words: the app writes no wording
+>   of its own) + `kind` (`LOOK_KIND` = `'forge-look'`), `schema`
+>   (`LOOK_SCHEMA` = 1, the file format's number), `name`, `captions`
+>   (`LookCaptions`: `styleId`, a `CAPTION_STYLES` id; `overrides?`
+>   (`StyleOverrides`); `placement?: 'smart'`) and `graphics`
+>   (`LookGraphics`: `styleId`, a `GRAPHIC_STYLES` id; `overrides?`, dotted
+>   keys as `GraphicsSettings` holds them). Not in a look: captions on or
+>   off, the graphics' sound switch, any text, clip, media, path, font file,
+>   key or setting. `LOOK_EXTENSION` = `'forgelook'`; `LOOKS_SETTING` =
+>   `'creatorLooks'`, the settings key (app-level, never in a project).
+>   Caps: `LOOK_FILE_MAX_BYTES` = 64 × 1024 (65536 UTF-8 bytes; a look with
+>   every override and the longest strings serialises to under 4 KB, which
+>   `tests/look.test.ts` measures); `LOOK_NAME_MAX` 60, `LOOK_AUTHOR_MAX`
+>   80, `LOOK_LICENCE_MAX` 200, `LOOK_FONT_MAX` 100, all in code points;
+>   `SAVED_LOOKS_MAX` = 50; `SAVED_LOOKS_READ` = `SAVED_LOOKS_MAX * 4` =
+>   200 (`6ac4db0`); `LOOK_VERSION_MAX` = 1 000 000.
+> - **`lookFromProject(project, made)`** reads `captions.styleId`,
+>   `overrides`, `placement` and `graphics?.styleId`, `overrides`; the
+>   overrides go through the file's checks (so a saved look never holds
+>   what `parseLook` would drop), the name, maker and licence are cleaned
+>   and capped as a file's. Since `6ac4db0` it stores the preset the
+>   resolvers DRAW: `styleById(id).id` for the captions, the
+>   `GRAPHIC_STYLES` match or `CLEAN_GRAPHIC_STYLE`'s id for the graphics,
+>   so a look saved from a project holding an id this app lacks no longer
+>   vanishes on the next start. **`applyLook(project, look)`** REPLACES the
+>   caption preset, overrides and placement and the graphic preset and
+>   overrides (never merged; a look with no overrides writes `overrides:
+>   {}`, as `clearCaptionOverrides` does; placement `'smart'` or no field,
+>   as `setCaptionPlacement('style')` deletes it); graphics are written `{
+>   sound: true, ...project.graphics, styleId, overrides }`, so the sounds
+>   switch and any later field are kept (absent graphics mean sounds on);
+>   captions on or off, clips, transcripts and caption words are never
+>   touched. The same project comes back when nothing changes, absent
+>   graphics comparing as clean with no overrides (`6ac4db0`), so no undo
+>   step is made. `graphicsStyleChanged(before, after)` (preset or
+>   overrides) decides the rebake.
+> - **`parseLook(value)`** never throws (a guard around the whole read):
+>   own keys only, every object built anew, so no `__proto__`,
+>   `constructor` or `prototype` is copied. Refusals, each a reason that
+>   carries nothing of the file: not an object, a wrong `kind`, a `schema`
+>   not a whole number from 1, `captions` or `graphics` not objects, a
+>   `styleId` not a string: "This file is not a saved look. Choose a file
+>   that ends in .forgelook." (`LOOK_NOT_A_LOOK`); a larger `schema`: "This
+>   look was made by a newer version of the app. Update the app, then
+>   import it again." (`LOOK_NEWER`); an unknown preset: "This look uses a
+>   caption style this version of the app does not have. Update the app,
+>   then import it again." / "This look uses a graphic style this version
+>   of the app does not have. Update the app, then import it again."
+>   (`LOOK_UNKNOWN_CAPTION_STYLE`, `LOOK_UNKNOWN_GRAPHIC_STYLE`). Notes, in
+>   this order: "A name, maker or licence line in this look was too long
+>   and was shortened." (`LOOK_NOTE_SHORTENED`, a string past its cap is
+>   cut, not refused); "A text style in this look is not in this version
+>   of the app, so the style’s own is used." (`LOOK_NOTE_TEXT_STYLE`); "An
+>   animation in this look is not in this version of the app, so the
+>   style’s own is used." (`LOOK_NOTE_ANIMATION`); and one counted note
+>   for everything else dropped, "1 setting in this look could not be used
+>   and was left out." / "<n> settings in this look could not be used and
+>   were left out." (`lookDroppedNote`): an unknown override key, a value
+>   that would not be used, a header field of the wrong type (read as ''),
+>   a version that is not a whole number 1 to 1 000 000 (read as 1), a
+>   placement other than `'smart'` or `'style'`. A text style the app has
+>   but a graphic may not use is counted, not noted. Strings (name,
+>   maker, licence) lose control characters, lone surrogate halves and the
+>   bidirectional controls U+061C, U+200E/F, U+202A-202E and U+2066-2069
+>   (`NEVER_KEPT`, `6ac4db0`: an "ab<RLO>gpj" name made a file that showed
+>   as a picture's), the joiners U+200C/D kept for Indic scripts and emoji;
+>   ends trimmed; cut in code points, never inside a pair.
+>   `readLookText(text)` checks the size in UTF-8 bytes again, drops a
+>   byte order mark and parses inside a guard: a text that is not JSON says
+>   "This file could not be read. It may be damaged: ask for it again, or
+>   choose another file." (`LOOK_UNREADABLE`). `lookSizeRefusal(bytes)`:
+>   "This file is too large to be a saved look. Choose a file that ends in
+>   .forgelook." (`LOOK_TOO_LARGE`).
+> - **`CAPTION_ACCEPTS`**, because no validator for caption overrides
+>   existed (`resolveStyle` guards only the numbers it divides or scales
+>   by, and only from below), typed by `StyleOverrides`' keys so a key
+>   added there without its row fails typecheck: `fontFamily` the font rule
+>   below; `fontSize` 1..1080; `primaryColor`, `highlightColor`,
+>   `outlineColor` exactly `#RRGGBB` (`toAssColor` reads six digits);
+>   `outlineWidth` 0..100; `position` top / center / bottom; `marginV`
+>   0..1080; `wordsPerLine` 1..50; `highlightScale` 0.1..10; `shadowDepth`
+>   0..100 (finite numbers); `uppercase`, `animated`, `bold` booleans;
+>   `textStyleId` a `TEXT_STYLES` id, `animationId` a `TEXT_ANIMATIONS` id.
+>   A value outside is dropped, never clamped; each floor at or below
+>   `resolveStyle`'s own. **`graphicOverrideAccepted(key, value)`**
+>   (`src/shared/graphics/style.ts`): the resolver's own guards as
+>   predicates (`ACCEPTS`), typed by `OVERRIDES`' keys, which `OVERRIDES`
+>   now declares with `satisfies` instead of a `Record` type; out-of-range
+>   numbers are accepted where the resolver clamps them (finite, not
+>   negative). **The font family rule** (`FONT_FAMILY_OK`, `isFontFamily`),
+>   for the captions' `fontFamily` and the graphics' `font`, stricter than
+>   the project's own reads because this is a stranger's file: no control
+>   character and none of `, ; " { } \ < >` (the comma ends a family in the
+>   caption file's style line, the quote and semicolon in a canvas font
+>   string, braces and backslash are libass's tags), no edge spaces, at most
+>   100 code points, nothing `NEVER_KEPT` drops. **`lookFontNotes(look,
+>   installed)`**: "The font “<family>” is not on this computer, so another
+>   face is drawn in its place until it is added." per override family not
+>   installed (a missing family is not refused: the canvas and libass draw
+>   a stand-in); the store builds `installed` from `SYSTEM_FONT_FAMILIES`
+>   and the catalogue's font families, and passes null (no note) while the
+>   catalogue has not loaded.
+> - **`serializeLook(look)`**: the keys `kind`, `schema`, `name`,
+>   `author`, `version`, `licence`, `captions` (`styleId`, `overrides`,
+>   `placement`), `graphics` (`styleId`, `overrides`), override keys
+>   sorted, two-space indent, a final newline; since `6ac4db0` both
+>   override objects go through the read's checks, so a key a look may not
+>   carry never reaches the text. **`lookFileBase(name)`**: `NEVER_KEPT`
+>   first, `/` and `\` to `-` (a name is not a path), then `safeTakeBase`'s
+>   rules, a trailing high surrogate removed, `'look'` for an empty
+>   result: "Bride 5:30pm" gives `Bride 530pm.forgelook`. **`safeTakeBase`
+>   (`src/shared/render/voiceover.ts`) was widened by `6ac4db0`**: its
+>   reserved-name test is now
+>   `/^(con|prn|aux|nul|conin\$|conout\$|com[0-9¹²³]|lpt[0-9¹²³]) *(\..*)?$/i`
+>   (COM0, LPT0, the superscript digits, CONIN$, CONOUT$, and spaces before
+>   the dot), which also changes **voice-over take names**:
+>   a take named so is now prefixed `_`. `lookIsApplied(project, look)`
+>   compares the two resolved styles (canonical sorted-key text) and the
+>   placement: what is drawn, never a stored flag. `uniqueLookName(name,
+>   taken)`: its own if free, else " 2", " 3", … within 60 code points; an
+>   empty name is "Imported look". Names compare case-blind with ends
+>   trimmed (`sameLookName`). `saneSavedLooks(raw)`: at most 200 entries
+>   read, each through `parseLook`, refused, unnamed and repeated names
+>   dropped (the first kept), at most 50.
+> - **`src/shared/lookChannels.ts`** (new): `LOOK_CHANNELS` = `{ export:
+>   'look:export', import: 'look:import' }`, re-exported by `look.ts`, its
+>   own file so the sandboxed preload does not bundle the style libraries
+>   (the builder read the preload at 19.53 kB).
+> - **Main** (`src/main/ipc.ts`, after `settings:set`). `look:export`
+>   reads its payload with `parseLook` (a refused one throws its reason),
+>   opens the Save dialog (title "Export look", default name
+>   `lookFileBase(name).forgelook`, filter "Look" `*.forgelook`), writes
+>   `serializeLook(read.look)` through `writeAtomic` (a temp file renamed
+>   into place), so only a look's own sane fields reach the disk whatever
+>   the window sent; answers the file's basename, never its folder, null on
+>   Cancel or no window; a failed write throws "The look could not be
+>   written. Choose another folder and try again." (`LOOK_EXPORT_FAILED`).
+>   `look:import`: the Open dialog (title "Import look", filters "Look" and
+>   "All files"); null on Cancel; then `stat`: not a regular file is
+>   `LOOK_NOT_A_LOOK` before any read (`6ac4db0`: a link to `/dev/zero`
+>   reports size 0 and filled main's memory, a named pipe hung it); over the
+>   cap `LOOK_TOO_LARGE` before any read; then `readLookBytes`, one handle
+>   opened `O_RDONLY | O_NONBLOCK` (`O_NONBLOCK` falls back to 0 where it is
+>   undefined, Windows), checked again as a regular file within the cap,
+>   at most 65537 bytes read into a fixed buffer, so a file that grew after
+>   the `stat` is still refused; any throw there is `LOOK_UNREADABLE`; then
+>   `readLookText`. The preload's `exportLook(look)` and `importLook()`
+>   invoke the two channels. The store takes Electron's "Error invoking
+>   remote method '<channel>': Error:" off a rejection with `helperErrorText`
+>   (`src/shared/sidecar/row.ts`) before it reaches the screen (`6ac4db0`),
+>   falling back to `LOOK_EXPORT_FAILED` or `LOOK_UNREADABLE`.
+> - **The harness bridge** (`harness/bridge.ts`): `harnessLookFile`, the
+>   look file in memory, as `window.__forgeLookFile`: `text` (null = no
+>   file chosen), `name`, `writes`, `cancel` (both dialogs answer as
+>   Cancel), `failWrite` (piece 2: an export throws `LOOK_EXPORT_FAILED`),
+>   `put(text)`, `reset()`. An export runs `parseLook` and writes `text`,
+>   `name` and `writes + 1`; an import tries the text as main tries a file
+>   (the UTF-8 size, then `readLookText`), so any text put there, a hostile
+>   one included, can be tried on the page; a non-regular file cannot. The
+>   fallback bridge's `exportLook` and `importLook` throw its one sentence,
+>   "The app bridge did not load — restart Forge".
+> - **The store** (`src/renderer/src/store.ts`): `savedLooks: Look[]`
+>   (named so because `useCatalog` already has `looks`, the colour LUTs),
+>   `lookNotes: string[]` (what the last look action said, replaced by the
+>   next). `loadSavedLooks()` reads `creatorLooks` through `saneSavedLooks`,
+>   a failed read silent, as `loadPresets`; called once in `App.tsx`'s
+>   mount effect beside `loadPresets`. `saveLook({ name, author?, licence?
+>   })`: the look made by `lookFromProject`; an empty name → false with
+>   "Type a name to save this look." (`LOOK_NAME_NEEDED`); a new name with
+>   50 saved → false with "You have 50 saved looks. Remove one to save or
+>   import another." (`LOOK_LIST_FULL`); saving over a name (any case)
+>   replaces it in its place under the new spelling with `version` + 1
+>   (at most 1 000 000), even with the list full; else appended at version
+>   1; notes cleared; `setSetting` (a failure swallowed); true.
+>   `applySavedLook(name)`: one `update()`, so ONE undo step for both
+>   styles; notes = the font notes; the graphic clips rebaked once through
+>   `rebakeGraphicClips`, only when the project changed and
+>   `graphicsStyleChanged` says so (a look changing only the captions
+>   rebakes nothing). `removeSavedLook(name)`: filtered, notes cleared,
+>   written. `exportSavedLook(name)`: notes "Exported as <file>."
+>   (`lookExportedNote`, the name only), none on Cancel, main's sentence on
+>   a failure. `importLookFile()`: the list's cap first (since `8730ff7`,
+>   before the Open dialog), Cancel leaves the notes as they were, a
+>   refusal's reason as the note, the cap again, the look appended under
+>   `uniqueLookName` with the read's notes plus "A saved look already had
+>   this name, so a number was added after it." (`LOOK_NOTE_RENAMED`) when
+>   a number was added; written; **not applied**.
+> - **Tests**: `tests/look.test.ts` 41 cases, `tests/lookIpc.test.ts` 13
+>   (one, the link to a device and the named pipe, real on macOS and
+>   skipped on win32), `tests/renderer/lookStore.test.ts` 19,
+>   `tests/renderer/lookBridge.test.ts` 6 (one of them piece 2's), counted
+>   in the code at `6e8fcb9`. The builder's 31 mutations, each caught; the
+>   fixer's 17, 16 caught, the survivor `lookFileBase`'s `'look'` guard,
+>   unreachable since the strip runs first and kept as a defence. The
+>   agents' suite readings: 388 files and 6428 tests passed at `5ce2cb3`,
+>   6442 at `6ac4db0` (the builder read 6364 before the lane).
+
+> **Built 2026-11-25 (the creator style, piece 2: the OUTPUT strip's "My
+> look" section and its checks).** `00bf867`, then `8730ff7` after two
+> critics; the same run and push.
+> - **`LookSection`** (`src/renderer/src/components/OutputStrip.tsx`),
+>   the open OUTPUT strip's last section, after `GraphicsSection`, no state
+>   of its own. The heading "My look" (`LOOK_SECTION_LABEL`); one line, with
+>   nothing saved "A look is your caption style and graphic style kept
+>   together, to use again on any project. Set both above, then save them
+>   here." (`LOOK_EMPTY`), else "Click a look to use it on this project."
+>   (`LOOK_HINT`). Each saved look a row: a button (`data-look-row`, its
+>   title the full name, the name cut with an ellipsis) whose click is
+>   `applySavedLook`; lit (`bg-ink-700`, `aria-pressed`) when
+>   `lookIsApplied(project, look)`, so two saved looks that resolve alike
+>   are both lit; then a download icon titled "Export this look to a file
+>   you can share" (`LOOK_EXPORT_TITLE`) and an X titled "Remove this look
+>   from the list. To have it back, save it again or import its file."
+>   (`LOOK_REMOVE_TITLE`), always shown; Remove asks nothing, as
+>   forgetting an export preset does. "Save this look" (`LOOK_SAVE_OPEN`,
+>   hidden while the form is open) opens the form: three boxes with the
+>   placeholders "Name this look", "Made by (optional)", "Licence line
+>   (optional)" (`maxLength` `LOOK_NAME_MAX`, `LOOK_AUTHOR_MAX`,
+>   `LOOK_LICENCE_MAX`: UTF-16 units, so a box never passes the code-point
+>   cap), the name box focused; "Save" and "Cancel". Enter in any box
+>   saves, except the Enter that confirms an input method's word
+>   (`nativeEvent.isComposing`, `8730ff7`); Escape leaves, with
+>   `stopPropagation` so full screen is not left too. "Import a look"
+>   (`LOOK_IMPORT`) beside it. The notes under the buttons, inline
+>   (`data-look-notes`), all in one colour, until the next look action
+>   replaces them; opening the form clears them, and since `8730ff7` New
+>   and Open do. The store holds the form as `lookDraft` (`LookDraft`:
+>   `name`, `author`, `licence`) with `startLookSave` (empty, notes
+>   cleared), `setLookDraft(patch)`, `commitLookDraft()` (through
+>   `saveLook`; closes only when it saved, so an empty name stays open and
+>   says why) and `cancelLookSave`, as `folderEdit` holds a folder's name.
+> - **The census**: 29 rows in `tests/fixtures/ui-census.json`, all home
+>   `output`, standing for 31 carriers (the Export and Remove titles count
+>   2; the builder said three rows, the critic and the code say two): four
+>   with needs `none` (the heading, `LOOK_EMPTY`, the two buttons), and 15
+>   recipes in `harness/census.ts`: `looks-saved` (the hint, the two
+>   titles), `look-form` (three placeholders, Save, Cancel),
+>   `look-refused-not-a-look`, `look-refused-large`,
+>   `look-refused-damaged`, `look-refused-newer`,
+>   `look-refused-caption-style`, `look-refused-graphic-style`,
+>   `look-import-changed` (five notes), `look-import-dropped-one`,
+>   `look-name-needed`, `look-list-full`, `look-exported`,
+>   `look-export-failed`, `look-font-missing` (it throws, saying so, when
+>   the catalogue has not loaded). **The session's reading, the harness
+>   page, the Mac, 2026-11-25, at `8730ff7`**: `__forgeCensus()` missing [],
+>   1058 checked, 12 skipped, about 70 s (1029 checked, 12 skipped before
+>   the lane).
+> - **`window.__forgeLookCheck`** (`src/renderer/src/harness/lookCheck.ts`):
+>   fourteen cases, in order: save; change both styles; apply; one undo
+>   restores both; the chosen mark follows the project; export then import
+>   round trip; import under a taken name; refuses a damaged file; refuses
+>   a newer file; refuses a file too large; an empty name says why; remove;
+>   the cap; restores the page. It runs on the page's store, in-memory
+>   settings and look file, in a project of its own (`emptyProject('look
+>   check')`, captions on, the graphics' sounds off, no clip to rebake),
+>   with OUTPUT opened, reads the lit rows on screen
+>   (`[data-look-row][aria-pressed="true"]`, after two animation frames, so
+>   the tab must be in front) against the rule's, and puts the page back;
+>   since `8730ff7` "restores the page" checks thirteen parts by identity:
+>   project, undo, redo, the unsaved mark, saved looks, notes, form, OUTPUT
+>   open, settings, and the file's text, name, writes and cancel (seven
+>   before). `tests/renderer/lookCheck.test.ts` (4 cases) runs the same
+>   cases in node on the harness bridge, so CI holds them; only the screen
+>   reading is the page's. **The session's reading, the harness page, the
+>   Mac, 2026-11-25, at `8730ff7`**: `ok: true`, "14 of 14 cases pass", in
+>   about 8 s or less; save `saved true; 1 saved, version 1; settings holds
+>   1; marked on screen ["Bride 5:30pm"], by the rule ["Bride 5:30pm"]`;
+>   change both styles `captions clean, graphics mono; marked on screen [],
+>   by the rule []`; apply `caption style equal, graphic style equal; undo
+>   steps +1; captions on true, sounds false; marked on screen ["Bride
+>   5:30pm"], by the rule ["Bride 5:30pm"]`; one undo `after one undo:
+>   caption as before, graphic as before`; the chosen mark undone not
+>   marked, applied marked, one caption setting changed not marked, that
+>   undone marked, the accent changed not marked, that undone marked, each
+>   screen list equal to the rule's; round trip `file "Bride
+>   530pm.forgelook", ends with a newline true; note []; read back equal`;
+>   taken name `names ["Bride 5:30pm","Bride 5:30pm 2"]` with the renamed
+>   note; the three refusals each with its sentence, `project unchanged;
+>   list unchanged`; empty name `saved false; notes ["Type a name to save
+>   this look."]; the form stayed open`; remove `left ["Bride 5:30pm"];
+>   settings match`; the cap `50 saved; one more refused true with the
+>   full note; an import refused true; saving over a name true, version 2`;
+>   restores the page `project back; undo back; redo back; unsaved mark
+>   back; saved looks back; notes back; form back; OUTPUT open back;
+>   settings back; file text back; file name back; file writes back; file
+>   cancel back`. The file there is the harness's in-memory file and the
+>   settings its in-memory settings: no real dialog, file or
+>   `settings.json`.
+> - **The render check** (`tests/integration/look.int.test.ts`, 4 cases):
+>   a #606060 1080×1920 shot, 5 s at 30 fps, with made-up words every 400
+>   ms, captions on (libass, through main's `prepareCaptions`), and the
+>   Library's lower third on V2 (placed with captions off, so it takes the
+>   bottom third), exported through `bakeForExport`, `buildRenderPlan` and
+>   the bundled ffmpeg twice: with a look applied by `applyLook` (made by
+>   `lookFromProject` elsewhere, `bold-center` captions in #FF40C0, primary
+>   and highlight, at the top; `neon` graphics with the accent #40E0FF;
+>   written by `serializeLook` and read back by `readLookText`), and
+>   without. Two colours no preset has (a case asserts it), far from the
+>   grey, white, black and each other; full size so the accent bar (about 8
+>   px) is wider than a 4:2:0 chroma pair. On a held frame, a pixel is a
+>   colour's when every channel is within 40; with the look more than 300
+>   near #FF40C0 in the top half and more than 300 near #40E0FF in the
+>   bottom third, and the stand-in baker handed the accent; without it, 0
+>   of either anywhere. The builder's reading on the Mac: frame 33, 38039
+>   and 3992 with the look, 0 and 0 without (a critic reproduced them).
+>   Its mutations: `applyLook` leaving the graphics, then the captions, as
+>   they were, each failing. **Its limit, in the builder's words**: the
+>   accent reaches the picture through a stand-in `Bakers.graphic`, which
+>   paints the real drawer's list (as in `graphic.int`; the real painter is
+>   the renderer's canvas, which node lacks), so it checks that the export
+>   composites what the look's style bakes, not the canvas painter. It
+>   proves `applyLook` → export; `lookCheck` and `lookSection` prove the
+>   store's `applySavedLook`. Windows CI ran it on the 2018 ffmpeg at
+>   `6e8fcb9`: green, no figure read.
+> - **Tests**: `tests/renderer/lookSection.test.tsx` 19 cases (every
+>   control and state; since `8730ff7` three looks with the MIDDLE row's
+>   row button, Export and Remove pressed, the `maxLength`s, the input
+>   method's Enter), `lookCheck.test.ts` 4, `look.int` 4, `lookBridge`'s
+>   `failWrite`. The builder's 15 mutations, each caught (one, the
+>   refusal cases always passing, after a test was added); the fixer's 11,
+>   each caught. The agents' suite readings: 391 files and 6466 tests passed
+>   at `00bf867`, 6470 at `8730ff7`.
+> - **The session's verification, the Mac, 2026-11-25, at `8730ff7`**,
+>   each run written to a file and its exit code read: typecheck 0; `npx
+>   vitest run` 0, 391 files passed and 6 skipped, 6470 tests passed and 67
+>   skipped (384 files and 6364 tests before the lane: +7 files, +106
+>   tests); build 0. After `1c1dba0` (comments only) typecheck 0 and the two
+>   template test files 0 (26 tests); the full suite was not run again.
+>   **CI at `6e8fcb9`** (run 45729819708): `windows-latest` (job
+>   139608744007) and `macos-15` (job 139608744430) green, no annotation;
+>   no runner's totals known (the log needs a sign-in). CI never runs the
+>   real dialogs, a real exported file or a real import.
+> - **By eye, the harness page, the Mac, 2026-11-25** (viewport 1280×900;
+>   the session, not a rating): three looks saved through the store, one
+>   named in 61 characters, of which 60 were kept; after Graphics the
+>   heading, the hint, three rows each with a download icon and an X, the
+>   long name cut with an ellipsis, "Save this look" and "Import a look"
+>   side by side, no sideways scroll at the column's width; the applied
+>   row drawn darker. A real click on "Bride 5:30pm" set the caption style
+>   to pop and the graphic style to mono (that look's); one `undo()`
+>   restored clean and neon; `redo()` put both back. With
+>   `__forgeLookFile.put('not a look')`, a real click on "Import a look"
+>   showed a line beginning "This file could not be read", the list
+>   unchanged. "Save this look" opened the three boxes with their
+>   placeholders. No console error about a look. Not done: a rating, the
+>   keyboard by hand (Enter, Escape, Tab), the empty state by eye (the
+>   census stands it up).
+>
+> **Read, and where; not read.** Every on-screen figure above was read on
+> the Mac's harness page, with its in-memory file and settings. Nothing
+> was read in the development app or on the Surface. **The Electron half
+> never ran**: the two real dialogs, the real file `look:export` writes,
+> the real read by `look:import` (the `stat`, the bounded handle) and the
+> real `userData/settings.json` are covered by `tests/lookIpc.test.ts`'s
+> node tests with fakes and nothing more. No exported clip with a look was
+> watched; a missing font's note was not seen. You have not seen or tried
+> "My look": every choice here is the session's or an agent's. §10 has no
+> exit paragraph; nothing here is marked met.
+>
+> **Departures from the plan's words** (the creator style):
+> 1. "Exported and imported as JSON": the file is JSON text with its own
+>    extension, `.forgelook`, saying `"kind": "forge-look"` and `"schema":
+>    1`; the dialogs filter "Look", and the import also offers "All files".
+> 2. "`{author, version, licence}` header": no header object; `author`,
+>    `version` and `licence` are top-level keys between `name` and
+>    `captions`. `author` and `licence` are optional boxes ("Made by
+>    (optional)", "Licence line (optional)"), kept as typed; `version` is
+>    the app's (1, then + 1 for each save over the name), never typed.
+> 3. A look also carries Smart placement (`placement: 'smart'` or none),
+>    beside the two styles.
+> 4. The section does more than "applied in one click": it saves,
+>    exports, removes and imports, and an import adds a look without
+>    applying it.
+> 5. Saved looks are app-level, in settings under `creatorLooks`, at most
+>    50; the plan does not say where they live.
+> 6. `safeTakeBase`'s reserved names were widened for the look's file
+>    name, which changes voice-over take names too.
+> 7. The caps (64 KB; 60 / 80 / 200 / 100 code points; 50 looks; 200
+>    entries read), `CAPTION_ACCEPTS`' ranges and every on-screen line are
+>    the lane's choices, unrated.
+>
+> **Left open** (the creator style; each builder's, critic's as declined
+> and fixer's open item, unless the code at `6e8fcb9` shows it done):
+> - Yours: whether a stranger's look may carry caption values beyond what
+>   the controls write (`fontSize` up to 1080, `wordsPerLine` up to 50,
+>   `marginV` up to 1080, outline and shadow up to 100, where the controls
+>   stop at 324, 8 and 432); declined by piece 1's fixer, since a project
+>   can already hold them and bounding would change a look read back.
+> - A look made from a project holding values no control writes (a
+>   caption font with a comma, `fontSize` over 1080) drops them, and then
+>   resolves differently from its source; the round trip is exact for
+>   every value the app's controls write.
+> - As the export presets: if `getSettings` fails at start, the next save,
+>   import or remove writes a short list over `creatorLooks`, and a failed
+>   `setSetting` is swallowed, so a look can look saved unwritten; a
+>   "loaded" guard or a note was declined.
+> - Undo and redo after a graphic-style change, a look's included, do not
+>   rebake the edit-time frames (export rebakes from the spec); not new,
+>   declined.
+> - The notes do not tell a refusal from a confirmation by colour (it
+>   needs a kind per note; `lookNotes` is `string[]`); declined, for your
+>   eye.
+> - The three boxes have no `aria-label` (it would add three census
+>   rows); declined.
+> - Two saved looks that resolve alike are both lit (the mark is a pure
+>   comparison); kept as the rule, to be seen.
+> - Without the bridge, Export and Import say "The app bridge did not load
+>   — restart Forge", which names "Forge", not 3dit (pre-existing).
+> - `FolderNameInput` (`MediaPool.tsx`) still saves on an input method's
+>   Enter (pre-existing; the same one-line guard would fix it).
+> - `look.int` reads its colours in halves and thirds, not inside the
+>   plan's overlay rectangle and libass's top band; `tests/oldestFfmpeg.test.ts`
+>   does not scan the `ass=…:fontsdir=…:shaping=complex` shape;
+>   tightenings, declined.
+> - `lookFileBase`'s `'look'` guard survived a mutation (unreachable since
+>   `6ac4db0`), kept as a defence.
+> - The non-regular-file refusal cannot be tried on the harness page (its
+>   file is text); only `lookIpc` covers it.
+> - Not measured on Windows by anyone: the bounded-handle read on an NTFS
+>   path (`O_NONBLOCK` falling back to 0; the pipe and device test is
+>   skipped on win32), the Save dialog's default name, the atomic write.
+>   Yours: export a look named "Bride 5:30pm" on the Mac and on the Surface
+>   and import it back.
+> - Not read: the section in the development app or on the Surface, by
+>   keyboard, empty, or rated; an exported clip with a look; a missing
+>   font's note.
+> - The licence wording stays yours (`MARKET.md` §10 item 3): the app
+>   writes none and keeps the maker's line as typed; asked on 2026-11-25
+>   whether a default is wanted, not answered.
+> - The second bullet, the saved template with slots: not built.
 
 ---
 
