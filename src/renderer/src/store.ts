@@ -756,12 +756,6 @@ export interface FolderMenuTarget {
   y: number
 }
 
-/**
- * A folder's name being typed in the Upload panel, in place: a new folder
- * (`from` null; `moving` are the files its making also moves in, from a
- * tile's "New folder…") or a folder being renamed (`from` its name).
- * Window state, never saved.
- */
 /** The "save this look" form's three boxes, as typed (OUTPUT's "My look"). */
 export interface LookDraft {
   name: string
@@ -771,6 +765,12 @@ export interface LookDraft {
   licence: string
 }
 
+/**
+ * A folder's name being typed in the Upload panel, in place: a new folder
+ * (`from` null; `moving` are the files its making also moves in, from a
+ * tile's "New folder…") or a folder being renamed (`from` its name).
+ * Window state, never saved.
+ */
 export interface FolderEdit {
   from: string | null
   draft: string
@@ -6633,6 +6633,12 @@ export const useEditor = create<EditorState>((set, get) => ({
   },
 
   importLookFile: async () => {
+    // A full list refuses any import (an import never saves over a name), so
+    // say so before the Open dialog asks for a file that could not be added.
+    if (get().savedLooks.length >= SAVED_LOOKS_MAX) {
+      set({ lookNotes: [LOOK_LIST_FULL] })
+      return
+    }
     let read: Awaited<ReturnType<typeof window.forge.importLook>>
     try {
       read = await window.forge.importLook()
@@ -7327,6 +7333,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       folderMenu: null,
       folderEdit: null,
       foldedFolders: [],
+      // What "My look" last said was about the project being closed (an export, a refused file).
+      lookNotes: [],
       aspect: aspectOf(project.settings),
       past: [],
       future: []
@@ -7353,6 +7361,8 @@ export const useEditor = create<EditorState>((set, get) => ({
       folderMenu: null,
       folderEdit: null,
       foldedFolders: [],
+      // What "My look" last said was about the project being closed (an export, a refused file).
+      lookNotes: [],
       /*
        * The aspect comes back with the project.
        *

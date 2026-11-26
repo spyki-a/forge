@@ -341,7 +341,10 @@ export function LookSection(): ReactNode {
   const commitLookDraft = useEditor((s) => s.commitLookDraft)
   const cancelLookSave = useEditor((s) => s.cancelLookSave)
 
-  const keys = (e: { key: string; preventDefault: () => void; stopPropagation: () => void }): void => {
+  const keys = (e: { key: string; nativeEvent?: { isComposing?: boolean }; preventDefault: () => void; stopPropagation: () => void }): void => {
+    // The Enter that confirms a word in an input method (a script typed by
+    // transliteration) is not the person's Enter: the name is half typed.
+    if (e.nativeEvent?.isComposing) return
     if (e.key === 'Enter') {
       e.preventDefault()
       void commitLookDraft()

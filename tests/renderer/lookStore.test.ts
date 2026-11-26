@@ -329,10 +329,16 @@ describe('importing a look', () => {
     expect(state().lookNotes).toEqual(['earlier'])
   })
 
-  it('with the list full: refused, nothing added', async () => {
+  it('with the list full: refused before the Open dialog, nothing added', async () => {
     start(projectWith({ styleId: 'pop' }), Array.from({ length: SAVED_LOOKS_MAX }, (_, i) => look(`Look ${i}`)))
     bridge.imported = file('New')
-    await state().importLookFile()
+    const opened = vi.spyOn(window.forge, 'importLook')
+    try {
+      await state().importLookFile()
+      expect(opened).not.toHaveBeenCalled()
+    } finally {
+      opened.mockRestore()
+    }
     expect(state().savedLooks).toHaveLength(SAVED_LOOKS_MAX)
     expect(state().lookNotes).toEqual([LOOK_LIST_FULL])
     expect(bridge.writes).toEqual([])

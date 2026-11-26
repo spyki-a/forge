@@ -34,17 +34,34 @@ describe('the look check (harness lookCheck.ts), in node on the harness bridge',
     expect(run.LOOK_CHECK_CASES).toHaveLength(14)
   })
 
-  it('puts the page back: the project, the saved looks, the setting and the file as they were', async () => {
+  it('puts the page back: the project, undo and redo, the unsaved mark, the saved looks, notes, form, OUTPUT, the setting and the file as they were', async () => {
     const page = store.useEditor.getState()
+    // A page state unlike what the check sets: OUTPUT closed, a note, something to redo, unsaved.
+    const future = [page.project]
+    const notes = ['the page’s own note']
+    store.useEditor.setState({ outputOpen: false, lookNotes: notes, future, dirty: true })
     const project = page.project
     const looks = page.savedLooks
     file().put('the page’s own file')
+    Object.assign(file(), { name: 'Page own.forgelook', cancel: false })
     await window.forge.setSetting(LOOKS_SETTING, ['the page’s own value'])
-    await run.runLookCheck({ file: file() })
-    expect(store.useEditor.getState().project).toBe(project)
-    expect(store.useEditor.getState().savedLooks).toBe(looks)
+    const result = await run.runLookCheck({ file: file() })
+    const after = store.useEditor.getState()
+    expect(after.project).toBe(project)
+    expect(after.savedLooks).toBe(looks)
+    expect(after.outputOpen).toBe(false)
+    expect(after.lookNotes).toBe(notes)
+    expect(after.future).toBe(future)
+    expect(after.dirty).toBe(true)
     expect((await window.forge.getSettings())[LOOKS_SETTING]).toEqual(['the page’s own value'])
     expect(file().text).toBe('the page’s own file')
+    expect(file().name).toBe('Page own.forgelook')
+    const restores = result.cases.find((c) => c.name === 'restores the page')!
+    expect(restores.pass).toBe(true)
+    for (const what of ['redo back', 'unsaved mark back', 'notes back', 'OUTPUT open back', 'file name back', 'file cancel back']) {
+      expect(restores.detail).toContain(what)
+    }
+    store.useEditor.setState({ outputOpen: false, lookNotes: [], future: [], dirty: false })
   })
 
   it('fails the three refusal cases when an import touches the list though the file was refused', async () => {

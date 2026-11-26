@@ -333,15 +333,25 @@ export async function runLookCheck(env: LookCheckEnv): Promise<LookCheckResult> 
   await attempt('restores the page', async () => {
     const now = state()
     const setting = await savedSetting()
-    const pass =
-      now.project === before.project &&
-      now.past === before.past &&
-      now.savedLooks === before.savedLooks &&
-      now.lookDraft === before.lookDraft &&
-      same(setting, settingBefore) &&
-      env.file.text === fileBefore.text &&
-      env.file.writes === fileBefore.writes
-    return { pass, detail: `project ${now.project === before.project ? 'back' : 'NOT back'}; saved looks ${now.savedLooks === before.savedLooks ? 'back' : 'NOT back'}; settings ${same(setting, settingBefore) ? 'back' : 'NOT back'}; file ${env.file.text === fileBefore.text ? 'back' : 'NOT back'}` }
+    // Every piece the check set aside, each by identity (or value, for the file's
+    // plain fields), and each named in the detail so a miss says which.
+    const parts: Array<[string, boolean]> = [
+      ['project', now.project === before.project],
+      ['undo', now.past === before.past],
+      ['redo', now.future === before.future],
+      ['unsaved mark', now.dirty === before.dirty],
+      ['saved looks', now.savedLooks === before.savedLooks],
+      ['notes', now.lookNotes === before.lookNotes],
+      ['form', now.lookDraft === before.lookDraft],
+      ['OUTPUT open', now.outputOpen === before.outputOpen],
+      ['settings', same(setting, settingBefore)],
+      ['file text', env.file.text === fileBefore.text],
+      ['file name', env.file.name === fileBefore.name],
+      ['file writes', env.file.writes === fileBefore.writes],
+      ['file cancel', env.file.cancel === fileBefore.cancel]
+    ]
+    const pass = parts.every(([, back]) => back)
+    return { pass, detail: parts.map(([what, back]) => `${what} ${back ? 'back' : 'NOT back'}`).join('; ') }
   })
 
   const failed = cases.filter((c) => !c.pass)

@@ -6,6 +6,9 @@ import { resolveGraphicStyle } from '@shared/graphics/style'
 import { emptyProject, type Project } from '@shared/timeline'
 import {
   LOOKS_SETTING,
+  LOOK_AUTHOR_MAX,
+  LOOK_LICENCE_MAX,
+  LOOK_NAME_MAX,
   LOOK_NAME_NEEDED,
   LOOK_SECTION_LABEL,
   LOOK_UNREADABLE,
@@ -140,8 +143,8 @@ function section() {
 }
 
 const press = (h: Host): unknown => (h.props.onClick as () => unknown)()
-const key = (h: Host, k: string) => {
-  const e = { key: k, prevented: false, stopped: false, preventDefault() { this.prevented = true }, stopPropagation() { this.stopped = true } }
+const key = (h: Host, k: string, composing = false) => {
+  const e = { key: k, nativeEvent: { isComposing: composing }, prevented: false, stopped: false, preventDefault() { this.prevented = true }, stopPropagation() { this.stopped = true } }
   ;(h.props.onKeyDown as (e: unknown) => void)(e)
   return e
 }
@@ -157,6 +160,7 @@ function projectWith(captions: Partial<Project['captions']>, graphics?: Project[
 const LONG = 'A long look name for a wedding studio, goes past the column'
 const ONE = lookFromProject(projectWith({ styleId: 'clean' }, { styleId: 'neon', sound: true }), { name: 'Neon clean' })
 const TWO = lookFromProject(projectWith({ styleId: 'bold-center', overrides: { primaryColor: '#FF40C0' } }, { styleId: 'mono', sound: true }), { name: LONG })
+const THREE = lookFromProject(projectWith({ styleId: 'pop' }, { styleId: 'energetic', sound: true }), { name: 'Third' })
 
 function start(project: Project = emptyProject(), looks: Look[] = []): void {
   useEditor.setState({ ...useEditor.getInitialState(), outputOpen: true, project, past: [], future: [], savedLooks: looks, lookNotes: [], lookDraft: null })
@@ -353,5 +357,58 @@ describe('OUTPUT’s "My look" section', () => {
     expect(file).toBe('Зорпа плим вечер-ноч.forgelook')
     expect(file).not.toMatch(/[<>:"/\\|?*]/)
     expect(state().lookNotes).toEqual([lookExportedNote(file)])
+  })
+
+  it('each row’s controls act on their own row: the middle of three is applied, exported and removed, not its neighbours', async () => {
+    start(projectWith({ styleId: 'kinetic' }, { styleId: 'editorial', sound: true }), [ONE, TWO, THREE])
+    const resolved = (p: Project) =>
+      JSON.stringify([resolveStyle(p.captions.styleId, p.captions.overrides as StyleOverrides), resolveGraphicStyle(p.graphics?.styleId ?? 'clean', p.graphics?.overrides)])
+    // The three are told apart by their styles, and the project is none of them.
+    expect(new Set([ONE, TWO, THREE].map((l) => lookIsApplied(state().project, l)))).toEqual(new Set([false]))
+
+    press(section().rows[1])
+    const twoProject = projectWith(
+      { styleId: TWO.captions.styleId, overrides: TWO.captions.overrides as StyleOverrides },
+      { styleId: TWO.graphics.styleId, overrides: TWO.graphics.overrides, sound: true }
+    )
+    expect(resolved(state().project)).toBe(resolved(twoProject))
+    expect(section().rows.map((r) => r.props['aria-pressed'])).toEqual([false, true, false])
+
+    await press(section().exports[1])
+    expect(bridge.exported).toEqual([TWO])
+
+    await press(section().removes[1])
+    expect(section().rows.map((r) => r.props['data-look-row'])).toEqual([ONE.name, THREE.name])
+    expect((bridge.settings[LOOKS_SETTING] as Look[]).map((l) => l.name)).toEqual([ONE.name, THREE.name])
+  })
+
+  it('each box holds no more than its cap, so the store never shortens a name silently', () => {
+    state().startLookSave()
+    const s = section()
+    expect(s.inputs.name.map((i) => i.props.maxLength)).toEqual([LOOK_NAME_MAX])
+    expect(s.inputs.author.map((i) => i.props.maxLength)).toEqual([LOOK_AUTHOR_MAX])
+    expect(s.inputs.licence.map((i) => i.props.maxLength)).toEqual([LOOK_LICENCE_MAX])
+  })
+
+  it('the Enter that ends an input method’s word saves nothing; the next Enter saves', async () => {
+    state().startLookSave()
+    type(section().inputs.name[0], 'Зорпа')
+    const e = key(section().inputs.name[0], 'Enter', true)
+    expect(e.prevented).toBe(false)
+    await settle()
+    expect(state().savedLooks).toHaveLength(0)
+    expect(state().lookDraft).not.toBeNull()
+    key(section().inputs.name[0], 'Enter')
+    await settle()
+    expect(state().savedLooks.map((l) => l.name)).toEqual(['Зорпа'])
+  })
+
+  it('a new or opened project clears what the section last said', () => {
+    useEditor.setState({ lookNotes: [LOOK_UNREADABLE] })
+    state().newProject()
+    expect(state().lookNotes).toEqual([])
+    useEditor.setState({ lookNotes: [LOOK_UNREADABLE] })
+    state().loadProject(emptyProject(), '/projects/a.forge', [])
+    expect(state().lookNotes).toEqual([])
   })
 })
