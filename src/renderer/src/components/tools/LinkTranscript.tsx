@@ -266,7 +266,8 @@ export function LinkTranscript(): ReactNode {
   // A language chosen by hand is offered again when it had nothing — unless
   // the video has no caption track in any language.
   const chosen = source !== null && source.meta !== null && source.meta.language === null && source.meta.hasCaptions !== false
-  const ready = source?.status === 'ready'
+  // The same value the store's toggleTranscript and the tab decide on, so pressed and the press cannot drift.
+  const ready = useEditor((s) => wordsShown(s))
   // Pressed while the panel shows the link's words, as shown (not merely asked for: shared/foldout.ts).
   const showing = foldoutShowsWords(foldout, 'link', { link: ready, clip })
   const Panel = showing ? PanelLeftClose : PanelLeftOpen

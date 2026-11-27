@@ -685,7 +685,14 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     await frames()
     const before = harnessIngests.length
     const jobsBefore = harnessReframe.jobs.length
-    click([...panel().querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === 'Clip download') ?? null, 'Clip download')
+    // Clip download is in the fold-out's Transcript tab, under the link's words (piece 3), not in the URL tile.
+    editor().openFoldout('transcript', 'link')
+    const words = await until(
+      () => document.querySelector('[data-foldout-body="transcript"] [data-transcript-rows]')?.closest('[data-foldout-body="transcript"]') ?? null,
+      3000,
+      'the link’s words in the Transcript tab'
+    )
+    click([...words.querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === 'Clip download') ?? null, 'Clip download')
     await until(() => harnessIngests.length > before, 3000, 'Clip download asking')
     let graphicsRan = false
     const stop = useEditor.subscribe((s) => {

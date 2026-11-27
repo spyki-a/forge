@@ -98,8 +98,9 @@ export function TranscriptTile(): ReactNode {
         type="button"
         data-clip-transcript-toggle=""
         aria-pressed={showing}
-        // With no clip there are no words of one to show: the tab would show the link's, and the press would do nothing.
-        disabled={!clip}
+        // With no clip there are no words of one to show: the tab would show the link's, and the press would do
+        // nothing — unless the panel already shows the clip's (empty) face, when the press closes it.
+        disabled={!clip && !showing}
         onClick={() => toggleTranscript('clip')}
         title={CLIP_TRANSCRIPT_TOGGLE_TITLE}
         className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors disabled:opacity-40 ${

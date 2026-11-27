@@ -831,10 +831,26 @@ async function transcriptTile(talk: Transcript, expect: (ok: boolean, what: stri
   // The user's spot: Find graphics pressed, the dock open, the tile open — and the run let end.
   const findButton = document.querySelector<HTMLElement>('[data-foldout-body="transcript"] [data-find-graphics]')
   if (!findButton) throw new Error('no Find graphics in the panel beside the picture')
-  findButton.click()
-  await until(() => editor().findingGraphics === null, 10_000, 'Find graphics ending')
+  // Seen to start (or to leave a result) before its end is waited for: an end read on the first frame,
+  // before findGraphics set findingGraphics, would measure a section that never ran.
+  const graphicsBefore = editor().lastGraphics
+  let started = false
+  const stopWatch = useEditor.subscribe((s) => {
+    if (s.findingGraphics !== null) started = true
+  })
+  let ran = false
+  try {
+    findButton.click()
+    await until(() => started || editor().lastGraphics !== graphicsBefore, 3000, 'Find graphics starting')
+    await until(() => editor().findingGraphics === null, 10_000, 'Find graphics ending')
+    ran = started
+  } finally {
+    stopWatch()
+  }
   await frames()
-  const find = findLayout()
+  // ran: the run was seen going; listed: it left a result (lastGraphics changed). Both true when all is well.
+  const find = { ...findLayout(), ran, listed: editor().lastGraphics !== graphicsBefore }
+  expect(ran, 'Find graphics was never seen running, so its section was measured without a run')
   expect(find.dock !== null, 'the dock is not open in the left column, so Find graphics was not measured beside it')
   expect(find.inside, `Find graphics or its section runs past the panel beside the picture: body ${JSON.stringify(find.body)}, button ${JSON.stringify(find.button)}, section ${JSON.stringify(find.section)}`)
   expect(find.clearOfDock, `Find graphics or its section is drawn over the Trimmer dock: dock ${JSON.stringify(find.dock)}, button ${JSON.stringify(find.button)}, section ${JSON.stringify(find.section)}`)

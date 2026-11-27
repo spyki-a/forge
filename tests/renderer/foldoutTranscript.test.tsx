@@ -266,6 +266,22 @@ describe('the panel opens on the link’s words when they arrive', () => {
     await vi.waitFor(() => expect(state().foldout).toEqual({ open: true, tab: 'transcript', words: 'link' }))
   })
 
+  it('a language chosen again after “no captions”, the words come back: open on them too', async () => {
+    stub(LINK_WORDS)
+    state().setIngest({ url: URL })
+    useEditor.setState({
+      urlSource: {
+        linkKey: linkCacheKey(parseLink(URL)!), url: parseLink(URL)!.url,
+        meta: { id: 'x', title: 't', duration: 20, language: null, chapters: [], heatmap: null, channel: 'c', uploader: 'c', webpage_url: URL, hasCaptions: true } as LinkMeta,
+        fetchedAt: null, transcript: null, tracks: [], language: null, status: 'none', error: null, run: null, anchorRow: null, clipped: false
+      }
+    })
+    const english = hosts(createElement(LinkTranscript)).find((h) => h.props['data-language'] === 'en')
+    expect(english, 'the no-captions block offers the languages again').toBeTruthy()
+    press(english)
+    await vi.waitFor(() => expect(state().foldout).toEqual({ open: true, tab: 'transcript', words: 'link' }))
+  })
+
   it('no words come back (no captions): it stays shut', async () => {
     stub(null)
     state().setIngest({ url: NO_CAPTIONS })
@@ -426,6 +442,21 @@ describe('the Transcript tile', () => {
   })
 })
 
+describe('the Transcript tile’s toggle with no clip (piece 3’s critics)', () => {
+  const toggle = (): Host => hosts(createElement(TranscriptTile)).find((h) => h.props['data-clip-transcript-toggle'] !== undefined)!
+
+  it('no link, no clip, the tab opened on the clip’s empty face: the toggle reads pressed, is not greyed, and closes it', () => {
+    state().openFoldout('transcript', 'clip')
+    expect(tab()).toContain('data-foldout-words="clip"')
+    expect(toggle().props['aria-pressed']).toBe(true)
+    expect(toggle().props.disabled).toBe(false)
+    press(toggle())
+    expect(state().foldout.open).toBe(false)
+    // Shut again, with no clip, it greys as before.
+    expect(toggle().props.disabled).toBe(true)
+  })
+})
+
 describe('the toggles decide on the words the tab shows (piece 1’s critics, (b))', () => {
   const linkToggle = (): Host => hosts(createElement(LinkTranscript)).find((h) => h.props['data-link-transcript-toggle'] !== undefined)!
   const clipToggle = (): Host => hosts(createElement(TranscriptTile)).find((h) => h.props['data-clip-transcript-toggle'] !== undefined)!
@@ -452,6 +483,16 @@ describe('the toggles decide on the words the tab shows (piece 1’s critics, (b
     expect(clipToggle().props['aria-pressed']).toBe(false)
     press(clipToggle())
     expect(state().foldout).toEqual({ open: true, tab: 'transcript', words: 'clip' })
+  })
+
+  it('asked for the link (the tab bar’s way), no link words, a clip selected, the clip’s shown: the tile’s toggle reads pressed and closes', () => {
+    selectClip(true)
+    state().openFoldout('transcript')
+    expect(state().foldout.words).toBe('link')
+    expect(tab()).toContain('data-foldout-words="clip"')
+    expect(clipToggle().props['aria-pressed']).toBe(true)
+    press(clipToggle())
+    expect(state().foldout.open).toBe(false)
   })
 
   it('on the Clips tab, neither reads pressed, and each opens the Transcript tab on its words', () => {
