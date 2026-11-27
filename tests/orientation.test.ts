@@ -164,8 +164,24 @@ describe('the canvas bar sits over the picture without moving the Preview', () =
     const open = '<Panel defaultSize="64%" minSize="30%">'
     expect(count(app, open)).toBe(1)
     const start = app.indexOf(open)
-    const end = app.indexOf('</Panel>', start)
     expect(start).toBeGreaterThan(-1)
+    /*
+     * The centre panel's own close, counting the Panels nested in it: since
+     * the clip maker's layout the picture row holds the fold-out panel's and
+     * the Preview's own Panels, so the first `</Panel>` after the open is the
+     * fold-out's, and a slice to it cut the Preview off. Every Panel in App is
+     * written open and closed, never self-closing, or the count is off.
+     */
+    expect([...app.matchAll(/<Panel\b/g)].length).toBe([...app.matchAll(/<\/Panel>/g)].length)
+    let depth = 0
+    let end = -1
+    for (const m of app.slice(start).matchAll(/<Panel\b|<\/Panel>/g)) {
+      depth += m[0] === '</Panel>' ? -1 : 1
+      if (depth === 0) {
+        end = start + m.index!
+        break
+      }
+    }
     expect(end).toBeGreaterThan(start)
     const centre = app.slice(start, end)
     const at = (tag: string): number => centre.indexOf(tag)

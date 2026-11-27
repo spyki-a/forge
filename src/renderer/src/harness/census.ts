@@ -16,6 +16,7 @@ import { PROP_RULE } from '@shared/automation/apply'
 import { SANDWICH_RULE } from '@shared/automation/sandwich'
 import { SPINE_RULE } from '@shared/director/apply'
 import { TRAY_MIN, TRAY_RAIL } from '@shared/curveTray'
+import { FOLDOUT_MIN, FOLDOUT_START, type FoldoutTab } from '@shared/foldout'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { runFromRows } from '@shared/ingest/wordRun'
 import { cardKey, newCardRecord, STEP_TEXT, withStep } from '@shared/bestclips/cardClip'
@@ -165,6 +166,15 @@ const SHELF_HOME = 'shelf'
 const TRAY_FACES = { rail: 'rail', keys: 'keys', curve: 'curves' } as const
 type TrayFace = (typeof TRAY_FACES)[keyof typeof TRAY_FACES]
 /**
+ * The fold-out panel beside the picture (components/Foldout.tsx), in its two
+ * open faces, each a home of its own for the tray's reason. Shut it draws
+ * nothing, so it has no home then. `foldtranscript` opens the Transcript tab
+ * on whichever words the scenario left asked for (`foldout.words`), so a
+ * recipe that asks for the clip's words is not undone by the opening.
+ */
+const FOLDOUT_FACES = { foldclips: 'clips', foldtranscript: 'transcript' } as const satisfies Record<string, FoldoutTab>
+type FoldoutHome = keyof typeof FOLDOUT_FACES
+/**
  * The OUTPUT and EXPORT strips under the Shelf (step 7), each a home in
  * two faces, as the tray is: open (`output`, `export`) — the body, the settings
  * themselves — and closed (`outputbar`, `exportbar`) — the header row, and what
@@ -187,7 +197,7 @@ type StripFace = keyof typeof STRIP_FACES
  * auditioned — the scenario's own state shows it, so it needs no opening; with
  * neither it is not there at all, and `fresh()` checks that it is not.
  */
-const FIXED_HOMES = ['header', 'canvasbar', 'preview', 'toolbox', 'dock', 'rail', 'keys', 'curve', 'output', 'outputbar', 'export', 'exportbar', 'transport', 'timeline'] as const
+const FIXED_HOMES = ['header', 'canvasbar', 'preview', 'toolbox', 'foldclips', 'foldtranscript', 'dock', 'rail', 'keys', 'curve', 'output', 'outputbar', 'export', 'exportbar', 'transport', 'timeline'] as const
 /**
  * Overlays: counted only inside the one element that appeared when the scenario
  * opened it. `settings` is the panel under the header's gear (step 6), opened
@@ -498,7 +508,11 @@ function shelfFace(shelf: Element): { showing: string; panel: Element | null } {
  *     the source row that headed the column is three of its tiles, so nothing
  *     sits above the holder)
  *   right = centre / [ transport + timeline | curve tray ]
- *   centre = canvas bar / [ toolbox + preview ]   (step 4: the bar over the picture row)
+ *   centre = canvas bar / [ toolbox + [ fold-out panel | preview ] ]
+ *     (step 4: the bar over the picture row. The clip maker's layout: the
+ *     picture row's second child is a horizontal Group, always there, of the
+ *     fold-out panel — collapsed to nothing while shut, its root then
+ *     `data-foldout="shut"` and empty — and the Preview's own panel)
  *   curve tray = the lower row's second panel, whatever its width: a 28 px
  *     rail when closed, a few hundred px open (step 5). The rail, Keys and
  *     Curves homes are all its root; `openHome` puts it in the right face.
@@ -551,7 +565,19 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]>, Element
   // The centre column: the canvas bar, then the picture row under it. By
   // position, never by the bar's words — those are what is being counted.
   const [canvasbar, pictureRow] = childrenOf(middle, 2, 'the centre column')
-  const [toolbox, preview] = childrenOf(pictureRow, 2, 'the picture row')
+  const [toolbox, beside] = childrenOf(pictureRow, 2, 'the picture row')
+  if (!beside.matches('[data-group]')) {
+    throw new Error('census: the picture row’s second child is not the fold-out panel’s group — the layout changed; update homeRoots')
+  }
+  const [foldout, preview] = panels(beside, 2, 'the fold-out panel and the picture')
+  // By what the panel says it is showing, never by its words.
+  const folded = foldout.getAttribute('data-foldout')
+  if (folded !== 'shut' && !(Object.values(FOLDOUT_FACES) as string[]).includes(folded ?? '')) {
+    throw new Error('census: the picture row’s first panel is not the fold-out panel — the layout changed; update homeRoots')
+  }
+  if (document.querySelectorAll('[data-foldout]').length !== 1) {
+    throw new Error(`census: ${document.querySelectorAll('[data-foldout]').length} [data-foldout] on the page — expected the one panel; update homeRoots`)
+  }
   // The bar has two or three parts of its own, so a bar moved BELOW the picture
   // would still split as "two children" here; the preview canvas says which is which.
   only(preview.querySelectorAll('canvas[data-forge-preview="1"]'), 'preview canvas under the canvas bar')
@@ -566,6 +592,10 @@ function layout(): Record<Exclude<Home, (typeof OVERLAY_HOMES)[number]>, Element
     canvasbar: [canvasbar],
     toolbox: [toolbox],
     preview: [preview],
+    // Each open face's root only while it is the face showing: a row looked for
+    // in a face that is not open is absent.
+    foldclips: folded === 'clips' ? [foldout] : [],
+    foldtranscript: folded === 'transcript' ? [foldout] : [],
     transport: [transport],
     timeline: [timeline],
     rail: [tray],
@@ -823,6 +853,7 @@ async function escape(): Promise<void> {
  */
 async function openHome(home: Home): Promise<void> {
   if (home in TRAY_FACES) return trayShows(TRAY_FACES[home as keyof typeof TRAY_FACES])
+  if (home in FOLDOUT_FACES) return foldoutShows(FOLDOUT_FACES[home as FoldoutHome])
   if (home in STRIP_FACES) return stripShows(home as StripFace)
   if (home === SHELF_HOME) return shelfShows(null)
   if (!(home in TOOL_HOMES)) return
@@ -855,6 +886,31 @@ async function trayShows(face: TrayFace): Promise<void> {
     if (shows === face && right) return
     if (performance.now() > deadline) {
       throw new Error(`census: the Curve tray was asked for ${face} and shows ${shows} in ${Math.round(width)} px`)
+    }
+  }
+}
+
+/**
+ * Open the fold-out panel on a tab, or shut it, through the store as its
+ * toggles and its close button do, and wait for the page to show it.
+ *
+ * Measured as well as read, as the tray is: an open face left in a panel the
+ * Group never widened would still give its text nodes boxes. Opening keeps the
+ * words the scenario asked for (`openFoldout(tab)` leaves them).
+ */
+async function foldoutShows(tab: FoldoutTab | null): Promise<void> {
+  if (tab === null) editor().closeFoldout()
+  else editor().openFoldout(tab)
+  const deadline = performance.now() + 2000
+  for (;;) {
+    await frames()
+    const root = document.querySelector('[data-foldout]')
+    const shows = root?.getAttribute('data-foldout') ?? null
+    const width = root?.closest('[data-panel]')?.getBoundingClientRect().width ?? -1
+    const right = tab === null ? shows === 'shut' && width >= 0 && width <= 1 : shows === tab && width >= FOLDOUT_MIN - 2
+    if (right) return
+    if (performance.now() > deadline) {
+      throw new Error(`census: the fold-out panel was asked for ${tab ?? 'shut'} and shows ${shows} in ${Math.round(width)} px`)
     }
   }
 }
@@ -1425,6 +1481,16 @@ async function importText(text: string): Promise<void> {
 const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   /* nothing at all: a new, empty project */
   none: async () => ({}),
+  /*
+   * The fold-out panel's Transcript tab asked for the selected clip's words,
+   * with no clip selected and no link: its empty line for the clip. Asked
+   * through the store as the Transcript tile's toggle will ask; the home then
+   * opens the tab and keeps the words.
+   */
+  'foldout-clip-words': async () => {
+    editor().openFoldout('transcript', 'clip')
+    return {}
+  },
 
   /*
    * Two states the harness cannot reach; their rows are marked harnessOnly:
@@ -3114,6 +3180,9 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
     // The Shelf on its tiles: whatever tool the last scenario opened is shut,
     // the Library among them, which ends any audition (Library.tsx).
     await shelfShows(null)
+    // The fold-out panel shut, on Clips and the link's words: how a window starts.
+    useEditor.setState({ foldout: FOLDOUT_START })
+    await foldoutShows(null)
     await curveOnMotion()
     // Nothing selected and the Library shut: no dock (the successor of "No clip selected").
     await noDock()

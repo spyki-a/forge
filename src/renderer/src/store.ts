@@ -238,6 +238,15 @@ import {
   type CarouselClipSpec
 } from '@shared/render/carousel'
 import { isBaking } from '@shared/bakeGuard'
+import {
+  FOLDOUT_START,
+  foldoutClosed,
+  foldoutOpened,
+  foldoutToggled,
+  type FoldoutState,
+  type FoldoutTab,
+  type FoldoutWords
+} from '@shared/foldout'
 import { DEFAULT_PAPER, type PaperSpec } from '@shared/render/paper'
 import {
   DEFAULT_PIP,
@@ -980,6 +989,18 @@ interface EditorState {
   setTrayOpen: (open: boolean) => void
   trayTab: TrayTab
   setTrayTab: (tab: TrayTab) => void
+  /**
+   * The fold-out panel beside the picture (components/Foldout.tsx,
+   * shared/foldout.ts): open or shut, on Clips or Transcript, and which
+   * transcript that tab was asked for. View state like the rest of this
+   * block: no undo step, never dirty, not saved, not kept across launches.
+   */
+  foldout: FoldoutState
+  /** Open it on `tab` (and, given, on those words). */
+  openFoldout: (tab: FoldoutTab, words?: FoldoutWords) => void
+  closeFoldout: () => void
+  /** On what is already showing it closes; on anything else it opens there (shared/foldout.ts `foldoutToggled`). */
+  toggleFoldout: (tab: FoldoutTab, words?: FoldoutWords) => void
   /** The settings panel under the header's gear. */
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
@@ -2035,6 +2056,10 @@ export const useEditor = create<EditorState>((set, get) => ({
   setTrayOpen: (trayOpen) => set({ trayOpen }),
   trayTab: 'keys',
   setTrayTab: (trayTab) => set({ trayTab }),
+  foldout: FOLDOUT_START,
+  openFoldout: (tab, words) => set((s) => ({ foldout: foldoutOpened(s.foldout, tab, words) })),
+  closeFoldout: () => set((s) => ({ foldout: foldoutClosed(s.foldout) })),
+  toggleFoldout: (tab, words) => set((s) => ({ foldout: foldoutToggled(s.foldout, tab, words) })),
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   settingsFocus: null,

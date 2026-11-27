@@ -1385,7 +1385,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 461,
+    "line": 592,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1396,7 +1396,7 @@
     "home": "header",
     "needs": "fullscreen",
     "file": "src/renderer/src/App.tsx",
-    "line": 480,
+    "line": 614,
     "newHome": "unchanged (app shell)"
   },
   {
@@ -1405,7 +1405,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 435,
+    "line": 566,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1416,7 +1416,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 455,
+    "line": 586,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1427,7 +1427,7 @@
     "home": "header",
     "needs": "none",
     "file": "src/renderer/src/App.tsx",
-    "line": 100,
+    "line": 139,
     "newHome": "unchanged (header gear, §3.1)",
     "note": "Step 6: the gear that replaced the \"AI\" status dot; it carries the AI helper's dot and opens the settings panel."
   },
@@ -1459,7 +1459,7 @@
     "home": "header",
     "needs": "none",
     "file": "src/renderer/src/App.tsx",
-    "line": 74,
+    "line": 120,
     "newHome": "unchanged",
     "note": "A new project's name, which the header shows; the path and the unsaved dot have no text of their own."
   },
@@ -1481,7 +1481,7 @@
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/App.tsx",
-    "line": 80,
+    "line": 126,
     "newHome": "unchanged (header)"
   },
   {
@@ -10409,5 +10409,90 @@
     "line": 132,
     "newHome": "trimmer dock (the graphic panel, docs/CLIPS.md §6.6; step 6's two-sided templates, §9)",
     "note": "The field label of right.value (FIELD_LABELS), the one text node of these words in the dock: the label element beside its input; the template's name beside the heading is \"versus\", never these words. Count reasoned from the code by step 6 piece 1, 2026-11-25: one; not yet read on screen."
+  },
+  {
+    "label": "Clips",
+    "match": "text",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 44,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, its bar",
+    "note": "The bar's first tab (the clip maker's layout, piece 1). Counted on the Clips face; the Transcript face shows the same bar."
+  },
+  {
+    "label": "Transcript",
+    "match": "text",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 45,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, its bar",
+    "note": "The bar's second tab. Counted on the Clips face, where nothing else says Transcript."
+  },
+  {
+    "label": "The best clips found in the link",
+    "match": "title",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 46,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Clips tab's tooltip"
+  },
+  {
+    "label": "The words of the link, or of the selected clip",
+    "match": "title",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 47,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab's tooltip"
+  },
+  {
+    "label": "Clips and transcript",
+    "match": "aria-label",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 43,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the tabs' group (role tablist)"
+  },
+  {
+    "label": "Close and give the picture its room back",
+    "match": "title",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 48,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the close button at the bar's end",
+    "note": "The same words are its aria-label (the button is an icon); one row per label, home and state, so the title stands for both, as Close keys & curves does."
+  },
+  {
+    "label": "No clips yet. Press Analyse under Best clips, in the URL tile.",
+    "match": "text",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 51,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Clips tab with nothing to show",
+    "note": "Piece 1's empty line; piece 2 moves the cards in and may replace it."
+  },
+  {
+    "label": "No words from a link yet. Paste a link in the URL tile and press Get transcript.",
+    "match": "text",
+    "home": "foldtranscript",
+    "needs": "none",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 53,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab on the link's words, none ready and no clip selected"
+  },
+  {
+    "label": "Select a clip on the timeline to see its words here.",
+    "match": "text",
+    "home": "foldtranscript",
+    "needs": "foldout-clip-words",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 55,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab asked for the selected clip's words, no clip selected and no link words"
   }
 ]

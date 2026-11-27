@@ -22,6 +22,7 @@ import { CanvasBar } from './components/CanvasBar'
 import { Shortcuts } from './components/Shortcuts'
 import { NewProject } from './components/NewProject'
 import { CurveTray, useTrayPanel } from './components/CurveTray'
+import { Foldout, useFoldoutPanel } from './components/Foldout'
 import { SettingsPanel, dotClass, useHelperRow } from './components/SettingsPanel'
 import { OutputStrip } from './components/OutputStrip'
 import { ExportStrip } from './components/ExportStrip'
@@ -35,6 +36,27 @@ function Divider({ vertical = false }: { vertical?: boolean }): ReactNode {
           ? 'h-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500'
           : 'w-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500'
       }
+    />
+  )
+}
+
+/**
+ * The divider between the fold-out panel and the picture (components/Foldout.tsx).
+ *
+ * The house Divider while the panel is open. Shut, it is disabled — the
+ * library then gives it no place to grab, no keyboard stop and no cursor — and
+ * drawn at no width, so nothing of the panel is on screen at all. Its own
+ * component, reading the store itself, so an open or a close re-renders this
+ * line and not App. No double-click: the panel's default size is shut, so a
+ * double-click "back to the default" would close it under the pointer.
+ */
+function FoldoutDivider(): ReactNode {
+  const open = useEditor((s) => s.foldout.open)
+  return (
+    <Separator
+      disabled={!open}
+      disableDoubleClick
+      className={open ? 'w-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500' : 'w-0'}
     />
   )
 }
@@ -179,6 +201,8 @@ export default function App(): ReactNode {
   const [fullScreen, setFullScreen] = useState(false)
   /** The Curve tray's Panel, opened and closed by the store's `trayOpen` (CurveTray.tsx). */
   const tray = useTrayPanel()
+  /** The fold-out panel's, opened and closed by the store's `foldout` (Foldout.tsx). */
+  const foldout = useFoldoutPanel()
 
   /*
    * Out of full screen, by Escape or by the button below.
@@ -621,9 +645,11 @@ export default function App(): ReactNode {
           is gone, its clip editor now the Trimmer dock in here, so the picture
           has the room. About 240 px at the 1400 px default — 17 %, and never
           under 240 px, the width a Slider row's fixed chrome and the Camera
-          rows need.
+          rows need. At most 45 % — it was 30 % until the clip maker's layout
+          (the user, 2026-11-27: "now there is a boundry just extend it a
+          little bit").
         */}
-        <Panel defaultSize="17%" minSize={240} maxSize="30%">
+        <Panel defaultSize="17%" minSize={240} maxSize="45%">
           {/*
             The Shelf with the Trimmer dock under it (LeftSplit), then the
             OUTPUT and EXPORT strips (WINDOW.md §3.16-3.17), at the foot of
@@ -663,9 +689,38 @@ export default function App(): ReactNode {
                 {/* The tool strip belongs to the picture, so it travels with it. */}
                 <div className="flex min-h-0 flex-1">
                   <Toolbox />
-                  <div className="min-w-0 flex-1">
-                    <Preview />
-                  </div>
+                  {/*
+                    The fold-out panel (Clips, Transcript) and the picture, in
+                    the user's sketch's order: tool strip, panel, picture. This
+                    Group is ALWAYS rendered and the panel's Panel collapses to
+                    nothing, so opening and closing it only resizes — the
+                    Preview never moves or remounts (its rAF loop is the
+                    playback clock). Open: 40 % of the row at first, never under
+                    280 px nor over 60 %, and the picture never under 35 %: it
+                    shrinks beside the panel, never covered by it. The height is
+                    the picture's, so the divider over the timeline sets it.
+                    Shut, the panel and its divider take no width at all.
+                  */}
+                  <Group orientation="horizontal" className="min-w-0 flex-1">
+                    <Panel
+                      id="foldout"
+                      collapsible
+                      collapsedSize={0}
+                      defaultSize={0}
+                      minSize={280}
+                      maxSize="60%"
+                      panelRef={foldout.panelRef}
+                      onResize={foldout.onResize}
+                    >
+                      <Foldout />
+                    </Panel>
+                    <FoldoutDivider />
+                    <Panel id="picture" minSize="35%">
+                      <div className="h-full min-w-0">
+                        <Preview />
+                      </div>
+                    </Panel>
+                  </Group>
                 </div>
               </div>
             </Panel>

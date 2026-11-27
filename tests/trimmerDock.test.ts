@@ -139,7 +139,9 @@ describe('the right column is gone; its editor is in the dock', () => {
     // column is the left Panel's one and only child.
     expect(attr(left, 'defaultSize', app)).toBe('"17%"')
     expect(attr(left, 'minSize', app)).toBe('{240}')
-    expect(attr(left, 'maxSize', app)).toBe('"30%"')
+    // At most 45 %: 30 % until the clip maker's layout (the user, 2026-11-27:
+    // "now there is a boundry just extend it a little bit").
+    expect(attr(left, 'maxSize', app)).toBe('"45%"')
     for (const name of ['LeftSplit', 'OutputStrip', 'ExportStrip']) expect(holds(left, name), name).toBe(true)
     expect(written(text, 'SourceBar'), 'the source row').toBe(0)
     const [output] = mounts(app, 'OutputStrip')
@@ -179,8 +181,9 @@ describe('the right column is gone; its editor is in the dock', () => {
     const PIXELS: Record<string, unknown> = { SHELF_FLOOR, DOCK_FLOOR }
     const panels = mounts(app, 'Panel')
     // The window's two columns, the picture and the timeline row, the timeline
-    // and the tray, the Shelf and the dock.
-    expect(panels).toHaveLength(8)
+    // and the tray, the Shelf and the dock, and the fold-out panel and the
+    // picture beside it (tests/foldoutWindow.test.ts).
+    expect(panels).toHaveLength(10)
     const strings: string[] = []
     for (const panel of panels) {
       for (const p of opening(panel).attributes.properties) {

@@ -13,6 +13,7 @@ import { installReframeCheck } from './reframeCheck'
 import { installHelperPackCheck } from './helperPackCheck'
 import { installGraphicCheck } from './graphicCheck'
 import { installLookCheck } from './lookCheck'
+import { installFoldoutCheck } from './foldoutCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -56,6 +57,9 @@ installGraphicCheck()
 
 /* "My look": saved, applied, undone, exported, imported and refused, on the page's store and bridge (docs/CLIPS.md §10). */
 installLookCheck()
+
+/* The fold-out panel beside the picture, opened, switched and closed, and the Preview never remounted (the clip maker's layout). */
+installFoldoutCheck()
 
 /*
  * The store, reachable from a driving script.
