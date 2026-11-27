@@ -15,6 +15,7 @@ import { installGraphicCheck } from './graphicCheck'
 import { installLookCheck } from './lookCheck'
 import { installFoldoutCheck } from './foldoutCheck'
 import { installClipsLayoutCheck } from './clipsLayoutCheck'
+import { installOverlapCheck } from './overlapCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -64,6 +65,9 @@ installFoldoutCheck()
 
 /* Best clips' two parts measured where they are: the URL tile's choices and the panel's cards, nothing cut or past an edge (the clip maker's layout, piece 2). */
 installClipsLayoutCheck()
+
+/* Controls that sit on one another, are covered, cut off or scroll sideways, read state by state (the clip maker's layout, piece 4). */
+installOverlapCheck()
 
 /*
  * The store, reachable from a driving script.

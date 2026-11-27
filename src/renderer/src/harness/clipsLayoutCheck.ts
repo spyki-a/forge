@@ -9,8 +9,12 @@
  * wants to look at — the left column at its 240 px floor, the panel at its
  * 280 px floor, then wide — and reads this back each time.
  *
- * - LEFT: the URL tile's Best clips section. Nothing in it reaches past the
- *   section's right edge, and the Shelf's panel does not scroll sideways.
+ * - LEFT: the whole URL tile (`[data-url-tile]`; since piece 4 Best clips'
+ *   parts are spread over its rows: Analyse beside Get transcript, the Clips
+ *   toggle beside Transcript, the options under them). Nothing in it reaches
+ *   past the tile's right edge, and the Shelf's panel does not scroll
+ *   sideways. Shown whenever the URL tile is open; the session puts a link in
+ *   the box to see Best clips' parts in it.
  * - TAB: the fold-out's Clips tab. Nothing in it reaches past the tab's right
  *   edge, the tab does not scroll sideways, no card title is cut, and every
  *   card is at least 15rem (240 px) wide, or as wide as the tab when the tab
@@ -58,13 +62,13 @@ export function measureClipsLayout(want: { left?: boolean; tab?: boolean } = {})
   const wantTab = want.tab ?? true
 
   let left: ClipsLayout['left'] = null
-  const section = document.querySelector('[data-shelf-tool="url"] [data-shelf-panel] [data-best-clips]')
+  const section = document.querySelector('[data-shelf-tool="url"] [data-shelf-panel] [data-url-tile]')
   if (section) {
     const shelf = section.closest('[data-shelf-panel]') as HTMLElement
     left = { width: round(section.getBoundingClientRect().width), sideways: shelf.scrollWidth > shelf.clientWidth + 1, past: pastRight(section) }
     if (left.sideways) problems.push(`the URL tile scrolls sideways (${shelf.scrollWidth} in ${shelf.clientWidth})`)
     for (const p of left.past) problems.push(`left: ${p}`)
-  } else if (wantLeft) problems.push('no Best clips section in the URL tile (open the URL tile with a link in the box)')
+  } else if (wantLeft) problems.push('no URL tile on screen (open the URL tile, with a link in the box)')
 
   let tab: ClipsLayout['tab'] = null
   const body = document.querySelector<HTMLElement>('[data-foldout-body="clips"]')

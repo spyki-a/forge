@@ -1,12 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { DownloadCloud, Loader2, Scissors } from 'lucide-react'
+import { ChevronDown, ChevronUp, DownloadCloud, Loader2, Scissors } from 'lucide-react'
 import { useEditor, wordsShown } from '../store'
 import { QUALITIES, type Quality } from '@shared/ingest/format'
 import { linkProblem, LINK_PROBLEM_TEXT, parseLink } from '@shared/ingest/url'
 import { formatMark, MIN_RANGE_MS, parseMark } from '@shared/ingest/section'
 import type { IngestWant } from '@shared/ingest/args'
-import { LinkTranscript } from './tools/LinkTranscript'
-import { BestClips } from './tools/BestClips'
+import { GetTranscriptButton, LinkTranscriptStatus, LinkTranscriptToggle } from './tools/LinkTranscript'
+import { AnalyseButton, BestClips, BestClipsPointer, ClipsToggle } from './tools/BestClips'
+import { foldDownChoices, foldDownKeyDown, type FoldDownChoice } from './ui/FoldDown'
 
 /**
  * Sheets ⑥ and ⑫: paste a link, choose what to take, get a clip.
@@ -19,7 +20,15 @@ import { BestClips } from './tools/BestClips'
  * two: paste, Get. Everything else on this panel is optional and stays out of
  * the way until it is wanted.
  *
- * Get transcript (sheets 25–26, docs/CLIPS.md §3b) is `LinkTranscript`: rows
+ * The rows, in the order of the user's sketch of 2026-11-27 (the clip
+ * maker's layout): the link box and **Download**; the kinds as one row, the
+ * chosen kind's quality (Video) or format (Audio, Instrumental, Vocal) a
+ * fold-down list under it, in the flow (`KindsRow`); Get transcript and
+ * Analyse; their status lines; Just a part of it, with the Transcript and
+ * Clips toggles; Best clips' options; the download lines. Nothing in it
+ * floats: a floating menu is one more thing that can cover another.
+ *
+ * Get transcript (sheets 25–26, docs/CLIPS.md §3b) is `LinkTranscript`'s: rows
  * of the link's words, a run picked from them, and Clip it — its button
  * **Clip download**. Since the clip maker's layout (2026-11-27) those rows are
  * the fold-out panel's Transcript tab beside the picture (`LinkWords`), and
@@ -29,18 +38,26 @@ import { BestClips } from './tools/BestClips'
  * beside the rows (§3b.5); with no captions, or none fetched, they are typed
  * as before.
  *
- * And while it has them, Get says what it does — **Full download**, no
- * longer the accent button — because the run's range is shown with the rows
- * and Get does not take it: Clip download does. The two names are the user's
- * (2026-10-06: "let's specify the complete full download, clip download, so
- * that way it will be clear"). Enter in the link box, which would press Get
- * unseen, does nothing then. (Measured in the 240 px panel: "Get the whole
- * video" took 145 px and left the link box 63; "Whole video" took 106 and left
- * it 102, against 147 beside "Get"; "Full download" takes 113.5 and leaves it
- * 94, on one line — and "Clip download", alone on its row, 117, on one.)
+ * The link's button reads **Download**, the sketch's word (2026-11-27; it
+ * was "Get"). And while the link has words, it says what it does — **Full
+ * download**, no longer the accent button — because the run's range is shown
+ * with the rows and the button does not take it: Clip download does. The two
+ * names are the user's (2026-10-06: "let's specify the complete full download,
+ * clip download, so that way it will be clear"). Enter in the link box, which
+ * would press it unseen, does nothing then. (Measured in the 240 px panel:
+ * "Get the whole video" took 145 px and left the link box 63; "Whole video"
+ * took 106 and left it 102, against 147 beside "Get"; "Full download" takes
+ * 113.5 and leaves it 94, on one line — and "Clip download", alone on its
+ * row, 117, on one. "Download" is "Full download" less "Full ": about 91 px
+ * by its classes, leaving the box about 117 — reasoned, not measured. Should
+ * a narrower column or a larger font leave the box under 5.5rem (88 px, a
+ * little under the 94 it has beside Full download), the row wraps and the button goes under the box rather than squeezing it.)
  */
 
 const GET_TITLE = 'Download and put it on the timeline'
+/** The link's button with no words shown: the sketch's word (2026-11-27), where it read "Get". */
+export const DOWNLOAD = 'Download'
+export const FULL_DOWNLOAD = 'Full download'
 export const FULL_DOWNLOAD_TITLE = 'Download the whole video and put it on the timeline'
 
 const WANTS: { id: IngestWant; label: string; hint: string }[] = [
@@ -49,6 +66,116 @@ const WANTS: { id: IngestWant; label: string; hint: string }[] = [
   { id: 'instrumental', label: 'Instrumental', hint: 'The song with the centred voice removed' },
   { id: 'vocal', label: 'Vocal', hint: 'The voice, for cutting to the words' }
 ]
+
+/** The kinds row's fold-down lists (the store's `foldDownOpen`): Video's quality, and the sound's format. */
+export const QUALITY_LIST = 'link-quality'
+export const FORMAT_LIST = 'link-format'
+/** The unfolded choices' names, for a screen reader. */
+export const QUALITY_LABEL = 'Quality'
+export const FORMAT_LABEL = 'Format'
+
+const QUALITY_CHOICES: readonly FoldDownChoice<Quality>[] = QUALITIES.map((quality: Quality) => ({
+  value: quality,
+  label: quality === '2160p' ? '4K' : quality
+}))
+
+const FORMAT_CHOICES: readonly FoldDownChoice<'m4a' | 'mp3'>[] = [
+  { value: 'm4a', label: 'm4a', title: 'What the site already stores — copied out, no re-encode' },
+  { value: 'mp3', label: 'mp3', title: 'Re-encoded to mp3, for somewhere that insists on it' }
+]
+
+/**
+ * The kinds as one row — Video, Audio, Instrumental, Vocal — and under it, in
+ * the flow, the chosen kind's quality or format as a fold-down list: the
+ * sketch's "collapsable" (2026-11-27). The chosen kind's chip says its choice
+ * ("Video · 1080p") and is the list's button.
+ *
+ * A press on another kind chooses it (and folds any list open); a press on the
+ * chosen kind opens or folds its list; a choice folds it, and so does Escape.
+ * The row itself is the `[data-fold-down]` root, so `foldDownChoices` finds
+ * the chosen chip as the button to put the keyboard back on. Same store values
+ * as the buttons it replaced: `kind`, `quality`, `audioFormat`.
+ *
+ * No hook but the store's, so a test can call it as a function.
+ */
+export function KindsRow(): ReactNode {
+  const ingest = useEditor((s) => s.ingest)
+  const setIngest = useEditor((s) => s.setIngest)
+  const foldDownOpen = useEditor((s) => s.foldDownOpen)
+  const setFoldDownOpen = useEditor((s) => s.setFoldDownOpen)
+  const video = ingest.kind === 'video'
+  const list = video ? QUALITY_LIST : FORMAT_LIST
+  const open = foldDownOpen === list
+  const fold = (next: boolean): void => setFoldDownOpen(next ? list : null)
+  const Chevron = open ? ChevronUp : ChevronDown
+
+  return (
+    <div data-fold-down={list} data-open={open} onKeyDown={foldDownKeyDown(open, fold)} className="mt-2.5 flex flex-wrap items-center gap-1">
+      {WANTS.map((want) => {
+        const on = ingest.kind === want.id
+        return (
+          <button
+            key={want.id}
+            type="button"
+            data-want={want.id}
+            aria-pressed={on}
+            {...(on ? { 'aria-expanded': open, 'aria-controls': `fold-down-${list}` } : {})}
+            onClick={() => {
+              if (on) return fold(!open)
+              if (foldDownOpen === QUALITY_LIST || foldDownOpen === FORMAT_LIST) setFoldDownOpen(null)
+              setIngest({ kind: want.id })
+            }}
+            title={want.hint}
+            className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] transition-colors ${
+              on ? 'bg-accent-500 text-ink-950' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
+            }`}
+          >
+            <span>{want.label}</span>
+            {on && (
+              <>
+                <span aria-hidden>·</span>
+                {video ? (
+                  <span>{QUALITY_CHOICES.find((c) => c.value === ingest.quality)?.label ?? ingest.quality}</span>
+                ) : (
+                  <span className="uppercase">{ingest.audioFormat}</span>
+                )}
+                <Chevron size={11} className="shrink-0" aria-hidden />
+              </>
+            )}
+          </button>
+        )
+      })}
+
+      {open &&
+        (video
+          ? foldDownChoices({
+              id: list,
+              label: QUALITY_LABEL,
+              value: ingest.quality,
+              choices: QUALITY_CHOICES,
+              onOpenChange: fold,
+              onChoose: (quality) => setIngest({ quality }),
+              choiceData: 'data-quality',
+              className: 'basis-full'
+            })
+          : foldDownChoices({
+              id: list,
+              label: FORMAT_LABEL,
+              value: ingest.audioFormat,
+              choices: FORMAT_CHOICES,
+              onOpenChange: fold,
+              onChoose: (audioFormat) => setIngest({ audioFormat }),
+              choiceData: 'data-format',
+              className: 'basis-full',
+              choiceClassName: 'uppercase'
+            }))}
+
+      {ingest.kind === 'instrumental' || ingest.kind === 'vocal' ? (
+        <span className="basis-full text-[10px] text-ink-600">split after downloading</span>
+      ) : null}
+    </div>
+  )
+}
 
 /**
  * One end of the range, typed.
@@ -130,7 +257,8 @@ export function LinkBox(): ReactNode {
   }
 
   return (
-    <div className="flex items-center gap-2">
+    // Wraps only when the box would be squeezed under 5.5rem: the button then goes under it.
+    <div className="flex flex-wrap items-center gap-2">
       <input
         value={ingest.url}
         onChange={(e) => setIngest({ url: e.target.value })}
@@ -140,7 +268,7 @@ export function LinkBox(): ReactNode {
         placeholder="Paste a video link"
         spellCheck={false}
         autoComplete="off"
-        className="min-w-0 flex-1 rounded border border-ink-750 bg-ink-950 px-2 py-1.5 text-[11.5px] text-ink-200 outline-none placeholder:text-ink-600 focus:border-accent-500"
+        className="min-w-[5.5rem] flex-1 basis-[5.5rem] rounded border border-ink-750 bg-ink-950 px-2 py-1.5 text-[11.5px] text-ink-200 outline-none placeholder:text-ink-600 focus:border-accent-500"
       />
       <button
         onClick={submit}
@@ -154,7 +282,7 @@ export function LinkBox(): ReactNode {
         }`}
       >
         {ingest.busy ? <Loader2 size={12} className="animate-spin" /> : <DownloadCloud size={12} />}
-        {words ? 'Full download' : 'Get'}
+        {words ? FULL_DOWNLOAD : DOWNLOAD}
       </button>
     </div>
   )
@@ -185,7 +313,7 @@ export function IngestPanel(): ReactNode {
   const running = jobs.filter((j) => pending[j.id] && (j.status === 'running' || j.status === 'queued'))
 
   return (
-    <div className="px-3 py-2.5">
+    <div data-url-tile="" className="px-3 py-2.5">
       {/* ------------------------------------------------------------ link */}
       <LinkBox />
 
@@ -203,78 +331,21 @@ export function IngestPanel(): ReactNode {
       )}
 
       {/* ------------------------------------------------------------ what */}
+      <KindsRow />
+
+      {/* ---------------------------------- Get transcript and Analyse (the sketch's row) */}
       <div className="mt-2.5 flex flex-wrap items-center gap-1">
-        {WANTS.map((want) => {
-          const on = ingest.kind === want.id
-          return (
-            <button
-              key={want.id}
-              onClick={() => setIngest({ kind: want.id })}
-              title={want.hint}
-              className={`rounded px-2 py-1 text-[11px] transition-colors ${
-                on ? 'bg-accent-500 text-ink-950' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
-              }`}
-            >
-              {want.label}
-            </button>
-          )
-        })}
-
-        <span className="mx-1 h-4 w-px bg-ink-800" />
-
-        {ingest.kind === 'video' ? (
-          QUALITIES.map((quality: Quality) => {
-            const on = ingest.quality === quality
-            return (
-              <button
-                key={quality}
-                onClick={() => setIngest({ quality })}
-                className={`rounded px-2 py-1 text-[11px] transition-colors ${
-                  on ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-                }`}
-              >
-                {quality === '2160p' ? '4K' : quality}
-              </button>
-            )
-          })
-        ) : (
-          <>
-            {(['m4a', 'mp3'] as const).map((format) => {
-              const on = ingest.audioFormat === format
-              return (
-                <button
-                  key={format}
-                  onClick={() => setIngest({ audioFormat: format })}
-                  title={
-                    format === 'm4a'
-                      ? 'What the site already stores — copied out, no re-encode'
-                      : 'Re-encoded to mp3, for somewhere that insists on it'
-                  }
-                  className={`rounded px-2 py-1 text-[11px] uppercase transition-colors ${
-                    on ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-                  }`}
-                >
-                  {format}
-                </button>
-              )
-            })}
-            {ingest.kind !== 'audio' && (
-              <span className="ml-1 text-[10px] text-ink-600">split after downloading</span>
-            )}
-          </>
-        )}
+        <GetTranscriptButton />
+        <AnalyseButton />
       </div>
+      <LinkTranscriptStatus />
+      <BestClipsPointer />
 
-      {/* ------------------------------------------------------ transcript */}
-      <LinkTranscript />
-
-      {/* ------------------------------------------------------ best clips */}
-      <BestClips />
-
-      {/* ----------------------------------------------------------- range */}
-      {!words && (
-        <div className="mt-2.5">
+      {/* ----------------------------------- Just a part of it, and the two toggles */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-1">
+        {!words && (
           <button
+            type="button"
             onClick={() => setIngest({ useRange: !ingest.useRange })}
             aria-pressed={ingest.useRange}
             className={`flex items-center gap-1.5 text-[11px] transition-colors ${
@@ -284,61 +355,69 @@ export function IngestPanel(): ReactNode {
             <Scissors size={11} strokeWidth={1.8} />
             Just a part of it
           </button>
+        )}
+        <div data-url-toggles="" className="ml-auto flex flex-wrap items-center justify-end gap-1">
+          <LinkTranscriptToggle />
+          <ClipsToggle />
+        </div>
+      </div>
 
-          {ingest.useRange && (
-            <div className="mt-2 rounded border border-ink-800 bg-ink-950/60 px-2.5 py-2">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-                <MarkField
-                  label="From"
-                  value={ingest.startMs}
-                  onCommit={(startMs) =>
-                    setIngest({
-                      startMs,
-                      // Keep a second between the marks however they are typed:
-                      // sectionPlan reads a zero-length range as "no range" and
-                      // would fetch the WHOLE video.
-                      endMs: Math.max(startMs + MIN_RANGE_MS, ingest.endMs)
-                    })
-                  }
-                />
-                <MarkField
-                  label="To"
-                  value={ingest.endMs}
-                  onCommit={(typed) => {
-                    const endMs = Math.max(MIN_RANGE_MS, typed)
-                    setIngest({ endMs, startMs: Math.min(ingest.startMs, endMs - MIN_RANGE_MS) })
-                  }}
-                />
-                <span className="text-[10.5px] text-ink-600">
-                  {formatMark(Math.max(0, ingest.endMs - ingest.startMs))} long
-                </span>
-              </div>
+      {/* ----------------------------------------------------------- range */}
+      {!words && ingest.useRange && (
+        <div className="mt-2 rounded border border-ink-800 bg-ink-950/60 px-2.5 py-2">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+            <MarkField
+              label="From"
+              value={ingest.startMs}
+              onCommit={(startMs) =>
+                setIngest({
+                  startMs,
+                  // Keep a second between the marks however they are typed:
+                  // sectionPlan reads a zero-length range as "no range" and
+                  // would fetch the WHOLE video.
+                  endMs: Math.max(startMs + MIN_RANGE_MS, ingest.endMs)
+                })
+              }
+            />
+            <MarkField
+              label="To"
+              value={ingest.endMs}
+              onCommit={(typed) => {
+                const endMs = Math.max(MIN_RANGE_MS, typed)
+                setIngest({ endMs, startMs: Math.min(ingest.startMs, endMs - MIN_RANGE_MS) })
+              }}
+            />
+            <span className="text-[10.5px] text-ink-600">
+              {formatMark(Math.max(0, ingest.endMs - ingest.startMs))} long
+            </span>
+          </div>
 
-              <div className="mt-2 flex gap-1">
-                {([false, true] as const).map((exact) => (
-                  <button
-                    key={String(exact)}
-                    onClick={() => setIngest({ exact })}
-                    aria-pressed={ingest.exact === exact}
-                    title={
-                      exact
-                        ? 'Re-encodes at the marks. Slow on a 4K video.'
-                        : 'Copies the streams and fetches a little either side; the clip is trimmed to your marks on the timeline.'
-                    }
-                    className={`rounded px-2 py-1 text-[10.5px] transition-colors ${
-                      ingest.exact === exact
-                        ? 'bg-ink-700 text-ink-100'
-                        : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-                    }`}
-                  >
-                    {exact ? 'Exact cut — slower' : 'Fast cut'}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <div className="mt-2 flex gap-1">
+            {([false, true] as const).map((exact) => (
+              <button
+                key={String(exact)}
+                onClick={() => setIngest({ exact })}
+                aria-pressed={ingest.exact === exact}
+                title={
+                  exact
+                    ? 'Re-encodes at the marks. Slow on a 4K video.'
+                    : 'Copies the streams and fetches a little either side; the clip is trimmed to your marks on the timeline.'
+                }
+                className={`rounded px-2 py-1 text-[10.5px] transition-colors ${
+                  ingest.exact === exact
+                    ? 'bg-ink-700 text-ink-100'
+                    : 'bg-ink-850 text-ink-500 hover:text-ink-200'
+                }`}
+              >
+                {exact ? 'Exact cut — slower' : 'Fast cut'}
+              </button>
+            ))}
+          </div>
         </div>
       )}
+
+      {/* ------------------------------------------------ best clips' options */}
+      <BestClips />
 
       {/* ---------------------------------------------------------- status */}
       {running.length > 0 && (

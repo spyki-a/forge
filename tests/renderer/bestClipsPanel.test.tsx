@@ -69,8 +69,11 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
 
 const { useEditor } = await import('../../src/renderer/src/store')
 const {
+  AnalyseButton,
   BestClips,
   BestClipsCards,
+  BestClipsPointer,
+  ClipsToggle,
   BEST_CLIPS_DURATION,
   CLIPS_TOGGLE,
   FOLDOUT_CLIPS_EMPTY,
@@ -178,9 +181,15 @@ function textOf(node: ReactNode): string {
   return ''
 }
 
-/** The URL tile's part. */
-const shown = (): Host[] => hosts(createElement(BestClips))
-const markup = (): string => renderToStaticMarkup(createElement(BestClips))
+/**
+ * The URL tile's part: since piece 4 of the clip maker's layout, four parts the tile places in the sketch's
+ * order — Analyse in a row with Get transcript, the pointer under it, the Clips toggle beside Transcript,
+ * then the options (heading, Duration, Make it vertical). Walked together, in that order, so every
+ * assertion that read the section still reads all of what the tile shows of Best clips.
+ */
+const TILE_PARTS = [AnalyseButton, BestClipsPointer, ClipsToggle, BestClips]
+const shown = (): Host[] => TILE_PARTS.flatMap((part) => hosts(createElement(part)))
+const markup = (): string => TILE_PARTS.map((part) => renderToStaticMarkup(createElement(part))).join('')
 const buttonNamed = (label: string): Host | undefined => shown().find((h) => h.type === 'button' && textOf(h.props.children as ReactNode).trim() === label)
 const withAttr = (name: string): Host[] => shown().filter((h) => h.props[name] !== undefined)
 /** The fold-out's Clips tab. */
@@ -387,9 +396,14 @@ describe('the Best clips section', () => {
       expect(useEditor.getState().bestClipsVertical, status).toBe(false)
       expect(buttonNamed(MAKE_IT_VERTICAL)?.props['aria-pressed'], status).toBe(false)
     }
-    // Before Analyse in the tile's order: the switch, then Analyse.
+    // In the tile's order since piece 4, the user's sketch of 2026-11-27: Analyse in the top row beside Get
+    // transcript, the options (Duration, Make it vertical) under the toggles. "Before Analyse" is in time, as
+    // the loop above holds: the switch is there, and works, before any result.
     const order = shown().filter((h) => h.props['data-best-vertical'] !== undefined || h.props['data-best-analyse'] !== undefined)
-    expect(order.map((h) => (h.props['data-best-vertical'] !== undefined ? 'vertical' : 'analyse'))).toEqual(['vertical', 'analyse'])
+    expect(order.map((h) => (h.props['data-best-vertical'] !== undefined ? 'vertical' : 'analyse'))).toEqual(['analyse', 'vertical'])
+    const tile = renderToStaticMarkup(createElement(IngestPanel))
+    expect(tile.indexOf('data-best-analyse')).toBeGreaterThan(-1)
+    expect(tile.indexOf('data-best-vertical')).toBeGreaterThan(tile.indexOf('data-best-analyse'))
     // Clip it plans from that same value: both of the store's plans read it.
     const store = readFileSync(resolve(__dirname, '../../src/renderer/src/store.ts'), 'utf8')
     expect([...store.matchAll(/cardClipPlan\(get\(\)\.project, get\(\)\.bestClipsVertical,/g)]).toHaveLength(2)

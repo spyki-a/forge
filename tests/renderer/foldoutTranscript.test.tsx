@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createElement, isValidElement, type ReactElement, type ReactNode } from 'react'
+import { createElement, Fragment, isValidElement, type ReactElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -50,7 +50,14 @@ const { useEditor } = await import('../../src/renderer/src/store')
 const F = await import('../../src/renderer/src/components/Foldout')
 const { Foldout, FoldoutTranscript, FoldoutTranscriptFace, WordsSwitch } = F
 const LT = await import('../../src/renderer/src/components/tools/LinkTranscript')
-const { LinkTranscript, LinkWords } = LT
+const { LinkWords } = LT
+/**
+ * The link's transcript in the URL tile: since piece 4 of the clip maker's layout, three parts the tile
+ * places apart (Get transcript in a row with Analyse, the status lines under it, the toggle beside Clips).
+ * Walked together, so every assertion that read the tile's half still reads all of it.
+ */
+const LinkTranscript = (): ReactNode =>
+  createElement(Fragment, null, createElement(LT.GetTranscriptButton), createElement(LT.LinkTranscriptStatus), createElement(LT.LinkTranscriptToggle))
 const TP = await import('../../src/renderer/src/components/TranscriptPanel')
 const { TranscriptPanel, TranscriptTile } = TP
 const { ErrorBoundary } = await import('../../src/renderer/src/components/ErrorBoundary')

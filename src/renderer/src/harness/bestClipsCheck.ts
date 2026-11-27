@@ -249,7 +249,7 @@ async function cardCase(k: StubCase, base: UrlSource, original: Forge): Promise<
       const press = async (): Promise<void> => {
         editor().closeFoldout()
         await frames()
-        click(section().querySelector('button[data-best-analyse]'), 'Analyse')
+        click(panel().querySelector('button[data-best-analyse]'), 'Analyse')
         if (!editor().foldout.open || editor().foldout.tab !== 'clips') failures.push('Analyse did not open the panel on Clips')
         await until(() => editor().bestClips.running === null && editor().bestClips.last !== null, 8000, 'Analyse answering')
         await frames()
@@ -452,7 +452,7 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
   const picked: string[] = []
   await pickLength(60_000, picked)
   if (picked.length > 0) throw new Error(picked.join('; '))
-  click(section().querySelector('button[data-best-analyse]'), 'Analyse')
+  click(panel().querySelector('button[data-best-analyse]'), 'Analyse')
   await until(() => editor().bestClips.running === null && (editor().bestClips.last?.result.cards.length ?? 0) === 3, 5000, 'three cards on the talk')
   await frames()
   const cards = editor().bestClips.last!.result.cards

@@ -76,16 +76,8 @@ export function FoldDown<T extends string | number>({
   const list = `fold-down-${id}`
   const Chevron = open ? ChevronUp : ChevronDown
 
-  const onKeyDown = (event: KeyboardEvent): void => {
-    if (!open || event.key !== 'Escape') return
-    // Folds this list only: the window's own Escape (leaving full screen) is not also run.
-    event.stopPropagation()
-    refocus(event)
-    onOpenChange(false)
-  }
-
   return (
-    <div data-fold-down={id} data-open={open} onKeyDown={onKeyDown} className="min-w-0">
+    <div data-fold-down={id} data-open={open} onKeyDown={foldDownKeyDown(open, onOpenChange)} className="min-w-0">
       <button
         type="button"
         aria-expanded={open}
@@ -99,31 +91,83 @@ export function FoldDown<T extends string | number>({
         {chosen && <span className="min-w-0 flex-1 break-words text-ink-200">{chosen.label}</span>}
         <Chevron size={12} className="ml-auto shrink-0 text-ink-500" />
       </button>
-      {open && (
-        <div id={list} role="group" aria-label={label} className="mt-1 flex flex-wrap gap-1">
-          {choices.map((choice) => (
-            <button
-              key={String(choice.value)}
-              {...(choiceData ? { [choiceData]: String(choice.value) } : {})}
-              type="button"
-              aria-pressed={choice.value === value}
-              title={choice.title}
-              onClick={(event) => {
-                onChoose(choice.value)
-                refocus(event)
-                onOpenChange(false)
-              }}
-              className={`rounded px-2 py-0.5 text-[11px] transition-colors ${
-                choice.value === value
-                  ? 'bg-accent-900 text-accent-400'
-                  : 'text-ink-400 hover:bg-ink-850 hover:text-ink-200'
-              }`}
-            >
-              {choice.label}
-            </button>
-          ))}
-        </div>
-      )}
+      {open && foldDownChoices({ id, label, value, choices, onOpenChange, onChoose, choiceData })}
+    </div>
+  )
+}
+
+/**
+ * Escape on a fold-down's root: folds it and puts the keyboard back on its
+ * button while it is open, and is kept from the window then; folded, Escape
+ * is the window's (leaving full screen). Shared by `FoldDown` and the URL
+ * tile's kinds row, whose chosen kind is the list's button.
+ */
+export function foldDownKeyDown(open: boolean, onOpenChange: (open: boolean) => void): (event: KeyboardEvent) => void {
+  return (event) => {
+    if (!open || event.key !== 'Escape') return
+    // Folds this list only: the window's own Escape (leaving full screen) is not also run.
+    event.stopPropagation()
+    refocus(event)
+    onOpenChange(false)
+  }
+}
+
+/**
+ * A fold-down's choices, unfolded: a row of buttons that wraps, in the flow,
+ * the chosen one pressed; a choice calls back, puts the keyboard back on the
+ * list's button and folds the list. Called as a function, not drawn as a
+ * component, so the tree a test walks holds its buttons as `FoldDown`'s own.
+ *
+ * Its root must sit inside the `[data-fold-down]` element whose DIRECT child
+ * is the list's button (`aria-expanded`, `aria-controls` = `fold-down-<id>`):
+ * that is where `refocus` looks. The URL tile's kinds row is such a root,
+ * with the chosen kind as the button and these choices on a line of their
+ * own under the kinds (`className` "basis-full").
+ */
+export function foldDownChoices<T extends string | number>({
+  id,
+  label,
+  value,
+  choices,
+  onOpenChange,
+  onChoose,
+  choiceData,
+  className = 'mt-1',
+  choiceClassName = ''
+}: {
+  id: string
+  label: string
+  value: T
+  choices: readonly FoldDownChoice<T>[]
+  onOpenChange: (open: boolean) => void
+  onChoose: (value: T) => void
+  choiceData?: `data-${string}`
+  /** Where the row sits: under its button (the default), or on a line of its own in a wrapping row. */
+  className?: string
+  /** Added to every choice: the formats are written lowercase and shown uppercase, as their buttons were. */
+  choiceClassName?: string
+}): ReactNode {
+  return (
+    <div id={`fold-down-${id}`} role="group" aria-label={label} className={`flex flex-wrap gap-1 ${className}`}>
+      {choices.map((choice) => (
+        <button
+          key={String(choice.value)}
+          {...(choiceData ? { [choiceData]: String(choice.value) } : {})}
+          type="button"
+          aria-pressed={choice.value === value}
+          title={choice.title}
+          onClick={(event) => {
+            onChoose(choice.value)
+            refocus(event)
+            onOpenChange(false)
+          }}
+          className={`rounded px-2 py-0.5 text-[11px] transition-colors ${choiceClassName && `${choiceClassName} `}${
+            choice.value === value ? 'bg-accent-900 text-accent-400' : 'text-ink-400 hover:bg-ink-850 hover:text-ink-200'
+          }`}
+        >
+          {choice.label}
+        </button>
+      ))}
     </div>
   )
 }

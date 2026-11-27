@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createElement, isValidElement, type ReactNode } from 'react'
+import { createElement, Fragment, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { buildYtDlpArgs, outputStem, type IngestRequest, type LinkMeta } from '@shared/ingest/args'
@@ -49,8 +49,17 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
 })
 
 const { useEditor } = await import('../../src/renderer/src/store')
-const { IngestPanel, LinkBox, FULL_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/IngestPanel')
-const { LinkTranscript, LinkWords, CLIP_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/tools/LinkTranscript')
+const { IngestPanel, KindsRow, LinkBox, DOWNLOAD, FULL_DOWNLOAD, FULL_DOWNLOAD_TITLE, QUALITY_LIST, FORMAT_LIST } = await import('../../src/renderer/src/components/IngestPanel')
+const { QUALITIES } = await import('@shared/ingest/format')
+const { FOLDOUT_CLIPS_EMPTY } = await import('../../src/renderer/src/components/tools/BestClips')
+const { GetTranscriptButton, LinkTranscriptStatus, LinkTranscriptToggle, LinkWords, CLIP_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/tools/LinkTranscript')
+/**
+ * The link's transcript in the URL tile: since piece 4 of the clip maker's layout, three parts the tile
+ * places apart (Get transcript in a row with Analyse, the status lines under it, the toggle beside Clips).
+ * Walked together, so every assertion that read the tile's half still reads all of it.
+ */
+const LinkTranscript = (): ReactNode =>
+  createElement(Fragment, null, createElement(GetTranscriptButton), createElement(LinkTranscriptStatus), createElement(LinkTranscriptToggle))
 
 const URL = 'https://www.youtube.com/watch?v=MadeUpTalk2'
 const NO_CAPTIONS = 'https://www.youtube.com/watch?v=MadeUpTalk3'
@@ -584,11 +593,12 @@ describe('the From and To fields', () => {
     expect(started[1].request.exact).toBe(false)
   })
 
-  it('while the words are shown, Get reads Full download, is not the accent button, and Enter does not press it', async () => {
-    // No words: "Get", the accent button, and Enter in the box presses it.
+  it('while the words are shown, Download reads Full download, is not the accent button, and Enter does not press it', async () => {
+    // No words: "Download" (the sketch's word, 2026-11-27, where it read "Get"), the accent button, and Enter in the box presses it.
     state().setIngest({ url: URL })
     let get = getButton()
-    expect(textOf(get.props.children as ReactNode).trim()).toBe('Get')
+    expect(textOf(get.props.children as ReactNode).trim()).toBe('Download')
+    expect(get.props.title).toBe('Download and put it on the timeline')
     expect(String(get.props.className)).toContain('bg-accent-500')
     const enter = (): void => {
       const box = linkBox().find((h) => h.type === 'input')!
@@ -728,5 +738,195 @@ describe('a video with no captions', () => {
     const chips = transcriptHosts().filter((h) => h.props['data-chapter'] !== undefined)
     ;(chips[2].props.onClick as () => void)()
     expect(state().ingest).toMatchObject({ useRange: true, startMs: 13_000, endMs: 20_000 })
+  })
+})
+
+/* ------------------------------------------- the URL tile's rows (the clip maker's layout, piece 4) */
+
+describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27)', () => {
+  const kinds = (): Host[] => hosts(createElement(KindsRow))
+  const chip = (id: string): Host => {
+    const found = kinds().filter((h) => h.type === 'button' && h.props['data-want'] === id)
+    expect(found, id).toHaveLength(1)
+    return found[0]
+  }
+  const press = (h: Host | undefined, event: unknown = { currentTarget: null }): void => (h!.props.onClick as (e: unknown) => void)(event)
+  const choices = (attr: 'data-quality' | 'data-format'): Host[] => kinds().filter((h) => h.type === 'button' && h.props[attr] !== undefined)
+  const chipText = (id: string): string => textOf(chip(id).props.children as ReactNode)
+
+  it('runs link box, kinds, Get transcript and Analyse (one row), their lines, Just a part with the toggles, Best clips’ options, the download lines', () => {
+    // A link whose fetch failed: Just a part of it shows, and so does the pointer.
+    useEditor.setState((s) => ({
+      ingest: { ...s.ingest, url: URL },
+      urlSource: {
+        linkKey: LINK_KEY, url: parseLink(URL)!.url, meta: null, fetchedAt: null, transcript: null, tracks: [], language: null,
+        status: 'failed', error: 'offline', run: null, anchorRow: null, clipped: false
+      }
+    }))
+    const html = panel()
+    const marks = [
+      'placeholder="Paste a video link"',
+      'data-want="video"',
+      '>Get transcript<',
+      'data-best-analyse',
+      'Could not get the transcript.',
+      'data-best-pointer',
+      'Just a part of it',
+      'data-url-toggles',
+      'data-best-clips',
+      'data-best-vertical'
+    ]
+    const at = marks.map((m) => {
+      expect([...html.matchAll(new RegExp(m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))], m).toHaveLength(1)
+      return html.indexOf(m)
+    })
+    for (let i = 1; i < at.length; i++) expect(at[i], `${marks[i]} after ${marks[i - 1]}`).toBeGreaterThan(at[i - 1])
+    // Get transcript and Analyse share one row: nothing opens or closes a box between them.
+    expect(html.slice(at[2], at[3])).not.toMatch(/<\/?div/)
+    // The toggles sit in Just a part's row.
+    expect(html.slice(at[6], at[7])).not.toMatch(/<div class="mt-/)
+  })
+
+  it('draws every part of the link’s transcript and of Best clips once, the two toggles side by side in Just a part’s row', async () => {
+    await getTranscript()
+    const html = panel()
+    for (const mark of ['>Get transcript<', 'data-best-analyse', 'data-link-transcript-toggle', 'data-best-toggle', 'data-best-clips=', 'data-best-vertical', 'data-fold-down="best-length"']) {
+      expect([...html.matchAll(new RegExp(mark, 'g'))], mark).toHaveLength(1)
+    }
+    const toggles = html.slice(html.indexOf('data-url-toggles'), html.indexOf('data-best-clips='))
+    expect(toggles.indexOf('data-link-transcript-toggle')).toBeGreaterThan(-1)
+    expect(toggles.indexOf('data-best-toggle')).toBeGreaterThan(toggles.indexOf('data-link-transcript-toggle'))
+    // The Clips tab's empty line names where Analyse is now.
+    expect(FOLDOUT_CLIPS_EMPTY).toBe('No clips yet. Press Analyse in the URL tile, beside Get transcript.')
+  })
+
+  it('the chosen kind’s chip says its choice and is the list’s button; the others are plain chips', () => {
+    state().setIngest({ kind: 'video', quality: '1080p' })
+    expect(chipText('video')).toBe('Video·1080p')
+    expect(chip('video').props['aria-pressed']).toBe(true)
+    expect(chip('video').props['aria-expanded']).toBe(false)
+    expect(chip('video').props['aria-controls']).toBe(`fold-down-${QUALITY_LIST}`)
+    for (const id of ['audio', 'instrumental', 'vocal']) {
+      expect(chipText(id)).toBe({ audio: 'Audio', instrumental: 'Instrumental', vocal: 'Vocal' }[id])
+      expect(chip(id).props['aria-pressed']).toBe(false)
+      expect(chip(id).props['aria-expanded']).toBeUndefined()
+    }
+    state().setIngest({ quality: '2160p' })
+    expect(chipText('video')).toBe('Video·4K')
+    state().setIngest({ kind: 'vocal', audioFormat: 'mp3' })
+    expect(chipText('vocal')).toBe('Vocal·mp3')
+    expect(chip('vocal').props['aria-controls']).toBe(`fold-down-${FORMAT_LIST}`)
+    expect(renderToStaticMarkup(createElement(KindsRow))).toMatch(/<span class="uppercase">mp3<\/span>/)
+  })
+
+  it('folded, no choice is drawn; a press on the chosen kind unfolds its list under the row, in the flow, and a second folds it', () => {
+    expect(choices('data-quality')).toHaveLength(0)
+    press(chip('video'))
+    expect(state().foldDownOpen).toBe(QUALITY_LIST)
+    expect(chip('video').props['aria-expanded']).toBe(true)
+    expect(choices('data-quality').map((h) => textOf(h.props.children as ReactNode))).toEqual(['4K', '1080p', '720p', '480p'])
+    const html = renderToStaticMarkup(createElement(KindsRow))
+    expect(html).toContain(`id="fold-down-${QUALITY_LIST}"`)
+    expect(html).toContain('aria-label="Quality"')
+    expect(html).not.toMatch(/\b(?:fixed|absolute)\b/)
+    // On a line of its own under the kinds, inside the row that is the fold-down's root.
+    expect(html).toMatch(new RegExp(`^<div data-fold-down="${QUALITY_LIST}" data-open="true"`))
+    expect(html).toMatch(new RegExp(`<div id="fold-down-${QUALITY_LIST}" role="group" aria-label="Quality" class="[^"]*basis-full`))
+    press(chip('video'))
+    expect(state().foldDownOpen).toBe(null)
+    expect(choices('data-quality')).toHaveLength(0)
+  })
+
+  it('every quality chooses the same store value its button did, and the list folds saying it', () => {
+    for (const quality of QUALITIES) {
+      press(chip('video'))
+      const choice = choices('data-quality').find((h) => h.props['data-quality'] === quality)
+      expect(choice, quality).toBeTruthy()
+      press(choice)
+      expect(state().ingest.quality).toBe(quality)
+      expect(state().ingest.kind).toBe('video')
+      expect(state().foldDownOpen).toBe(null)
+      expect(chipText('video')).toBe(`Video·${quality === '2160p' ? '4K' : quality}`)
+    }
+  })
+
+  it('every format chooses the same store value its button did, with the same tooltips, for each of the three sound kinds', () => {
+    for (const kind of ['audio', 'instrumental', 'vocal'] as const) {
+      press(chip(kind))
+      expect(state().ingest.kind).toBe(kind)
+      for (const format of ['mp3', 'm4a'] as const) {
+        press(chip(kind))
+        expect(state().foldDownOpen).toBe(FORMAT_LIST)
+        const shown = choices('data-format')
+        expect(shown.map((h) => textOf(h.props.children as ReactNode))).toEqual(['m4a', 'mp3'])
+        expect(shown.map((h) => h.props.title)).toEqual([
+          'What the site already stores — copied out, no re-encode',
+          'Re-encoded to mp3, for somewhere that insists on it'
+        ])
+        expect(String(shown[0].props.className)).toContain('uppercase')
+        press(shown.find((h) => h.props['data-format'] === format))
+        expect(state().ingest.audioFormat).toBe(format)
+        expect(state().foldDownOpen).toBe(null)
+      }
+    }
+  })
+
+  it('a press on another kind chooses it and folds the list that was open; it does not open its own', () => {
+    press(chip('video'))
+    expect(state().foldDownOpen).toBe(QUALITY_LIST)
+    press(chip('instrumental'))
+    expect(state().ingest.kind).toBe('instrumental')
+    expect(state().foldDownOpen).toBe(null)
+    expect(choices('data-format')).toHaveLength(0)
+    // Another list's open state (Best clips' length) is left alone.
+    state().setFoldDownOpen('best-length')
+    press(chip('audio'))
+    expect(state().ingest.kind).toBe('audio')
+    expect(state().foldDownOpen).toBe('best-length')
+  })
+
+  it('Escape folds the open list and is kept from the window; folded, Escape is the window’s', () => {
+    const escape = (): boolean => {
+      let stopped = false
+      ;(kinds()[0].props.onKeyDown as (e: unknown) => void)({ key: 'Escape', currentTarget: null, stopPropagation: () => (stopped = true) })
+      return stopped
+    }
+    press(chip('video'))
+    expect(escape()).toBe(true)
+    expect(state().foldDownOpen).toBe(null)
+    expect(escape()).toBe(false)
+  })
+
+  it('says "split after downloading" under the row for Instrumental and Vocal only', () => {
+    for (const [kind, shown] of [['video', false], ['audio', false], ['instrumental', true], ['vocal', true]] as const) {
+      state().setIngest({ kind })
+      expect(renderToStaticMarkup(createElement(KindsRow)).includes('>split after downloading<'), kind).toBe(shown)
+    }
+  })
+
+  it('every kind, quality and format the store takes is reachable from the row', () => {
+    expect(kinds().filter((h) => h.props['data-want'] !== undefined).map((h) => h.props['data-want'])).toEqual(['video', 'audio', 'instrumental', 'vocal'])
+    press(chip('video'))
+    expect(choices('data-quality').map((h) => h.props['data-quality'])).toEqual([...QUALITIES])
+  })
+
+  it('the kinds row is the same with the link’s words shown, and Just a part of it gives way to them', async () => {
+    state().setIngest({ url: URL })
+    const before = renderToStaticMarkup(createElement(KindsRow))
+    expect(panel()).toContain('Just a part of it')
+    await getTranscript()
+    expect(renderToStaticMarkup(createElement(KindsRow))).toBe(before)
+    expect(panel()).not.toContain('Just a part of it')
+    expect(panel()).toContain('data-link-transcript-toggle')
+  })
+
+  it('names the link’s button Download, or Full download with words; the box keeps 5.5rem and the button wraps under it before squeezing it', () => {
+    expect(DOWNLOAD).toBe('Download')
+    expect(FULL_DOWNLOAD).toBe('Full download')
+    const [row] = linkBox()
+    expect(String(row.props.className).split(/\s+/)).toEqual(expect.arrayContaining(['flex', 'flex-wrap']))
+    const box = linkBox().find((h) => h.type === 'input')!
+    expect(String(box.props.className).split(/\s+/)).toEqual(expect.arrayContaining(['min-w-[5.5rem]', 'basis-[5.5rem]', 'flex-1']))
+    expect(String(getButton().props.className).split(/\s+/)).toContain('shrink-0')
   })
 })

@@ -17,13 +17,16 @@ import { HelperPointer } from '../SettingsPanel'
  * transcript unfolds beside the picture, "so that when the trim create wont
  * ever collide"):
  *
- * IN THE URL TILE (`LinkTranscript`): **Get transcript** and its short status
- * lines — reading, fetching, the failure, the language to choose, and a video
- * with no captions (its chapter chips set the tile's From and To there) — and,
- * once the words are ready, the **Transcript** toggle that opens and closes
- * the fold-out panel on them. The panel opens on them by itself when they
- * arrive, from Get transcript's own handler (`getTranscript` is left as it
- * was). Nothing long is drawn here: the 240 px column also holds the Trimmer.
+ * IN THE URL TILE, three parts IngestPanel places in the sketch's order:
+ * **Get transcript** (`GetTranscriptButton`), in a row with Analyse; its
+ * short status lines under that row (`LinkTranscriptStatus`) — reading,
+ * fetching, the failure, the language to choose, and a video with no captions
+ * (its chapter chips set the tile's From and To there); and, once the words
+ * are ready, the **Transcript** toggle (`LinkTranscriptToggle`), beside Clips,
+ * that opens and closes the fold-out panel on them. The panel opens on them
+ * by itself when they arrive, from Get transcript's own handler
+ * (`getTranscript` is left as it was). Nothing long is drawn here: the 240 px
+ * column also holds the Trimmer.
  *
  * IN THE PANEL (`LinkWords`, the fold-out's Transcript tab, Foldout.tsx): the
  * chapter chips, rows of `time | text` to pick a run of words from — by click
@@ -251,73 +254,102 @@ export function LinkWords(): ReactNode {
   return <Words source={source} />
 }
 
-export function LinkTranscript(): ReactNode {
+/**
+ * Get transcript, and a language chosen: the words, once they arrive, unfold
+ * beside the picture. Read through `getState` so the button and both language
+ * lists share it with no hook of their own; `getTranscript` is left as it was.
+ */
+async function fetchWords(language?: string): Promise<void> {
+  await useEditor.getState().getTranscript(language)
+  if (wordsShown(useEditor.getState())) useEditor.getState().openFoldout('transcript', 'link')
+}
+
+/**
+ * Get transcript, in the URL tile's row beside Analyse (the sketch's "Get
+ * transcript | Analyse transcript", 2026-11-27). Greyed until the box holds a
+ * link, and while the link is being read.
+ */
+export function GetTranscriptButton(): ReactNode {
   const ingest = useEditor((s) => s.ingest)
   const urlSource = useEditor((s) => s.urlSource)
-  const getTranscript = useEditor((s) => s.getTranscript)
-  const openFoldout = useEditor((s) => s.openFoldout)
+  const link = parseLink(ingest.url)
+  const source = urlSourceFor({ urlSource, ingest })
+  const fetching = source?.status === 'meta' || source?.status === 'captions'
+  return (
+    <button
+      type="button"
+      onClick={() => void fetchWords()}
+      disabled={!link || fetching}
+      title={GET_TRANSCRIPT_TITLE}
+      className="flex items-center gap-1.5 rounded bg-ink-850 px-2.5 py-1 text-[11px] text-ink-300 transition-colors hover:bg-ink-800 hover:text-ink-100 disabled:opacity-40"
+    >
+      {fetching ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+      Get transcript
+    </button>
+  )
+}
+
+/**
+ * The Transcript toggle: opens and closes the panel beside the picture on the
+ * link's words. Drawn only while they are ready (before that, the panel would
+ * only point back at Get transcript); in the URL tile's row of toggles, beside
+ * Clips.
+ */
+export function LinkTranscriptToggle(): ReactNode {
   const toggleTranscript = useEditor((s) => s.toggleTranscript)
   const foldout = useEditor((s) => s.foldout)
   const clip = useEditor((s) => clipSelected(s))
-  const link = parseLink(ingest.url)
-  // Shown only while the box holds the link it belongs to.
-  const source = urlSourceFor({ urlSource, ingest })
-  const fetching = source?.status === 'meta' || source?.status === 'captions'
-  // A language chosen by hand is offered again when it had nothing — unless
-  // the video has no caption track in any language.
-  const chosen = source !== null && source.meta !== null && source.meta.language === null && source.meta.hasCaptions !== false
   // The same value the store's toggleTranscript and the tab decide on, so pressed and the press cannot drift.
   const ready = useEditor((s) => wordsShown(s))
+  if (!ready) return null
   // Pressed while the panel shows the link's words, as shown (not merely asked for: shared/foldout.ts).
   const showing = foldoutShowsWords(foldout, 'link', { link: ready, clip })
   const Panel = showing ? PanelLeftClose : PanelLeftOpen
+  return (
+    <button
+      type="button"
+      data-link-transcript-toggle=""
+      aria-pressed={showing}
+      onClick={() => toggleTranscript('link')}
+      title={LINK_TRANSCRIPT_TOGGLE_TITLE}
+      className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
+        showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
+      }`}
+    >
+      <Panel size={12} aria-hidden />
+      {TRANSCRIPT_TOGGLE}
+    </button>
+  )
+}
 
-  /** Get transcript, and a language chosen: the words, once they arrive, unfold beside the picture. */
-  const fetchWords = async (language?: string): Promise<void> => {
-    await getTranscript(language)
-    if (wordsShown(useEditor.getState())) openFoldout('transcript', 'link')
-  }
+/**
+ * What Get transcript is doing, in the URL tile under its row: reading the
+ * link, fetching the captions, the failure, the language to choose, and a
+ * video with no captions (its chapter chips set the tile's From and To). The
+ * words themselves are the fold-out's Transcript tab (`LinkWords`).
+ */
+export function LinkTranscriptStatus(): ReactNode {
+  const ingest = useEditor((s) => s.ingest)
+  const urlSource = useEditor((s) => s.urlSource)
+  // Shown only while the box holds the link it belongs to.
+  const source = urlSourceFor({ urlSource, ingest })
+  // A language chosen by hand is offered again when it had nothing — unless
+  // the video has no caption track in any language.
+  const chosen = source !== null && source.meta !== null && source.meta.language === null && source.meta.hasCaptions !== false
+  if (!source) return null
 
   return (
-    <div className="mt-2.5">
-      <div className="flex flex-wrap items-center gap-1">
-        <button
-          type="button"
-          onClick={() => void fetchWords()}
-          disabled={!link || fetching}
-          title={GET_TRANSCRIPT_TITLE}
-          className="flex items-center gap-1.5 rounded bg-ink-850 px-2.5 py-1 text-[11px] text-ink-300 transition-colors hover:bg-ink-800 hover:text-ink-100 disabled:opacity-40"
-        >
-          {fetching ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
-          Get transcript
-        </button>
-        {ready && (
-          <button
-            type="button"
-            data-link-transcript-toggle=""
-            aria-pressed={showing}
-            onClick={() => toggleTranscript('link')}
-            title={LINK_TRANSCRIPT_TOGGLE_TITLE}
-            className={`ml-auto flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
-              showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
-            }`}
-          >
-            <Panel size={12} aria-hidden />
-            {TRANSCRIPT_TOGGLE}
-          </button>
-        )}
-      </div>
-
-      {source?.status === 'meta' && <p className="mt-1.5 text-[10.5px] text-ink-500">Reading the link…</p>}
-      {source?.status === 'captions' && <p className="mt-1.5 text-[10.5px] text-ink-500">Fetching the captions…</p>}
-      {source?.status === 'failed' && (
+    <div data-link-status="">
+      {source.status === 'meta' && <p className="mt-1.5 text-[10.5px] text-ink-500">Reading the link…</p>}
+      {source.status === 'captions' && <p className="mt-1.5 text-[10.5px] text-ink-500">Fetching the captions…</p>}
+      {source.status === 'failed' && (
         <div className="mt-1.5 text-[10.5px] leading-snug">
           <p className="text-amber-800">Could not get the transcript.</p>
           <p className="text-ink-500">{source.error}</p>
         </div>
       )}
-      {source?.status === 'language' && <Languages onPick={(language) => void fetchWords(language)} />}
-      {source?.status === 'none' && (
+      {source.status === 'language' && <Languages onPick={(language) => void fetchWords(language)} />}
+      {source.status === 'none' && (
         <>
           <NoCaptions source={source} />
           {chosen && <Languages onPick={(language) => void fetchWords(language)} />}

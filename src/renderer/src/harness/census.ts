@@ -987,7 +987,7 @@ const fullScreen = (on: boolean): void =>
 
 /* ------------------------------------------------------------ building */
 
-interface Env {
+export interface Env {
   /** What the bridge's pickMedia made: three stills and one recorded video. */
   paths: string[]
 }
@@ -2612,6 +2612,21 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     await youtube({ kind: 'instrumental' })
     return {}
   },
+  /*
+   * The kinds row's lists unfolded (the clip maker's layout, piece 4): the
+   * chosen kind's chip is the list's button, and its choices sit under the
+   * row in the flow. Opened through the store as the chip opens them; folded,
+   * only the chosen one is on screen, on the chip.
+   */
+  'link-qualities': async () => {
+    editor().setFoldDownOpen('link-quality')
+    return {}
+  },
+  'link-formats': async () => {
+    await youtube({ kind: 'instrumental' })
+    editor().setFoldDownOpen('link-format')
+    return {}
+  },
   'ingest-bad-link': async () => {
     await youtube({ url: 'not a link' })
     return {}
@@ -3166,20 +3181,19 @@ async function syntheticMedia(): Promise<string[]> {
   return paths
 }
 
-export async function runCensus(options: CensusOptions = {}): Promise<CensusResult> {
-  const started = performance.now()
-  for (const hook of ['forgeMenu', 'forgeFullScreen'] as const) {
-    if (typeof (window as unknown as Record<string, unknown>)[hook] !== 'function') {
-      throw new Error(`census: window.${hook} is missing — the harness bridge did not install it`)
-    }
-  }
-  const all = parseRows()
-  for (const need of options.needs ?? []) {
-    if (!(need in RECIPES)) throw new Error(`census: no recipe for ${JSON.stringify(need)}`)
-  }
-  const wanted = all.filter((row) => !options.needs || options.needs.includes(row.needs))
-  const rows = wanted.filter((row) => row.harnessOnly !== false)
+/**
+ * A census run's page: the synthetic media, a `fresh` that puts the window as
+ * every scenario starts it, and a `restore` that puts the page back as it was
+ * before the run. Shared with the overlap check (overlapCheck.ts), which
+ * stands the same states up to measure them rather than count them.
+ */
+export interface CensusPage {
+  env: Env
+  fresh: () => Promise<void>
+  restore: () => Promise<void>
+}
 
+export async function censusPage(): Promise<CensusPage> {
   const editorBefore = snapshot(useEditor.getState())
   const catalogBefore = snapshot(useCatalog.getState())
   const packsBefore = snapshot(usePacks.getState())
@@ -3215,6 +3229,82 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
     // Nothing selected and the Library shut: no dock (the successor of "No clip selected").
     await noDock()
   }
+
+  const restore = async (): Promise<void> => {
+    await fresh().catch(() => undefined)
+    useEditor.setState(editorBefore)
+    // The bridge keeps the export choice in its settings too; put that back.
+    editor().setExportChoice(exportChoiceBefore)
+  }
+
+  return { env, fresh, restore }
+}
+
+/** The census's states, by name, for the overlap check: every `needs` a row can name. */
+export const CENSUS_STATES: readonly string[] = Object.keys(RECIPES)
+
+/**
+ * Stand one census state up as a run does after `fresh`: its recipe, then each
+ * home opened in turn (a Shelf tool, a strip's face, the fold-out panel's
+ * tab), then what the recipe opens over them. Returns what to undo before the
+ * next state. Overlays (the clip menu, the settings panel…) are not homes the
+ * overlap check opens.
+ */
+export async function standCensusState(env: Env, need: string, homes: readonly string[]): Promise<{ close: () => Promise<void> }> {
+  const recipe = RECIPES[need]
+  if (!recipe) throw new Error(`census: no recipe for ${JSON.stringify(need)}`)
+  for (const home of homes) {
+    if (!HOMES.includes(home) || isOverlay(home)) throw new Error(`census: ${JSON.stringify(home)} is not a home that can be opened`)
+  }
+  const built = await recipe(env)
+  await frames()
+  for (const home of homes) await openHome(home as Home)
+  if (built.show) await built.show()
+  await frames()
+  return { close: async () => (built.close ? built.close() : undefined) }
+}
+
+/**
+ * The parts of the window the overlap check reads, found as the census finds
+ * its homes (by structure, never by words; a layout the finders do not know
+ * throws): the header's own row, the whole left column (the Shelf, the
+ * Trimmer dock, OUTPUT and EXPORT), the fold-out panel, the canvas bar, the
+ * tool strip and the transport. Not the Preview, the timeline or the Curve
+ * tray: what overlaps there is drawn to (overlapCheck.ts says what is left
+ * out and why).
+ */
+export function windowRegions(): Record<'header' | 'left' | 'panel' | 'canvasbar' | 'toolbox' | 'transport', Element[]> {
+  const homes = layout()
+  const header = only(document.querySelectorAll('#root .drag-region'), 'header (.drag-region)')
+  const group = only(header.parentElement!.querySelectorAll(':scope > [data-group]'), 'panel group under the header')
+  const [left] = panels(group, 2, 'the window')
+  const foldout = document.querySelector('[data-foldout]')
+  return {
+    header: [header],
+    left: [left],
+    panel: foldout && foldout.getAttribute('data-foldout') !== 'shut' ? [foldout] : [],
+    canvasbar: homes.canvasbar,
+    toolbox: homes.toolbox,
+    transport: homes.transport
+  }
+}
+
+export async function runCensus(options: CensusOptions = {}): Promise<CensusResult> {
+  const started = performance.now()
+  for (const hook of ['forgeMenu', 'forgeFullScreen'] as const) {
+    if (typeof (window as unknown as Record<string, unknown>)[hook] !== 'function') {
+      throw new Error(`census: window.${hook} is missing — the harness bridge did not install it`)
+    }
+  }
+  const all = parseRows()
+  for (const need of options.needs ?? []) {
+    if (!(need in RECIPES)) throw new Error(`census: no recipe for ${JSON.stringify(need)}`)
+  }
+  const wanted = all.filter((row) => !options.needs || options.needs.includes(row.needs))
+  const rows = wanted.filter((row) => row.harnessOnly !== false)
+
+  const page = await censusPage()
+  const { env, fresh } = page
 
   const missing: CensusMiss[] = []
   const trace: CensusTally[] = []
@@ -3287,12 +3377,7 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
       }
     }
   } finally {
-    if (!options.keep) {
-      await fresh().catch(() => undefined)
-      useEditor.setState(editorBefore)
-      // The bridge keeps the export choice in its settings too; put that back.
-      editor().setExportChoice(exportChoiceBefore)
-    }
+    if (!options.keep) await page.restore()
   }
 
   return {

@@ -5234,11 +5234,11 @@
     "label": "4K",
     "match": "text",
     "home": "url",
-    "needs": "none",
+    "needs": "link-qualities",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 202,
+    "line": 79,
     "newHome": "Shelf tile URL",
-    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
+    "note": "Video's quality is a fold-down list under the kinds since piece 4 (the sketch's \"collapsable\"); folded, the chip says the chosen one (1080p by default), so 4K is counted unfolded."
   },
   {
     "label": "720p",
@@ -5256,7 +5256,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 23,
+    "line": 65,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5266,7 +5266,7 @@
     "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 293,
+    "line": 412,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5275,7 +5275,7 @@
     "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 293,
+    "line": 412,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5284,18 +5284,18 @@
     "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 251,
+    "line": 370,
     "newHome": "Shelf tile URL"
   },
   {
-    "label": "Get",
+    "label": "Download",
     "match": "text",
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 154,
+    "line": 59,
     "newHome": "Shelf tile URL",
-    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
+    "note": "The link's button with no words shown: \"Download\", the sketch's word (the clip maker's layout, piece 4, 2026-11-27), where it read \"Get\". Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
   {
     "label": "Give a topic; the edit is written and assembled for you",
@@ -5313,7 +5313,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 24,
+    "line": 66,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5323,7 +5323,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 244,
+    "line": 356,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5333,7 +5333,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 23,
+    "line": 65,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5363,7 +5363,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 138,
+    "line": 268,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5381,9 +5381,9 @@
     "label": "Re-encoded to mp3, for somewhere that insists on it",
     "match": "title",
     "home": "url",
-    "needs": "ingest-instrumental",
+    "needs": "link-formats",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 217,
+    "line": 84,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5401,7 +5401,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 311,
+    "line": 432,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5411,7 +5411,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 22,
+    "line": 64,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5421,7 +5421,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 24,
+    "line": 66,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5431,7 +5431,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 25,
+    "line": 67,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5441,7 +5441,7 @@
     "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 264,
+    "line": 383,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5471,7 +5471,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 22,
+    "line": 64,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5481,7 +5481,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 25,
+    "line": 67,
     "newHome": "Shelf tile URL",
     "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
   },
@@ -5489,9 +5489,9 @@
     "label": "What the site already stores — copied out, no re-encode",
     "match": "title",
     "home": "url",
-    "needs": "ingest-instrumental",
+    "needs": "link-formats",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 216,
+    "line": 83,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5510,7 +5510,7 @@
     "home": "url",
     "needs": "ingest-range",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 271,
+    "line": 391,
     "newHome": "Shelf tile URL",
     "note": "The length between the marks; the number before it is its own text."
   },
@@ -5520,19 +5520,50 @@
     "home": "url",
     "needs": "ingest-instrumental",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 208,
+    "line": 83,
     "newHome": "Shelf tile URL",
-    "note": "Rendered through CSS uppercase; the text node is the source spelling."
+    "note": "On the chosen kind's chip, \"Instrumental · m4a\", since piece 4; rendered through CSS uppercase, the text node is the source spelling."
   },
   {
     "label": "mp3",
     "match": "text",
     "home": "url",
-    "needs": "ingest-instrumental",
+    "needs": "link-formats",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 208,
+    "line": 84,
     "newHome": "Shelf tile URL",
-    "note": "Rendered through CSS uppercase; the text node is the source spelling."
+    "note": "A choice in the sound's format list, unfolded (piece 4); the chip says the chosen m4a. Rendered through CSS uppercase."
+  },
+  {
+    "label": "m4a",
+    "match": "text",
+    "home": "url",
+    "needs": "link-formats",
+    "count": 2,
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 82,
+    "newHome": "Shelf tile URL",
+    "note": "Unfolded: the chosen m4a on the Instrumental chip and as a choice under the kinds. Count 2. Rendered through CSS uppercase."
+  },
+  {
+    "label": "Format",
+    "match": "aria-label",
+    "home": "url",
+    "needs": "link-formats",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 75,
+    "newHome": "Shelf tile URL",
+    "note": "The unfolded format choices' group, named for a screen reader."
+  },
+  {
+    "label": "Quality",
+    "match": "aria-label",
+    "home": "url",
+    "needs": "link-qualities",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 74,
+    "newHome": "Shelf tile URL",
+    "note": "The unfolded quality choices' group, named for a screen reader."
   },
   {
     "label": "not built yet",
@@ -5551,7 +5582,7 @@
     "needs": "ingest-running",
     "part": true,
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 304,
+    "line": 425,
     "newHome": "Shelf tile URL (reworded in step 7: progress is under EXPORT)"
   },
   {
@@ -5570,7 +5601,7 @@
     "home": "url",
     "needs": "ingest-instrumental",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 228,
+    "line": 174,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5581,7 +5612,7 @@
     "part": true,
     "count": 2,
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 88,
+    "line": 230,
     "newHome": "Shelf tile URL",
     "note": "Count 2: the From and To fields."
   },
@@ -5591,7 +5622,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 291,
+    "line": 287,
     "newHome": "Shelf tile URL",
     "note": "M0 (CLIPS.md §3b.1): beside the link, greyed until the box holds a link, so it is on screen as soon as the URL tile opens."
   },
@@ -5601,7 +5632,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 49,
+    "line": 52,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5610,7 +5641,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 152,
+    "line": 60,
     "newHome": "Shelf tile URL",
     "note": "Get, while the link’s words are shown — the user’s name for it (2026-10-06), beside Clip download: it downloads the whole video, not the run, so it says so and is no longer the accent button; Enter in the link box does not press it then. With no words shown it is plain Get."
   },
@@ -5620,7 +5651,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 39,
+    "line": 61,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5629,7 +5660,7 @@
     "home": "url",
     "needs": "link-reading",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 310,
+    "line": 343,
     "newHome": "Shelf tile URL",
     "note": "The stubs answer at once, so the recipe holds the fetch at this state through the store."
   },
@@ -5639,7 +5670,7 @@
     "home": "url",
     "needs": "link-fetching",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 311,
+    "line": 344,
     "newHome": "Shelf tile URL",
     "note": "The stubs answer at once, so the recipe holds the fetch at this state through the store."
   },
@@ -5649,7 +5680,7 @@
     "home": "url",
     "needs": "link-failed",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 314,
+    "line": 347,
     "newHome": "Shelf tile URL",
     "note": "CLIPS.md §3b.8: the fetch failed (offline); From and To stay typed fields under it."
   },
@@ -5659,7 +5690,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 223,
+    "line": 226,
     "newHome": "Shelf tile URL",
     "note": "The details named no language (none of the eight measured videos did that, EFFECTS.md §40); the stub link NoLanguage1 gives that state."
   },
@@ -5669,7 +5700,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 61,
+    "line": 64,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5678,7 +5709,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 62,
+    "line": 65,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5687,7 +5718,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 63,
+    "line": 66,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5696,7 +5727,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 64,
+    "line": 67,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5705,7 +5736,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 65,
+    "line": 68,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5714,7 +5745,7 @@
     "home": "url",
     "needs": "link-no-captions",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 193,
+    "line": 196,
     "newHome": "Shelf tile URL",
     "note": "CLIPS.md §3b.5: the stub link NoCaptions1 has details and chapters and no caption track."
   },
@@ -5724,7 +5755,7 @@
     "home": "url",
     "needs": "link-no-captions",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 206,
+    "line": 209,
     "newHome": "Shelf tile URL",
     "note": "Greyed in M0: it would download the sound for the AI helper to transcribe (Step P), and never downloads anything yet."
   },
@@ -5734,7 +5765,7 @@
     "home": "url",
     "needs": "link-no-captions",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 52,
+    "line": 55,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5753,7 +5784,7 @@
     "home": "url",
     "needs": "link-no-captions-helper",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 212,
+    "line": 215,
     "newHome": "Shelf tile URL",
     "note": "With the AI helper able to transcribe AND the speech model on disk, Listen to it is still greyed: listening is not built in M0. Without the model it says \"needs the speech model\"; without the helper, the pointer."
   },
@@ -5764,7 +5795,7 @@
     "needs": "link-no-captions",
     "count": 3,
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 54,
+    "line": 57,
     "newHome": "Shelf tile URL",
     "note": "A chapter chip on a video with no captions sets the From and To fields (CLIPS.md §3b.3). Count 3: the stub’s three chapters."
   },
@@ -5775,7 +5806,7 @@
     "needs": "link-transcript",
     "count": 3,
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 53,
+    "line": 56,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The chapter chip (CLIPS.md §3b.3): its text is the chapter’s title, which is data; its tooltip is the interface’s. Count 3: the stub’s three chapters."
   },
@@ -5785,7 +5816,7 @@
     "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 171,
+    "line": 174,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "Clip it’s button — the user’s name for it (2026-10-06), beside Get’s Full download. Greyed until a run is picked (CLIPS.md §3b.4)."
   },
@@ -5795,7 +5826,7 @@
     "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 50,
+    "line": 53,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
@@ -5804,7 +5835,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 265,
+    "line": 369,
     "newHome": "Shelf tile URL",
     "note": "CLIPS.md §7.5, sheet 27: the section’s heading, under the link’s rows and Clip download, on screen whenever the box holds a link."
   },
@@ -5854,8 +5885,8 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 313,
-    "newHome": "Shelf tile URL",
+    "line": 276,
+    "newHome": "Shelf tile URL, in the row beside Get transcript",
     "note": "Reads the transcript Get transcript fetched; downloads nothing. Greyed until there are words, and while one runs."
   },
   {
@@ -5864,7 +5895,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 88,
+    "line": 90,
     "newHome": "Shelf tile URL"
   },
   {
@@ -6147,7 +6178,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 209,
+    "line": 211,
     "newHome": "Shelf tile URL",
     "note": "Best clips' length list, folded (components/ui/FoldDown.tsx, the sketch's word): its button, with the chosen length beside it."
   },
@@ -6157,7 +6188,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 210,
+    "line": 212,
     "newHome": "Shelf tile URL",
     "note": "The length list's button's tooltip."
   },
@@ -6178,7 +6209,7 @@
     "home": "url",
     "needs": "link-best-lengths",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 209,
+    "line": 211,
     "newHome": "Shelf tile URL",
     "note": "The unfolded choices' group, named for a screen reader by the list's label."
   },
@@ -6188,7 +6219,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 212,
+    "line": 214,
     "newHome": "Shelf tile URL",
     "note": "The toggle that opens and closes the fold-out panel on its Clips tab (aria-pressed); with a result it carries the number of clips found, a number and not a label. The tab of the same words is the panel's own, counted in foldclips."
   },
@@ -6198,7 +6229,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 213,
+    "line": 215,
     "newHome": "Shelf tile URL",
     "note": "The Clips toggle's tooltip."
   },
@@ -6208,7 +6239,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 216,
+    "line": 218,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The Clips tab with no link in the box: how a window starts."
   },
@@ -6218,7 +6249,7 @@
     "home": "foldclips",
     "needs": "link-failed",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 218,
+    "line": 220,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The Clips tab on a link with no words (here the fetch failed). Not BEST_CLIPS_NEEDS_TRANSCRIPT: beside the picture, \"press Get transcript first\" would not say where it is."
   },
@@ -6258,7 +6289,7 @@
     "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 143,
+    "line": 146,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The rows’ selection hint, while nothing is picked."
   },
@@ -6317,7 +6348,7 @@
     "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 116,
+    "line": 119,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The run’s length, \"0:39.6 selected\" — the number is its own text node."
   },
@@ -6327,7 +6358,7 @@
     "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 121,
+    "line": 124,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The From field mirroring the run, read-only (CLIPS.md §3b.5); the typed one is `ingest-range`’s."
   },
@@ -6337,7 +6368,7 @@
     "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 130,
+    "line": 133,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The To field mirroring the run, read-only (CLIPS.md §3b.5); the typed one is `ingest-range`’s."
   },
@@ -6347,7 +6378,7 @@
     "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 139,
+    "line": 142,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
@@ -6356,7 +6387,7 @@
     "home": "foldtranscript",
     "needs": "link-clipped",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 150,
+    "line": 153,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
@@ -6365,7 +6396,7 @@
     "home": "foldtranscript",
     "needs": "link-clipped",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 159,
+    "line": 162,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "CLIPS.md §3b.4: keeps the rows, clears the run, starts nothing."
   },
@@ -6375,7 +6406,7 @@
     "home": "foldtranscript",
     "needs": "link-clipped",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 51,
+    "line": 54,
     "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
@@ -7362,7 +7393,7 @@
     "needs": "ingest-running",
     "part": true,
     "file": "src/renderer/src/components/IngestPanel.tsx",
-    "line": 305,
+    "line": 426,
     "newHome": "Shelf tile URL",
     "note": "Reworded in step 7 from \"in the panel on the right\": download progress shows under EXPORT (Decision 7). \"on the left\" became \"bottom left\" in step 8, which put the strips at the foot of a full-height left column."
   },
@@ -8718,7 +8749,7 @@
     "home": "url",
     "needs": "link-no-captions-starting",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 212,
+    "line": 215,
     "newHome": "Shelf tile URL",
     "note": "Beside the greyed Listen to it while the helper has not answered."
   },
@@ -10582,14 +10613,14 @@
     "note": "The same words are its aria-label (the button is an icon); one row per label, home and state, so the title stands for both, as Close keys & curves does."
   },
   {
-    "label": "No clips yet. Press Analyse under Best clips, in the URL tile.",
+    "label": "No clips yet. Press Analyse in the URL tile, beside Get transcript.",
     "match": "text",
     "home": "foldclips",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 220,
+    "line": 222,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
-    "note": "The Clips tab with the link's words and nothing analysed yet (piece 2; piece 1's empty line, moved to BestClips.tsx with Best clips' other words)."
+    "note": "The Clips tab with the link's words and nothing analysed yet (piece 2; piece 1's empty line, moved to BestClips.tsx with Best clips' other words). Reworded in piece 4: Analyse moved out from under the Best clips heading into the row beside Get transcript (the sketch's order)."
   },
   {
     "label": "No words from a link yet. Paste a link in the URL tile and press Get transcript.",
@@ -10615,7 +10646,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 56,
+    "line": 59,
     "newHome": "Shelf tile URL, beside Get transcript once the words are ready",
     "note": "The clip maker's layout, piece 3: the toggle that opens and closes the panel beside the picture on the link's words (the Clips toggle's way). Drawn only while the words are ready. Count 1."
   },
@@ -10625,7 +10656,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 57,
+    "line": 60,
     "newHome": "Shelf tile URL, the Transcript toggle's tooltip"
   },
   {
