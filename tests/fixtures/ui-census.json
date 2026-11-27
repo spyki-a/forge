@@ -5804,7 +5804,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 122,
+    "line": 260,
     "newHome": "Shelf tile URL",
     "note": "CLIPS.md §7.5, sheet 27: the section’s heading, under the link’s rows and Clip download, on screen whenever the box holds a link."
   },
@@ -5816,34 +5816,37 @@
     "file": "src/shared/bestclips/session.ts",
     "line": 34,
     "newHome": "Shelf tile URL",
-    "note": "The four lengths are one choice (aria-pressed); 1 min is the default."
+    "note": "The four lengths are one fold-down list, \"Duration\" (the clip maker's layout, piece 2); folded, the chosen one is on its button: 1 min, the default. The four choices are counted unfolded (link-best-lengths)."
   },
   {
     "label": "2 min",
     "match": "text",
     "home": "url",
-    "needs": "link-transcript",
+    "needs": "link-best-lengths",
     "file": "src/shared/bestclips/session.ts",
     "line": 35,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "A choice of the length list, on screen only unfolded (link-best-lengths)."
   },
   {
     "label": "3 min",
     "match": "text",
     "home": "url",
-    "needs": "link-transcript",
+    "needs": "link-best-lengths",
     "file": "src/shared/bestclips/session.ts",
     "line": 36,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "A choice of the length list, on screen only unfolded (link-best-lengths)."
   },
   {
     "label": "4 min",
     "match": "text",
     "home": "url",
-    "needs": "link-transcript",
+    "needs": "link-best-lengths",
     "file": "src/shared/bestclips/session.ts",
     "line": 37,
-    "newHome": "Shelf tile URL"
+    "newHome": "Shelf tile URL",
+    "note": "A choice of the length list, on screen only unfolded (link-best-lengths)."
   },
   {
     "label": "Analyse",
@@ -5851,7 +5854,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 154,
+    "line": 306,
     "newHome": "Shelf tile URL",
     "note": "Reads the transcript Get transcript fetched; downloads nothing. Greyed until there are words, and while one runs."
   },
@@ -5861,7 +5864,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/BestClips.tsx",
-    "line": 52,
+    "line": 86,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5870,7 +5873,7 @@
     "home": "url",
     "needs": "link-failed",
     "file": "src/shared/bestclips/session.ts",
-    "line": 67,
+    "line": 68,
     "newHome": "Shelf tile URL",
     "note": "Before the link has words (here the fetch failed), Analyse is greyed and points at Get transcript."
   },
@@ -5890,253 +5893,354 @@
     "home": "url",
     "needs": "link-no-captions-helper",
     "file": "src/shared/bestclips/session.ts",
-    "line": 65,
+    "line": 66,
     "newHome": "Shelf tile URL",
     "note": "No caption track while the AI helper is there: M0’s Listen to it is still greyed, so the line names no button."
   },
   {
     "label": "Looking for the best stretches…",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-running",
     "file": "src/shared/bestclips/session.ts",
-    "line": 69,
-    "newHome": "Shelf tile URL",
+    "line": 70,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "An Analyse in flight; the recipe holds it there through the store (the no-model run answers at once)."
   },
   {
     "label": "Picked from the talk's own signals",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips",
     "count": 3,
     "file": "src/shared/bestclips/session.ts",
     "line": 54,
-    "newHome": "Shelf tile URL",
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Who picked each card (scoredBy ‘signals’). Count 3: Analyse at 1 min on the twelve-row talk with no model (the bridge’s director status has none) gives three cards."
   },
   {
     "label": "Picked by the model",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-model",
     "count": 3,
     "file": "src/shared/bestclips/session.ts",
     "line": 53,
-    "newHome": "Shelf tile URL",
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Who picked each card (scoredBy ‘model’). Count 3: Analyse at 1 min on the twelve-row talk with the harness’s model stub (bestClipsStub.ts, 'good') answering for the press: three cards, all the model’s."
   },
   {
     "label": "Picked without a model, from the talk's own signals.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips",
     "file": "src/shared/bestclips/run.ts",
     "line": 83,
-    "newHome": "Shelf tile URL",
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The result’s modelNote with no model configured (NO_MODEL_NOTE), under the cards."
   },
   {
     "label": "Make it vertical",
     "match": "text",
     "home": "url",
-    "needs": "link-best-clips",
+    "needs": "link-transcript",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 121,
+    "line": 154,
     "newHome": "Shelf tile URL",
-    "note": "§7.5 step 0’s switch over the cards, on by default (aria-pressed): a card’s clip is a 9:16 short; it never changes an edit’s aspect without asking."
+    "note": "§7.5 step 0's switch (aria-pressed, on by default), in the URL tile before Analyse as well as after since the clip maker's layout, piece 2: chosen before the cards exist; Clip it reads the same store value."
   },
   {
     "label": "Clip it makes each card a 9:16 short: on an empty timeline it sets this project to 9:16; with clips already there, it asks first. Off, the clip is added as it is.",
     "match": "title",
     "home": "url",
-    "needs": "link-best-clips",
+    "needs": "link-transcript",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 122,
+    "line": 155,
     "newHome": "Shelf tile URL",
-    "note": "Make it vertical’s tooltip."
+    "note": "Make it vertical's tooltip."
   },
   {
     "label": "Clip it",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips",
     "count": 3,
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 124,
-    "newHome": "Shelf tile URL",
+    "line": 157,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Clip it at the foot of each card (§7.5). Count 3: the three cards of Analyse at 1 min on the twelve-row talk; M0’s button over the rows reads “Clip download”, not this."
   },
   {
     "label": "Download just this stretch and put it on the timeline, with its words and the link’s credit",
     "match": "title",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips",
     "count": 3,
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 125,
-    "newHome": "Shelf tile URL",
+    "line": 158,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Each card’s Clip it tooltip. Count 3, one a card."
   },
   {
     "label": "This project already has clips on its timeline.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-question",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 126,
-    "newHome": "Shelf tile URL",
+    "line": 159,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Step 0’s question, open on the first card; the recipe sets it through the store (bestClipsQuestion) with the fresh 16:9 project marked unsaved."
   },
   {
     "label": "Start a new 9:16 project for this clip",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-question",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 127,
-    "newHome": "Shelf tile URL",
+    "line": 160,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The question’s first answer (§7.5, §7.7’s census row)."
   },
   {
     "label": "Saves this project first, then opens a new 9:16 project with just this clip.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-question",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 129,
-    "newHome": "Shelf tile URL",
+    "line": 162,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Under Start a new, with unsaved changes (the recipe marks the project dirty)."
   },
   {
     "label": "Add it to this project",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-question",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 132,
-    "newHome": "Shelf tile URL",
+    "line": 167,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The question’s second answer (§7.5, §7.7’s census row)."
   },
   {
     "label": "Adds it to this timeline as it is. The project keeps its shape, so nothing is reframed.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-question",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 136,
-    "newHome": "Shelf tile URL",
+    "line": 171,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Under Add, on the fresh project’s 16:9 canvas."
   },
   {
     "label": "Not now",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-question",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 137,
-    "newHome": "Shelf tile URL",
+    "line": 172,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Closes the question; nothing is sent."
   },
   {
     "label": "Download",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 179,
-    "newHome": "Shelf tile URL",
+    "line": 220,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The first card’s record, written through the store (the harness’s downloads never land): each step’s name."
   },
   {
     "label": "Shape",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 180,
-    "newHome": "Shelf tile URL",
+    "line": 221,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The record’s shape line."
   },
   {
     "label": "Follow the subject",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 181,
-    "newHome": "Shelf tile URL",
+    "line": 222,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The record’s step 3 (the Trimmer’s button of the same name is in the dock, not this home)."
   },
   {
     "label": "Captions",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 182,
-    "newHome": "Shelf tile URL",
+    "line": 223,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The record’s step 4."
   },
   {
     "label": "Graphics",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 183,
-    "newHome": "Shelf tile URL",
+    "line": 224,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The record’s step 5."
   },
   {
     "label": "on the timeline.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 188,
-    "newHome": "Shelf tile URL",
+    "line": 229,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "The download landed."
   },
   {
     "label": "this project set to 9:16.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 193,
-    "newHome": "Shelf tile URL",
+    "line": 235,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Step 0 on an empty timeline."
   },
   {
     "label": "skipped: the AI helper is not installed, so the crop is centred.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 202,
-    "newHome": "Shelf tile URL",
+    "line": 244,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Step 3 skipped without the AI helper."
   },
   {
     "label": "on.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 208,
-    "newHome": "Shelf tile URL",
+    "line": 250,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Step 4: captions on, with no subject track to keep them off."
   },
   {
     "label": "none found in this stretch.",
     "match": "text",
-    "home": "url",
+    "home": "foldclips",
     "needs": "link-best-clips-clipped",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 257,
-    "newHome": "Shelf tile URL",
+    "line": 258,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
     "note": "Step 5 ran and found nothing in the stretch: the line says what is there (graphicsResultText), never that graphics are listed when none are."
+  },
+  {
+    "label": "Duration",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 207,
+    "newHome": "Shelf tile URL",
+    "note": "Best clips' length list, folded (components/ui/FoldDown.tsx, the sketch's word): its button, with the chosen length beside it."
+  },
+  {
+    "label": "How long each clip should be",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 208,
+    "newHome": "Shelf tile URL",
+    "note": "The length list's button's tooltip."
+  },
+  {
+    "label": "1 min",
+    "match": "text",
+    "home": "url",
+    "needs": "link-best-lengths",
+    "count": 2,
+    "file": "src/shared/bestclips/session.ts",
+    "line": 34,
+    "newHome": "Shelf tile URL",
+    "note": "Unfolded: the chosen 1 min on the button and as a choice under it. Count 2."
+  },
+  {
+    "label": "Duration",
+    "match": "aria-label",
+    "home": "url",
+    "needs": "link-best-lengths",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 207,
+    "newHome": "Shelf tile URL",
+    "note": "The unfolded choices' group, named for a screen reader by the list's label."
+  },
+  {
+    "label": "Clips",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 210,
+    "newHome": "Shelf tile URL",
+    "note": "The toggle that opens and closes the fold-out panel on its Clips tab (aria-pressed); with a result it carries the number of clips found, a number and not a label. The tab of the same words is the panel's own, counted in foldclips."
+  },
+  {
+    "label": "Show or hide the clips Analyse found, beside the picture",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 211,
+    "newHome": "Shelf tile URL",
+    "note": "The Clips toggle's tooltip."
+  },
+  {
+    "label": "No clips yet. Paste a video link in the URL tile to find its best clips.",
+    "match": "text",
+    "home": "foldclips",
+    "needs": "none",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 214,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
+    "note": "The Clips tab with no link in the box: how a window starts."
+  },
+  {
+    "label": "No clips yet. Press Get transcript in the URL tile, then Analyse.",
+    "match": "text",
+    "home": "foldclips",
+    "needs": "link-failed",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 216,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
+    "note": "The Clips tab on a link with no words (here the fetch failed). Not BEST_CLIPS_NEEDS_TRANSCRIPT: beside the picture, \"press Get transcript first\" would not say where it is."
+  },
+  {
+    "label": "This video has no captions, and Best clips cannot listen to a video yet.",
+    "match": "text",
+    "home": "foldclips",
+    "needs": "link-no-captions",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 66,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
+    "note": "The Clips tab on a video with no caption track: the same words as the URL tile's pointer, which names no button."
+  },
+  {
+    "label": "Best clips is still looking at another video.",
+    "match": "text",
+    "home": "foldclips",
+    "needs": "link-best-clips-elsewhere",
+    "file": "src/shared/bestclips/session.ts",
+    "line": 72,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
+    "note": "An Analyse of another link held in flight through the store: the Clips tab's running line (it had no row before piece 2)."
   },
   {
     "label": "Click a row to pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",
@@ -10416,7 +10520,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 44,
+    "line": 45,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, its bar",
     "note": "The bar's first tab (the clip maker's layout, piece 1). Counted on the Clips face; the Transcript face shows the same bar."
   },
@@ -10426,7 +10530,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 45,
+    "line": 46,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, its bar",
     "note": "The bar's second tab. Counted on the Clips face, where nothing else says Transcript."
   },
@@ -10436,7 +10540,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 46,
+    "line": 47,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Clips tab's tooltip"
   },
   {
@@ -10445,7 +10549,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 47,
+    "line": 48,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab's tooltip"
   },
   {
@@ -10454,7 +10558,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 43,
+    "line": 44,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the tabs' group (role tablist)"
   },
   {
@@ -10463,7 +10567,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 48,
+    "line": 49,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the close button at the bar's end",
     "note": "The same words are its aria-label (the button is an icon); one row per label, home and state, so the title stands for both, as Close keys & curves does."
   },
@@ -10471,11 +10575,11 @@
     "label": "No clips yet. Press Analyse under Best clips, in the URL tile.",
     "match": "text",
     "home": "foldclips",
-    "needs": "none",
-    "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 51,
-    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Clips tab with nothing to show",
-    "note": "Piece 1's empty line; piece 2 moves the cards in and may replace it."
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/BestClips.tsx",
+    "line": 218,
+    "newHome": "beside the picture: the fold-out panel (Foldout.tsx), its Clips tab (tools/BestClips.tsx BestClipsCards)",
+    "note": "The Clips tab with the link's words and nothing analysed yet (piece 2; piece 1's empty line, moved to BestClips.tsx with Best clips' other words)."
   },
   {
     "label": "No words from a link yet. Paste a link in the URL tile and press Get transcript.",
@@ -10483,7 +10587,7 @@
     "home": "foldtranscript",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 53,
+    "line": 52,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab on the link's words, none ready and no clip selected"
   },
   {
@@ -10492,7 +10596,7 @@
     "home": "foldtranscript",
     "needs": "foldout-clip-words",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 55,
+    "line": 54,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab asked for the selected clip's words, no clip selected and no link words"
   }
 ]

@@ -1,6 +1,10 @@
 /**
- * Best clips in the URL tile, pressed through on the page (docs/CLIPS.md
- * §7.7's cards half, after M0's clipItCheck.ts):
+ * Best clips, pressed through on the page (docs/CLIPS.md §7.7's cards half,
+ * after M0's clipItCheck.ts). Since the clip maker's layout (piece 2) its
+ * choices are in the URL tile and its cards in the fold-out panel's Clips
+ * tab beside the picture: the check chooses the length in the tile's
+ * "Duration" list, presses Analyse there, and reads and presses the cards in
+ * the tab, which Analyse opens (each pressed case fails if it did not).
  *
  *   await window.__forgeBestClipsCheck()   → { ok, cases: [{ name, ok, saw }], ms }
  *
@@ -10,8 +14,9 @@
  *
  * THE CARDS HALF. Every case of `BEST_CLIPS_STUB_CASES` (bestClipsStub.ts,
  * run A's rules 1 to 26 that a page can show): the case's made-up words put
- * in the URL tile as the link's transcript, its length PRESSED (the length
- * button), Analyse PRESSED, and the cards read off the screen — title, why,
+ * in the URL tile as the link's transcript, its length PRESSED (unfolding the
+ * length list and pressing the choice), Analyse PRESSED, and the cards read
+ * off the screen — title, why,
  * range, word count, "Picked by …", note, and the notes under the cards. The
  * model is the harness's stub put in place of the bridge's
  * `directorStatus`/`directorComplete` (no model: the bridge's own status, as
@@ -23,7 +28,7 @@
  * One case is not pressed: a model that never answers, against Analyse's own
  * three-minute deadline (BEST_CLIPS_TIMEOUT_MS). There `bestClips` is called
  * with a 300 ms timeout, its result written to the store as Analyse writes
- * it, and the panel read (run A's note: the real deadline takes 3 minutes).
+ * it, the panel opened on Clips through the store, and the tab read (run A's note: the real deadline takes 3 minutes).
  *
  * THE CLIP IT HALF, on the bridge's twelve-row talk with no model, through
  * the bridge's recorded downloads (bridge.ts `harnessIngests`); a download
@@ -57,12 +62,12 @@
  *
  * WHEN ALL IS WELL: `ok: true` and every case `ok: true` — 29 cards cases
  * and 7 Clip it cases, 36 in all (BEST_CLIPS_CHECK_CASES). The store, the
- * bridge's switches and the Shelf are put back afterwards; the bridge's
+ * bridge's switches, the Shelf and the fold-out panel are put back afterwards; the bridge's
  * record of the downloads asked stays.
  */
 
 import { bestClips } from '@shared/bestclips/run'
-import { bestClipsAskOver, initialBestClips } from '@shared/bestclips/session'
+import { BEST_CLIPS_LENGTHS, bestClipsAskOver, initialBestClips } from '@shared/bestclips/session'
 import { candidatesFor } from '@shared/bestclips/signals'
 import {
   ADD_TO_PROJECT,
@@ -150,6 +155,30 @@ const section = (): Element => {
   return s
 }
 
+/** The fold-out panel's Clips tab, where the cards are: open, or the check says so. */
+const clipsTab = (): Element => {
+  const found = document.querySelectorAll('[data-foldout-body="clips"] [data-best-clips-tab]')
+  if (found.length !== 1) throw new Error(`expected the fold-out panel's Clips tab, found ${found.length} (the panel is ${editor().foldout.open ? `open on ${editor().foldout.tab}` : 'shut'})`)
+  return found[0]
+}
+
+/** Choose a length as a person does: unfold "Duration", press the length. The list folds and its button says the choice, or the failure is said. */
+async function pickLength(ms: number, failures: string[]): Promise<void> {
+  const list = section().querySelector('[data-fold-down="best-length"]')
+  if (!list) throw new Error('no length list in Best clips')
+  if (list.getAttribute('data-open') !== 'true') {
+    click(list.querySelector(':scope > button[aria-expanded]'), 'the length list')
+    await frames()
+  }
+  click(section().querySelector(`button[data-best-length="${ms}"]`), `the ${ms / 60_000} min length`)
+  await frames()
+  const after = section().querySelector('[data-fold-down="best-length"]')
+  const label = BEST_CLIPS_LENGTHS.find((l) => l.ms === ms)?.label ?? '?'
+  if (after?.getAttribute('data-open') !== 'false') failures.push('the length list did not fold after a choice')
+  if (!(after?.querySelector(':scope > button')?.textContent ?? '').includes(label)) failures.push(`the length list does not say ${label}`)
+  if (editor().bestClips.targetMs !== ms) failures.push(`the length chosen is ${editor().bestClips.targetMs} ms, not ${ms}`)
+}
+
 function click(el: Element | null, what: string): void {
   if (!(el instanceof HTMLElement)) throw new Error(`no ${what} on screen`)
   if (el instanceof HTMLButtonElement && el.disabled) throw new Error(`${what} is greyed`)
@@ -158,9 +187,9 @@ function click(el: Element | null, what: string): void {
 
 const text = (el: Element | null): string | null => (el ? (el.textContent ?? '') : null)
 
-/** The cards and notes as the screen shows them. */
+/** The cards and notes as the screen shows them, in the Clips tab. */
 function readCards(): SeenCards {
-  const s = section()
+  const s = clipsTab()
   const cards: SeenCard[] = [...s.querySelectorAll('li[data-best-card]')].map((li) => ({
     windowId: li.getAttribute('data-best-card') ?? '',
     title: text(li.querySelector('[data-card-title]')) ?? '',
@@ -207,18 +236,21 @@ async function cardCase(k: StubCase, base: UrlSource, original: Forge): Promise<
       directorComplete: k.model === null ? original.directorComplete : (request: CompletionRequest) => stubComplete(k.model as never, link, calls)(request)
     })
     await frames()
-    click(section().querySelector(`button[data-best-length="${link.targetMs}"]`), `the ${link.targetMs / 60_000} min length`)
-    await frames()
-    if (section().querySelector(`button[data-best-length="${link.targetMs}"]`)?.getAttribute('aria-pressed') !== 'true') failures.push('the length pressed is not shown as chosen')
+    await pickLength(link.targetMs, failures)
 
     if (k.model === 'never') {
       // Analyse's own deadline is three minutes: bestClips is called with 300 ms, and its result written as Analyse writes it.
       const asked = { linkKey: source.linkKey, targetMs: link.targetMs, transcript: link.transcript }
       const result = await bestClips(link.transcript, source.meta, link.targetMs, bestClipsAskOver(stubComplete('never', link, calls)), { timeoutMs: 300 })
       useEditor.setState((s) => ({ bestClips: { ...s.bestClips, last: { ...asked, result } } }))
+      // Not pressed, so the panel is opened as the Clips toggle opens it.
+      editor().openFoldout('clips')
     } else {
       const press = async (): Promise<void> => {
+        editor().closeFoldout()
+        await frames()
         click(section().querySelector('button[data-best-analyse]'), 'Analyse')
+        if (!editor().foldout.open || editor().foldout.tab !== 'clips') failures.push('Analyse did not open the panel on Clips')
         await until(() => editor().bestClips.running === null && editor().bestClips.last !== null, 8000, 'Analyse answering')
         await frames()
       }
@@ -261,7 +293,7 @@ async function cardCase(k: StubCase, base: UrlSource, original: Forge): Promise<
 
 /** A card's lines on screen, by step. */
 function stepsOn(windowId: string): Partial<Record<CardStepName, { state: string; label: string; text: string }>> {
-  const li = section().querySelector(`li[data-best-card="${windowId}"]`)
+  const li = clipsTab().querySelector(`li[data-best-card="${windowId}"]`)
   const out: Partial<Record<CardStepName, { state: string; label: string; text: string }>> = {}
   for (const row of li?.querySelectorAll('li[data-card-step]') ?? []) {
     const spans = row.querySelectorAll('span')
@@ -293,7 +325,7 @@ function graphicsLine(jobId: string): string {
 const ended = (windowId: string): boolean => ['done', 'skipped', 'failed'].includes(stepsOn(windowId).graphics?.state ?? '')
 
 function clipItButton(windowId: string): HTMLButtonElement | null {
-  const foot = section().querySelector(`li[data-best-card="${windowId}"] [data-best-clip-it]`)
+  const foot = clipsTab().querySelector(`li[data-best-card="${windowId}"] [data-best-clip-it]`)
   return [...(foot?.querySelectorAll('button') ?? [])].find((b) => (b.textContent ?? '').trim() === 'Clip it') ?? null
 }
 
@@ -417,8 +449,9 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
   // The cards of the talk, no model: three, as the census's link-best-clips.
   fresh()
   await talk()
-  click(section().querySelector('button[data-best-length="60000"]'), 'the 1 min length')
-  await frames()
+  const picked: string[] = []
+  await pickLength(60_000, picked)
+  if (picked.length > 0) throw new Error(picked.join('; '))
   click(section().querySelector('button[data-best-analyse]'), 'Analyse')
   await until(() => editor().bestClips.running === null && (editor().bestClips.last?.result.cards.length ?? 0) === 3, 5000, 'three cards on the talk')
   await frames()
@@ -438,7 +471,7 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     firstJob = job.id
     const settings = editor().project.settings
     if (harnessIngests.length !== before + 1) failures.push(`${harnessIngests.length - before} downloads asked, not 1`)
-    if (editor().bestClipsQuestion !== null || section().querySelector('[data-best-question]')) failures.push('the empty timeline was asked about')
+    if (editor().bestClipsQuestion !== null || clipsTab().querySelector('[data-best-question]')) failures.push('the empty timeline was asked about')
     if (editor().aspect !== '9:16' || settings.height <= settings.width) failures.push(`the project is ${editor().aspect} ${settings.width}×${settings.height}, not 9:16`)
     if (job.request.exact !== true) failures.push('the download is not an exact cut')
     if (job.request.range?.startMs !== cards[0].startMs || job.request.range?.endMs !== cards[0].endMs) {
@@ -583,7 +616,7 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     const before = harnessIngests.length
     click(clipItButton(cards[2].windowId), 'card 3’s Clip it')
     await frames()
-    const question = section().querySelector(`li[data-best-card="${cards[2].windowId}"] [data-best-question]`)
+    const question = clipsTab().querySelector(`li[data-best-card="${cards[2].windowId}"] [data-best-question]`)
     if (!question) throw new Error('no question on the card')
     const labels = [...question.querySelectorAll('button')].map((b) => (b.querySelector('span')?.textContent ?? b.textContent ?? '').trim())
     if (!labels.includes(START_NEW_PROJECT) || !labels.includes(ADD_TO_PROJECT)) failures.push(`the question's answers read ${JSON.stringify(labels)}`)
@@ -593,7 +626,7 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     if (editor().bestClipsQuestion !== null || harnessIngests.length !== before) failures.push('Not now did not close the question, or sent something')
     click(clipItButton(cards[2].windowId), 'card 3’s Clip it, again')
     await frames()
-    click(section().querySelector(`li[data-best-card="${cards[2].windowId}"] button[data-best-choice="add"]`), 'Add it to this project')
+    click(clipsTab().querySelector(`li[data-best-card="${cards[2].windowId}"] button[data-best-choice="add"]`), 'Add it to this project')
     await until(() => harnessIngests.length > before, 3000, 'Add sending the download')
     await frames()
     const after = editor().project
@@ -622,7 +655,7 @@ async function clipItCases(original: Forge, talk: () => Promise<void>): Promise<
     // Card 1's clip went into another project (case 1): it can be clipped again here.
     click(clipItButton(cards[0].windowId), 'card 1’s Clip it')
     await frames()
-    click(section().querySelector(`li[data-best-card="${cards[0].windowId}"] button[data-best-choice="new"]`), 'Start a new 9:16 project for this clip')
+    click(clipsTab().querySelector(`li[data-best-card="${cards[0].windowId}"] button[data-best-choice="new"]`), 'Start a new 9:16 project for this clip')
     await until(() => harnessIngests.length > before, 3000, 'Start new sending the download')
     await frames()
     if (saves.length !== 1 || saves[0].clips !== 1) failures.push(`${saves.length} saves (${JSON.stringify(saves)}), not one of the edit`)
@@ -701,6 +734,8 @@ export async function runBestClipsCheck(): Promise<BestClipsCheckReport> {
     selectedClipId: s.selectedClipId,
     lastGraphics: s.lastGraphics,
     shelfTool: s.shelfTool,
+    foldout: s.foldout,
+    foldDownOpen: s.foldDownOpen,
     reframeHelper: s.reframe.helper,
     reframeModel: s.reframe.model,
     modelPresent: harnessReframe.modelPresent
@@ -752,7 +787,9 @@ export async function runBestClipsCheck(): Promise<BestClipsCheckReport> {
       playhead: kept.playhead,
       selectedClipIds: kept.selectedClipIds,
       selectedClipId: kept.selectedClipId,
-      lastGraphics: kept.lastGraphics
+      lastGraphics: kept.lastGraphics,
+      foldout: kept.foldout,
+      foldDownOpen: kept.foldDownOpen
     })
     editor().setReframeHelper(kept.reframeHelper)
     editor().setReframeModel(kept.reframeModel)

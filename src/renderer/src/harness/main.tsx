@@ -14,6 +14,7 @@ import { installHelperPackCheck } from './helperPackCheck'
 import { installGraphicCheck } from './graphicCheck'
 import { installLookCheck } from './lookCheck'
 import { installFoldoutCheck } from './foldoutCheck'
+import { installClipsLayoutCheck } from './clipsLayoutCheck'
 import { useEditor } from '../store'
 import { useCatalog } from '../catalog'
 import '../styles.css'
@@ -60,6 +61,9 @@ installLookCheck()
 
 /* The fold-out panel beside the picture, opened, switched and closed, and the Preview never remounted (the clip maker's layout). */
 installFoldoutCheck()
+
+/* Best clips' two parts measured where they are: the URL tile's choices and the panel's cards, nothing cut or past an edge (the clip maker's layout, piece 2). */
+installClipsLayoutCheck()
 
 /*
  * The store, reachable from a driving script.

@@ -2650,6 +2650,22 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
     if (cards.length !== 3 || cards.some((c) => c.scoredBy !== 'model')) throw new Error(`census: the model stub's Analyse gave ${cards.length} cards, ${cards.filter((c) => c.scoredBy === 'model').length} of them the model's, not 3`)
     return {}
   },
+  /*
+   * Best clips' length list unfolded (the clip maker's layout, piece 2): the
+   * four lengths under "Duration", opened through the store as its button
+   * opens it. Folded, only the chosen one is on screen, on the button.
+   */
+  'link-best-lengths': async () => {
+    await linkWords()
+    editor().setFoldDownOpen('best-length')
+    return {}
+  },
+  /* an Analyse of ANOTHER link held in flight: the Clips tab says Best clips is still looking at another video */
+  'link-best-clips-elsewhere': async () => {
+    const transcript = await linkWords()
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: 'census-another-link', targetMs: s.bestClips.targetMs, transcript } } }))
+    return {}
+  },
   /* an Analyse held in flight through the store: the no-model run answers too fast to look at */
   'link-best-clips-running': async () => {
     const transcript = await linkWords()

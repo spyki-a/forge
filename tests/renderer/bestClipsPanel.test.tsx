@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
+import { FOLDOUT_START } from '@shared/foldout'
 import { bestClips, NO_MODEL_NOTE, type BestClipCard, type BestClipsResult } from '@shared/bestclips/run'
 import {
   BEST_CLIPS_CANNOT_LISTEN,
@@ -39,13 +40,19 @@ import {
 } from '@shared/bestclips/cardClip'
 
 /*
- * Best clips in the URL tile, rendered (docs/CLIPS.md §7.5's first half):
- * the heading, the four lengths as one choice, Analyse, the cards (title,
- * why, range, words, who picked, the card's note), the result's notes, the
- * no-captions line, the pointer to Get transcript — and never a result's
- * `problems` or `askNotes`. Rendered to static markup, the store mocked to a
- * plain selector over the REAL store's state (ingestPanel.test.tsx's way).
- * Every transcript is made up; the caseless title is \u escapes.
+ * Best clips, rendered (docs/CLIPS.md §7.5's first half), in its two parts
+ * since the clip maker's layout (2026-11-27):
+ * - in the URL tile (`BestClips`): the heading, the four lengths as one
+ *   fold-down list, Make it vertical, Analyse (which opens the panel on
+ *   Clips), the "Clips" toggle with the count, the no-captions line and the
+ *   pointer to Get transcript — and never a card or a note;
+ * - in the fold-out's Clips tab (`BestClipsCards`): the running line, the
+ *   cards (title, why, range, words, who picked, the card's note, Clip it,
+ *   the question, the steps), the result's notes, or the line for nothing yet
+ *   — and never a result's `problems` or `askNotes`.
+ * Rendered to static markup, the store mocked to a plain selector over the
+ * REAL store's state (ingestPanel.test.tsx's way). Every transcript is made
+ * up; the caseless title is \u escapes.
  */
 
 vi.mock('../../src/renderer/src/store', async (importOriginal) => {
@@ -61,7 +68,15 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
 })
 
 const { useEditor } = await import('../../src/renderer/src/store')
-const { BestClips } = await import('../../src/renderer/src/components/tools/BestClips')
+const {
+  BestClips,
+  BestClipsCards,
+  BEST_CLIPS_DURATION,
+  CLIPS_TOGGLE,
+  FOLDOUT_CLIPS_EMPTY,
+  FOLDOUT_CLIPS_NO_LINK,
+  FOLDOUT_CLIPS_NO_WORDS
+} = await import('../../src/renderer/src/components/tools/BestClips')
 const { IngestPanel } = await import('../../src/renderer/src/components/IngestPanel')
 
 const URL = 'https://www.youtube.com/watch?v=MadeUpTalk6'
@@ -163,10 +178,26 @@ function textOf(node: ReactNode): string {
   return ''
 }
 
+/** The URL tile's part. */
 const shown = (): Host[] => hosts(createElement(BestClips))
 const markup = (): string => renderToStaticMarkup(createElement(BestClips))
 const buttonNamed = (label: string): Host | undefined => shown().find((h) => h.type === 'button' && textOf(h.props.children as ReactNode).trim() === label)
 const withAttr = (name: string): Host[] => shown().filter((h) => h.props[name] !== undefined)
+/** The fold-out's Clips tab. */
+const tab = (): Host[] => hosts(createElement(BestClipsCards))
+const tabMarkup = (): string => renderToStaticMarkup(createElement(BestClipsCards))
+const inTab = (name: string): Host[] => tab().filter((h) => h.props[name] !== undefined)
+/** A choice's or Escape's handler reads its event for the focus; none is in the page here. */
+const NO_EVENT = { currentTarget: null }
+/** The length list's own button, and its choices once open. */
+const lengthButton = (): Host => {
+  const found = shown().filter((h) => h.type === 'button' && h.props['aria-expanded'] !== undefined && h.props['aria-controls'] === 'fold-down-best-length')
+  expect(found).toHaveLength(1)
+  return found[0]
+}
+const openLengths = (): void => (lengthButton().props.onClick as () => void)()
+/** Everything the URL tile's part must never draw: a card, the cards' list, a note, the running line. */
+const LONG_THINGS = ['data-best-card', 'data-best-cards', 'data-best-note', 'data-best-model-note', 'data-best-running', 'data-card-title', 'data-best-clip-it']
 
 beforeEach(() => {
   vi.stubGlobal('window', { forge: {} })
@@ -182,22 +213,34 @@ describe('the Best clips section', () => {
     expect(markup()).toBe('')
   })
 
-  it('shows its heading, the four lengths as one choice with 1 min picked, and Analyse ready over the link’s words', () => {
+  it('shows its heading, the four lengths as one fold-down list with 1 min picked, and Analyse ready over the link’s words', () => {
     onLink(T)
     const heading = shown().find((h) => h.type === 'h3')
     expect(heading && textOf(heading.props.children as ReactNode).trim()).toBe('Best clips')
+    // Folded: one button saying what it chooses and what is chosen, and no choice drawn.
+    expect(textOf(lengthButton().props.children as ReactNode)).toBe(`${BEST_CLIPS_DURATION}1 min`)
+    expect(lengthButton().props['aria-expanded']).toBe(false)
+    expect(withAttr('data-best-length')).toHaveLength(0)
+    openLengths()
+    expect(lengthButton().props['aria-expanded']).toBe(true)
     const lengths = withAttr('data-best-length')
     expect(lengths.map((h) => textOf(h.props.children as ReactNode))).toEqual(['1 min', '2 min', '3 min', '4 min'])
+    expect(lengths.map((h) => h.props['data-best-length'])).toEqual(['60000', '120000', '180000', '240000'])
     expect(lengths.map((h) => h.props['aria-pressed'])).toEqual([true, false, false, false])
     const analyse = buttonNamed('Analyse')!
     expect(analyse.props.disabled).toBe(false)
     expect(markup()).not.toContain(BEST_CLIPS_NEEDS_TRANSCRIPT)
   })
 
-  it('picks a length when one is pressed', () => {
+  it('picks a length when one is pressed: the same store value the four buttons set, and the list folds saying it', () => {
     onLink(T)
-    ;(buttonNamed('3 min')!.props.onClick as () => void)()
+    openLengths()
+    ;(buttonNamed('3 min')!.props.onClick as (e: unknown) => void)(NO_EVENT)
     expect(useEditor.getState().bestClips.targetMs).toBe(180_000)
+    expect(useEditor.getState().foldDownOpen).toBe(null)
+    expect(withAttr('data-best-length')).toHaveLength(0)
+    expect(textOf(lengthButton().props.children as ReactNode)).toBe(`${BEST_CLIPS_DURATION}3 min`)
+    openLengths()
     expect(withAttr('data-best-length').map((h) => h.props['aria-pressed'])).toEqual([false, false, true, false])
   })
 
@@ -252,27 +295,169 @@ describe('the Best clips section', () => {
     expect(greyedForGood).toBe(true)
   })
 
-  it('shows a running state while Analyse runs, with Analyse and the lengths greyed', () => {
+  it('shows a running state while Analyse runs (in the Clips tab), with Analyse and the length list greyed, and the list folded', () => {
     onLink(T)
+    // The list left open when Analyse was pressed: it folds, so no length can be picked mid-run.
+    useEditor.getState().setFoldDownOpen('best-length')
     useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: T } } }))
-    expect(markup()).toContain(BEST_CLIPS_RUNNING)
-    expect(markup()).not.toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
+    expect(tabMarkup()).toContain(BEST_CLIPS_RUNNING)
+    expect(tabMarkup()).not.toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
+    expect(inTab('data-best-running').map((h) => h.props['data-best-running'])).toEqual(['here'])
     expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
-    expect(withAttr('data-best-length').map((h) => h.props.disabled)).toEqual([true, true, true, true])
+    expect(lengthButton().props.disabled).toBe(true)
+    expect(lengthButton().props['aria-expanded']).toBe(false)
+    expect(withAttr('data-best-length')).toHaveLength(0)
+    // Pressed anyway, the greyed button opens nothing either.
+    useEditor.getState().setFoldDownOpen(null)
+    openLengths()
+    expect(withAttr('data-best-length')).toHaveLength(0)
   })
 
   it('says a run is another video’s when it is not this link’s or these captions’, and still points at Get transcript', () => {
     onLink(T)
     useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: 'yt-another', targetMs: 60_000, transcript: T } } }))
-    expect(markup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
-    expect(markup()).not.toContain(BEST_CLIPS_RUNNING)
+    expect(tabMarkup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
+    expect(tabMarkup()).not.toContain(BEST_CLIPS_RUNNING)
     expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
     // The same link, captions fetched again since: also not this panel's run.
     useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: madeUpTalk(60, 51) } } }))
-    expect(markup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
+    expect(tabMarkup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
     // No words on this link: the pointer still shows while another link's run goes on.
     onLink(null, 'failed')
     expect(markup()).toContain(BEST_CLIPS_NEEDS_TRANSCRIPT)
+  })
+
+  it('draws no card, no note and no running line in the URL tile, in any state', async () => {
+    const result = await bestClips(T, null, 60_000)
+    const states: [string, () => void][] = [
+      ['no link', () => undefined],
+      ['a link with no words', () => onLink(null, 'failed')],
+      ['no captions', () => onLink(null, 'none')],
+      ['words', () => onLink(T)],
+      ['running here', () => {
+        onLink(T)
+        useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: T } } }))
+      }],
+      ['running elsewhere', () => {
+        onLink(T)
+        useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: 'yt-another', targetMs: 60_000, transcript: T } } }))
+      }],
+      ['a result', () => {
+        onLink(T)
+        withResult({ ...result, note: 'A plain made-up shortfall.' })
+      }]
+    ]
+    for (const [name, put] of states) {
+      useEditor.setState(useEditor.getInitialState())
+      put()
+      for (const attr of LONG_THINGS) expect(withAttr(attr), `${name}: ${attr}`).toHaveLength(0)
+      const html = markup()
+      for (const words of [BEST_CLIPS_RUNNING, BEST_CLIPS_RUNNING_ELSEWHERE, NO_MODEL_NOTE, 'A plain made-up shortfall.', `${CLIP_IT_CARD}</button>`, ...result.cards.map((c) => c.why)]) {
+        expect(html, `${name}: ${words}`).not.toContain(words)
+      }
+    }
+    // The last state is not vacuous: the tab draws them (Make it vertical's tooltip says "Clip it" too, so the button's own text is looked for).
+    expect(inTab('data-best-card')).toHaveLength(result.cards.length)
+    expect(tabMarkup()).toContain(`${CLIP_IT_CARD}</button>`)
+    expect(inTab('data-best-note')).toHaveLength(1)
+  })
+
+  it('offers Make it vertical before any result, on the same store value Clip it reads', () => {
+    for (const status of ['failed', 'ready'] as const) {
+      useEditor.setState(useEditor.getInitialState())
+      onLink(status === 'ready' ? T : null, status)
+      const vertical = buttonNamed(MAKE_IT_VERTICAL)
+      expect(vertical?.props['aria-pressed'], status).toBe(true)
+      expect(withAttr('data-best-vertical'), status).toHaveLength(1)
+      ;(vertical!.props.onClick as () => void)()
+      expect(useEditor.getState().bestClipsVertical, status).toBe(false)
+      expect(buttonNamed(MAKE_IT_VERTICAL)?.props['aria-pressed'], status).toBe(false)
+    }
+    // Before Analyse in the tile's order: the switch, then Analyse.
+    const order = shown().filter((h) => h.props['data-best-vertical'] !== undefined || h.props['data-best-analyse'] !== undefined)
+    expect(order.map((h) => (h.props['data-best-vertical'] !== undefined ? 'vertical' : 'analyse'))).toEqual(['vertical', 'analyse'])
+    // Clip it plans from that same value: both of the store's plans read it.
+    const store = readFileSync(resolve(__dirname, '../../src/renderer/src/store.ts'), 'utf8')
+    expect([...store.matchAll(/cardClipPlan\(get\(\)\.project, get\(\)\.bestClipsVertical,/g)]).toHaveLength(2)
+    expect([...store.matchAll(/cardClipPlan\(/g)]).toHaveLength(2)
+  })
+
+  it('opens the panel on Clips when Analyse is pressed, and still runs the store’s Analyse once', () => {
+    onLink(T)
+    const analyse = vi.fn(async () => undefined)
+    useEditor.setState({ analyseBestClips: analyse })
+    for (const from of [null, 'transcript'] as const) {
+      useEditor.setState({ foldout: FOLDOUT_START })
+      if (from) useEditor.getState().openFoldout(from)
+      analyse.mockClear()
+      ;(buttonNamed('Analyse')!.props.onClick as () => void)()
+      expect(useEditor.getState().foldout, String(from)).toMatchObject({ open: true, tab: 'clips' })
+      expect(analyse, String(from)).toHaveBeenCalledTimes(1)
+    }
+  })
+
+  it('has a Clips toggle that opens and closes the panel on Clips, pressed while it shows, saying how many were found', async () => {
+    onLink(T)
+    const toggle = (): Host => {
+      const found = withAttr('data-best-toggle')
+      expect(found).toHaveLength(1)
+      return found[0]
+    }
+    const press = (): void => (toggle().props.onClick as () => void)()
+    expect(textOf(toggle().props.children as ReactNode)).toBe(CLIPS_TOGGLE)
+    expect(toggle().props['aria-pressed']).toBe(false)
+    press()
+    expect(useEditor.getState().foldout).toMatchObject({ open: true, tab: 'clips' })
+    expect(toggle().props['aria-pressed']).toBe(true)
+    press()
+    expect(useEditor.getState().foldout.open).toBe(false)
+    expect(toggle().props['aria-pressed']).toBe(false)
+    // Open on the other tab it is not pressed, and pressing it turns the panel to Clips.
+    useEditor.getState().openFoldout('transcript')
+    expect(toggle().props['aria-pressed']).toBe(false)
+    press()
+    expect(useEditor.getState().foldout).toMatchObject({ open: true, tab: 'clips' })
+    // The count: the cards found for this link and length, and nothing when there are none.
+    expect(withAttr('data-best-count')).toHaveLength(0)
+    const result = await bestClips(T, null, 60_000)
+    withResult(result)
+    expect(withAttr('data-best-count').map((h) => textOf(h.props.children as ReactNode))).toEqual([String(result.cards.length)])
+    expect(textOf(toggle().props.children as ReactNode)).toBe(`${CLIPS_TOGGLE}${result.cards.length}`)
+    withResult(fakeResult([], 'A plain made-up shortfall.'))
+    expect(withAttr('data-best-count')).toHaveLength(0)
+    withResult(result)
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, targetMs: 120_000 } }))
+    expect(withAttr('data-best-count')).toHaveLength(0)
+  })
+})
+
+describe('the Clips tab with nothing to show', () => {
+  const line = (): string[] => inTab('data-best-empty').map((h) => textOf(h.props.children as ReactNode))
+
+  it('says what to press, in one line, for each state before a result', () => {
+    expect(line()).toEqual([FOLDOUT_CLIPS_NO_LINK])
+    onLink(null, 'failed')
+    expect(line()).toEqual([FOLDOUT_CLIPS_NO_WORDS])
+    onLink(null, 'none')
+    expect(line()).toEqual([BEST_CLIPS_CANNOT_LISTEN])
+    onLink(T)
+    expect(line()).toEqual([FOLDOUT_CLIPS_EMPTY])
+    for (const html of [tabMarkup()]) expect(html).not.toContain('data-best-card')
+  })
+
+  it('says nothing of the kind while a run goes on, or once there is a result', async () => {
+    onLink(T)
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: T } } }))
+    expect(line()).toEqual([])
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: 'yt-another', targetMs: 60_000, transcript: T } } }))
+    expect(line()).toEqual([])
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: null } }))
+    withResult(await bestClips(T, null, 60_000))
+    expect(line()).toEqual([])
+    // Analysed and nothing found: the result's own note, not these lines.
+    withResult(fakeResult([], 'A plain made-up shortfall.'))
+    expect(line()).toEqual([])
+    expect(inTab('data-best-note').map((h) => textOf(h.props.children as ReactNode))).toEqual(['A plain made-up shortfall.'])
   })
 })
 
@@ -282,41 +467,42 @@ describe('the cards', () => {
     const result = await bestClips(T, null, 60_000)
     expect(result.cards).toHaveLength(3)
     withResult(result)
-    const cards = withAttr('data-best-card')
+    const cards = inTab('data-best-card')
     expect(cards.map((h) => h.props['data-best-card'])).toEqual(result.cards.map((c) => c.windowId))
-    const html = markup()
+    const html = tabMarkup()
     for (const card of result.cards) {
       expect(html).toContain(card.title.replace(/&/g, '&amp;'))
       expect(html).toContain(card.why)
       expect(html).toContain(cardRange(card))
       expect(html).toContain(cardWords(card))
     }
-    expect(withAttr('data-card-by').map((h) => textOf(h.props.children as ReactNode))).toEqual([SCORED_BY_LABEL.signals, SCORED_BY_LABEL.signals, SCORED_BY_LABEL.signals])
-    expect(withAttr('data-best-model-note').map((h) => textOf(h.props.children as ReactNode))).toEqual([NO_MODEL_NOTE])
+    expect(inTab('data-card-by').map((h) => textOf(h.props.children as ReactNode))).toEqual([SCORED_BY_LABEL.signals, SCORED_BY_LABEL.signals, SCORED_BY_LABEL.signals])
+    expect(inTab('data-best-model-note').map((h) => textOf(h.props.children as ReactNode))).toEqual([NO_MODEL_NOTE])
   })
 
   it('show "Picked by the model" for a model’s card, and the card’s own note', () => {
     onLink(T)
     const card: BestClipCard = { windowId: 'w3', startMs: 61_000, endMs: 121_500, words: 150, title: 'zor plim', why: 'It is clear.', scoredBy: 'model', note: 'A plain made-up note.' }
     withResult(fakeResult([card]))
-    expect(withAttr('data-card-by').map((h) => textOf(h.props.children as ReactNode))).toEqual([SCORED_BY_LABEL.model])
-    expect(withAttr('data-card-range').map((h) => textOf(h.props.children as ReactNode))).toEqual(['1:01.0 – 2:01.5'])
-    expect(withAttr('data-card-note').map((h) => textOf(h.props.children as ReactNode))).toEqual(['A plain made-up note.'])
+    expect(inTab('data-card-by').map((h) => textOf(h.props.children as ReactNode))).toEqual([SCORED_BY_LABEL.model])
+    expect(inTab('data-card-range').map((h) => textOf(h.props.children as ReactNode))).toEqual(['1:01.0 – 2:01.5'])
+    expect(inTab('data-card-note').map((h) => textOf(h.props.children as ReactNode))).toEqual(['A plain made-up note.'])
   })
 
   it('show the result’s note alone when there are no cards', () => {
     onLink(T)
     withResult(fakeResult([], 'A plain made-up shortfall.'))
-    expect(withAttr('data-best-card')).toHaveLength(0)
-    expect(withAttr('data-best-cards')).toHaveLength(0)
-    expect(withAttr('data-best-note').map((h) => textOf(h.props.children as ReactNode))).toEqual(['A plain made-up shortfall.'])
+    expect(inTab('data-best-card')).toHaveLength(0)
+    expect(inTab('data-best-cards')).toHaveLength(0)
+    expect(inTab('data-best-note').map((h) => textOf(h.props.children as ReactNode))).toEqual(['A plain made-up shortfall.'])
   })
 
   it('are not shown for another length than the one picked', async () => {
     onLink(T)
     withResult(await bestClips(T, null, 60_000))
+    expect(inTab('data-best-card')).toHaveLength(3)
     useEditor.setState((s) => ({ bestClips: { ...s.bestClips, targetMs: 120_000 } }))
-    expect(withAttr('data-best-card')).toHaveLength(0)
+    expect(inTab('data-best-card')).toHaveLength(0)
   })
 
   it('never show a result’s problems or askNotes, whatever they hold', () => {
@@ -327,7 +513,7 @@ describe('the cards', () => {
       problems: [{ path: '$.picks[0]', message: 'PROBLEM-SENTINEL http://10.0.0.1:1234 sk-sentinel' }],
       askNotes: ['ASKNOTE-SENTINEL the first answer was not JSON']
     })
-    const html = markup()
+    const html = tabMarkup()
     expect(html).toContain('zor')
     expect(html).not.toContain('PROBLEM-SENTINEL')
     expect(html).not.toContain('ASKNOTE-SENTINEL')
@@ -342,13 +528,25 @@ describe('the cards', () => {
     const title = `${caseless} ${marked}`
     const card: BestClipCard = { windowId: 'w2', startMs: 0, endMs: 60_000, words: 140, title, why: 'It is.', scoredBy: 'model' }
     withResult(fakeResult([card]))
-    const titleHost = withAttr('data-card-title')[0]
+    const titleHost = inTab('data-card-title')[0]
     expect(textOf(titleHost.props.children as ReactNode)).toBe(title)
     const cls = String(titleHost.props.className)
     expect(cls).toContain('[overflow-wrap:anywhere]')
     expect(cls).toContain('whitespace-normal')
     expect(cls).not.toMatch(/truncate|line-clamp|text-ellipsis|whitespace-nowrap|overflow-hidden/)
-    expect(markup()).toContain(title)
+    expect(tabMarkup()).toContain(title)
+  })
+
+  it('sit one to a row in a narrow panel and more in a wide one: a grid that fills, each card at least 15rem or the panel’s width', async () => {
+    onLink(T)
+    withResult(await bestClips(T, null, 60_000))
+    const list = inTab('data-best-cards')
+    expect(list).toHaveLength(1)
+    const cls = String(list[0].props.className).split(/\s+/)
+    expect(cls).toContain('grid')
+    expect(cls).toContain('[grid-template-columns:repeat(auto-fill,minmax(min(15rem,100%),1fr))]')
+    // A card's text column may shrink and wrap, never run out of the card.
+    for (const card of inTab('data-best-card')) expect(String(card.props.className)).toContain('flex')
   })
 })
 
@@ -372,7 +570,7 @@ describe('Clip it on a card (§7.5 steps 0 to 5)', () => {
   const B: BestClipCard = { ...A, windowId: 'w5', startMs: 70_000, endMs: 131_000 }
   const C: BestClipCard = { ...A, windowId: 'w9', startMs: 140_000, endMs: 199_000 }
   const footOf = (windowId: string): Host[] => {
-    const all = shown()
+    const all = tab()
     const at = all.findIndex((h) => h.props['data-best-clip-it'] === windowId)
     expect(at, windowId).toBeGreaterThan(-1)
     return hosts(all[at].props.children as ReactNode)
@@ -385,8 +583,10 @@ describe('Clip it on a card (§7.5 steps 0 to 5)', () => {
     withResult(fakeResult([A, B, C]))
   })
 
-  it('puts Clip it at the foot of every card, and Make it vertical over them, on by default', () => {
+  it('puts Clip it at the foot of every card, and Make it vertical in the URL tile, on by default', () => {
     for (const card of [A, B, C]) expect(buttonsIn(footOf(card.windowId)), card.windowId).toEqual([CLIP_IT_CARD])
+    // The switch is the tile's, never the tab's.
+    expect(inTab('data-best-vertical')).toHaveLength(0)
     const vertical = buttonNamed(MAKE_IT_VERTICAL)
     expect(vertical?.props['aria-pressed']).toBe(true)
     ;(vertical!.props.onClick as () => void)()

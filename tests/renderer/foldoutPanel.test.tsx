@@ -13,7 +13,8 @@ import type { Transcript } from '@shared/transcript'
  *
  * - shut: an empty root, nothing a person could read or press;
  * - open on Clips: the bar (its two tabs, Clips selected, the close button)
- *   and the Clips empty line, in a body that scrolls inside the panel;
+ *   and the Clips tab's line for no link (no link in these tests), in a body
+ *   that scrolls inside the panel;
  * - open on Transcript: the empty line of whichever transcript the rule picks
  *   (the link's, or the selected clip's), or nothing yet when it has words;
  * - and each body in its own error boundary, keyed by the tab.
@@ -37,7 +38,6 @@ const { useEditor } = await import('../../src/renderer/src/store')
 const {
   Foldout,
   FoldoutTranscript,
-  FOLDOUT_CLIPS_EMPTY,
   FOLDOUT_CLIPS_TAB,
   FOLDOUT_CLIP_EMPTY,
   FOLDOUT_CLOSE_TITLE,
@@ -46,6 +46,8 @@ const {
   FOLDOUT_TRANSCRIPT_TAB
 } = await import('../../src/renderer/src/components/Foldout')
 const { ErrorBoundary } = await import('../../src/renderer/src/components/ErrorBoundary')
+// The Clips tab's lines for nothing yet live with Best clips' other words since piece 2.
+const { FOLDOUT_CLIPS_NO_LINK } = await import('../../src/renderer/src/components/tools/BestClips')
 
 const URL = 'https://www.youtube.com/watch?v=MadeUpFold1'
 
@@ -116,7 +118,7 @@ describe('the fold-out panel, open', () => {
     expect(page).toMatch(new RegExp(`role="tab" aria-selected="false"[^>]*data-foldout-tab="transcript"[^>]*>${FOLDOUT_TRANSCRIPT_TAB}<`))
     expect(page).toContain(`title="${FOLDOUT_CLOSE_TITLE}"`)
     expect(page).toContain('data-foldout-close')
-    expect(page).toContain(escapeHtml(FOLDOUT_CLIPS_EMPTY))
+    expect(page).toContain(escapeHtml(FOLDOUT_CLIPS_NO_LINK))
     // The tabs and the panel name each other, and only the open tab points at a panel in the page.
     expect(page).toMatch(/data-foldout-tab="clips" id="foldout-tab-clips"/)
     expect(page).toMatch(/data-foldout-tab="transcript" id="foldout-tab-transcript"/)
@@ -133,7 +135,7 @@ describe('the fold-out panel, open', () => {
     expect(page).toMatch(/role="tab" aria-selected="true"[^>]*data-foldout-tab="transcript"/)
     expect(page).toContain(escapeHtml(FOLDOUT_LINK_EMPTY))
     expect(page).not.toContain(escapeHtml(FOLDOUT_CLIP_EMPTY))
-    expect(page).not.toContain(escapeHtml(FOLDOUT_CLIPS_EMPTY))
+    expect(page).not.toContain(escapeHtml(FOLDOUT_CLIPS_NO_LINK))
   })
 
   it('on Transcript, the clip’s words asked, no clip and no link words: the clip’s empty line', () => {

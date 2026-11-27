@@ -1001,6 +1001,13 @@ interface EditorState {
   closeFoldout: () => void
   /** On what is already showing it closes; on anything else it opens there (shared/foldout.ts `foldoutToggled`). */
   toggleFoldout: (tab: FoldoutTab, words?: FoldoutWords) => void
+  /**
+   * The fold-down list that is open (components/ui/FoldDown.tsx), by its id,
+   * or none: one at a time, so opening one folds the last. Held here so the
+   * components that own a list keep no hook of their own. View state.
+   */
+  foldDownOpen: string | null
+  setFoldDownOpen: (id: string | null) => void
   /** The settings panel under the header's gear. */
   settingsOpen: boolean
   setSettingsOpen: (open: boolean) => void
@@ -2060,6 +2067,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   openFoldout: (tab, words) => set((s) => ({ foldout: foldoutOpened(s.foldout, tab, words) })),
   closeFoldout: () => set((s) => ({ foldout: foldoutClosed(s.foldout) })),
   toggleFoldout: (tab, words) => set((s) => ({ foldout: foldoutToggled(s.foldout, tab, words) })),
+  foldDownOpen: null,
+  setFoldDownOpen: (foldDownOpen) => set({ foldDownOpen }),
   settingsOpen: false,
   setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
   settingsFocus: null,

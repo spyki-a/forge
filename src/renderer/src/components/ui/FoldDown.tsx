@@ -49,7 +49,8 @@ export function FoldDown<T extends string | number>({
   onOpenChange,
   onChoose,
   title,
-  disabled
+  disabled,
+  choiceData
 }: {
   /** Names it for the harness (`data-fold-down`) and ties the button to its list (`aria-controls`). */
   id: string
@@ -64,6 +65,12 @@ export function FoldDown<T extends string | number>({
   /** The button's tooltip. */
   title?: string
   disabled?: boolean
+  /**
+   * A data attribute every choice carries with its own value, for the owner's
+   * tests and the harness: Best clips' lengths keep the `data-best-length`
+   * their four buttons carried before they folded into this list.
+   */
+  choiceData?: `data-${string}`
 }): ReactNode {
   const chosen = choices.find((choice) => choice.value === value)
   const list = `fold-down-${id}`
@@ -97,6 +104,7 @@ export function FoldDown<T extends string | number>({
           {choices.map((choice) => (
             <button
               key={String(choice.value)}
+              {...(choiceData ? { [choiceData]: String(choice.value) } : {})}
               type="button"
               aria-pressed={choice.value === value}
               title={choice.title}

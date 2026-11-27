@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
-import { Loader2, Scissors, Smartphone, Sparkles } from 'lucide-react'
+import { Loader2, PanelLeftClose, PanelLeftOpen, Scissors, Smartphone, Sparkles } from 'lucide-react'
+import { foldoutShowing } from '@shared/foldout'
 import { useEditor, urlSourceFor } from '../../store'
+import { FoldDown } from '../ui/FoldDown'
 import { parseLink } from '@shared/ingest/url'
 import { formatMark } from '@shared/ingest/section'
 import type { BestClipCard } from '@shared/bestclips/run'
@@ -42,23 +44,29 @@ import {
 } from '@shared/bestclips/session'
 
 /**
- * Best clips in the URL tile (docs/CLIPS.md §7.5's first half, sheet 27):
- * **1 min · 2 min · 3 min · 4 min** as one choice, **Analyse**, then up to
- * three cards, each a stretch of the video worth posting on its own.
+ * Best clips (docs/CLIPS.md §7.5's first half, sheet 27), in two parts since
+ * the clip maker's layout (the user's sketch of 2026-11-27): what you choose
+ * stays in the URL tile, and what Analyse finds unfolds beside the picture.
  *
- * WHERE. In IngestPanel, right under LinkTranscript (the link's rows and Clip
- * download) and above the From and To fields: Best clips reads the transcript
- * Get transcript fetched, so it comes after it, and it is on screen whenever
- * the box holds a link, so it can be found before there are words (it then
- * points at Get transcript). Analyse downloads nothing.
+ * IN THE URL TILE (`BestClips`), under LinkTranscript and above the From and
+ * To fields, on screen whenever the box holds a link, so it can be found
+ * before there are words (it then points at Get transcript): the heading;
+ * the length as one fold-down list, "Duration" (1 to 4 min); Make it
+ * vertical, a choice made before Analyse as well as after; Analyse, which
+ * downloads nothing and opens the panel on Clips; the pointer line; and the
+ * "Clips" toggle that opens and closes the panel on its Clips tab, saying how
+ * many clips were found. Nothing long: no card and no note is drawn here,
+ * because the 240 px column also holds the Trimmer dock.
  *
- * THE CARDS are tall (a 9:16 face) and stacked, not side by side as sheet 27
- * drew them: three side by side in the 240 px column leave each about 68 px,
- * too narrow for a title of up to 60 graphemes and a why of 120. The face
- * holds the stretch's length (no thumbnail in v1, §7.5: unmeasured); the
- * title, the why, the range, the word count and who picked it sit beside it.
- * A title may be in any script: it wraps anywhere a line must break, is never
- * cut or clamped, and nothing here assumes Latin widths.
+ * IN THE PANEL (`BestClipsCards`, the fold-out's Clips tab, Foldout.tsx): the
+ * running line, the cards and the notes under them, or one plain line saying
+ * what to press when there is nothing yet. The cards sit one to a row in a
+ * narrow panel and two or more in a wide one (a grid that fills, each card at
+ * least 15rem): a 9:16 face with the stretch's length (no thumbnail in v1,
+ * §7.5: unmeasured), and beside it the title, the why, the range, the word
+ * count and who picked it. A title may be in any script: it wraps anywhere a
+ * line must break, is never cut or clamped, and nothing here assumes Latin
+ * widths.
  *
  * NEVER ON SCREEN: the result's `problems` and `askNotes`, or any error's
  * text. They can quote the model or name a server; only the fixed notes are
@@ -72,7 +80,7 @@ import {
  * `bestClipsClipped` record, shared/bestclips/cardClip.ts); the other cards
  * stay pressable: three separate shorts.
  *
- * No hook but the store's, so a test can call it as a function.
+ * No hook but the store's, so a test can call each part as a function.
  */
 
 export const ANALYSE_TITLE = 'Find the stretches of this video most worth posting, from its captions — nothing is downloaded'
@@ -193,6 +201,23 @@ function Card({ card, foot }: { card: BestClipCard; foot: CardFoot }): ReactNode
   )
 }
 
+/** The length list's id: one fold-down open at a time (the store's `foldDownOpen`). */
+export const BEST_CLIPS_LENGTH_LIST = 'best-length'
+/** The length list's name, the sketch's word. */
+export const BEST_CLIPS_DURATION = 'Duration'
+export const BEST_CLIPS_DURATION_TITLE = 'How long each clip should be'
+/** The toggle that opens and closes the panel on its Clips tab. */
+export const CLIPS_TOGGLE = 'Clips'
+export const CLIPS_TOGGLE_TITLE = 'Show or hide the clips Analyse found, beside the picture'
+
+/** The Clips tab with no link in the box. */
+export const FOLDOUT_CLIPS_NO_LINK = 'No clips yet. Paste a video link in the URL tile to find its best clips.'
+/** The Clips tab with a link that has no words yet (a video with no captions says so instead). */
+export const FOLDOUT_CLIPS_NO_WORDS = 'No clips yet. Press Get transcript in the URL tile, then Analyse.'
+/** The Clips tab with the link's words, nothing analysed yet. */
+export const FOLDOUT_CLIPS_EMPTY = 'No clips yet. Press Analyse under Best clips, in the URL tile.'
+
+/** Best clips in the URL tile: what you choose. The cards are `BestClipsCards`, in the panel beside the picture. */
 export function BestClips(): ReactNode {
   const ingest = useEditor((s) => s.ingest)
   const urlSource = useEditor((s) => s.urlSource)
@@ -201,6 +226,122 @@ export function BestClips(): ReactNode {
   const analyse = useEditor((s) => s.analyseBestClips)
   const vertical = useEditor((s) => s.bestClipsVertical)
   const setVertical = useEditor((s) => s.setBestClipsVertical)
+  const foldout = useEditor((s) => s.foldout)
+  const openFoldout = useEditor((s) => s.openFoldout)
+  const toggleFoldout = useEditor((s) => s.toggleFoldout)
+  const foldDownOpen = useEditor((s) => s.foldDownOpen)
+  const setFoldDownOpen = useEditor((s) => s.setFoldDownOpen)
+
+  // On screen whenever the box holds a link; its words are the link's own, or none yet.
+  if (!parseLink(ingest.url)) return null
+  const source = urlSourceFor({ urlSource, ingest })
+  const running = state.running !== null
+  const here = runningHere(state, source)
+  const refusal = analyseRefusal(state, source)
+  // Whether the link on screen has words, whatever runs elsewhere.
+  const noWords = analyseRefusal({ ...state, running: null }, source) === 'no-transcript'
+  const found = shownBestClips(state, source)?.cards.length ?? 0
+  const fetching = source?.status === 'meta' || source?.status === 'captions'
+  const pointer =
+    // No captions: Best clips cannot listen yet with the AI helper or without it (Listen to it is not built), so
+    // no line sends the user to install the helper for it.
+    source?.status === 'none'
+      ? BEST_CLIPS_CANNOT_LISTEN
+      : noWords && !fetching
+        ? BEST_CLIPS_NEEDS_TRANSCRIPT
+        : null
+  const showing = foldoutShowing(foldout, 'clips')
+  const Panel = showing ? PanelLeftClose : PanelLeftOpen
+
+  return (
+    <section data-best-clips="" className="mt-3 space-y-2 border-t border-ink-850 pt-2.5">
+      <h3 className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
+        <Sparkles size={12} className="text-accent-400" aria-hidden />
+        Best clips
+      </h3>
+
+      <FoldDown
+        id={BEST_CLIPS_LENGTH_LIST}
+        label={BEST_CLIPS_DURATION}
+        title={BEST_CLIPS_DURATION_TITLE}
+        value={state.targetMs}
+        choices={BEST_CLIPS_LENGTHS.map((length) => ({ value: length.ms, label: length.label }))}
+        choiceData="data-best-length"
+        // Greyed, and folded, while Analyse runs: a length changed mid-run would drop its answer without a word.
+        disabled={running}
+        open={foldDownOpen === BEST_CLIPS_LENGTH_LIST && !running}
+        onOpenChange={(open) => setFoldDownOpen(open ? BEST_CLIPS_LENGTH_LIST : null)}
+        onChoose={setLength}
+      />
+
+      {/* §7.5 step 0's switch, chosen before Analyse as well: on, a card's clip is a 9:16 short; it never changes an edit's aspect without asking. */}
+      <button
+        type="button"
+        data-best-vertical=""
+        aria-pressed={vertical}
+        onClick={() => setVertical(!vertical)}
+        title={MAKE_IT_VERTICAL_TITLE}
+        className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
+          vertical ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
+        }`}
+      >
+        <Smartphone size={12} aria-hidden />
+        {MAKE_IT_VERTICAL}
+      </button>
+
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          data-best-analyse=""
+          onClick={() => {
+            // What it finds unfolds beside the picture; the store's Analyse is left as it was.
+            openFoldout('clips')
+            void analyse()
+          }}
+          disabled={refusal !== null}
+          title={ANALYSE_TITLE}
+          className="flex items-center gap-1.5 rounded bg-accent-500 px-2.5 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
+        >
+          {here && <Loader2 size={12} className="animate-spin" aria-hidden />}
+          Analyse
+        </button>
+        <button
+          type="button"
+          data-best-toggle=""
+          aria-pressed={showing}
+          onClick={() => toggleFoldout('clips')}
+          title={CLIPS_TOGGLE_TITLE}
+          className={`ml-auto flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
+            showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
+          }`}
+        >
+          <Panel size={12} aria-hidden />
+          {CLIPS_TOGGLE}
+          {found > 0 && (
+            <span data-best-count="" className="rounded bg-ink-800 px-1 text-[10px] tabular-nums text-ink-200">
+              {found}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {pointer && (
+        <p data-best-pointer="" aria-live="polite" className="text-[10.5px] leading-snug text-ink-500">
+          {pointer}
+        </p>
+      )}
+    </section>
+  )
+}
+
+/**
+ * The fold-out's Clips tab: the running line, the cards and the notes under
+ * them, or one line saying what to press first.
+ */
+export function BestClipsCards(): ReactNode {
+  const ingest = useEditor((s) => s.ingest)
+  const urlSource = useEditor((s) => s.urlSource)
+  const state = useEditor((s) => s.bestClips)
   const question = useEditor((s) => s.bestClipsQuestion)
   const clipped = useEditor((s) => s.bestClipsClipped)
   const clipItFromCard = useEditor((s) => s.clipItFromCard)
@@ -211,118 +352,64 @@ export function BestClips(): ReactNode {
   const clips = useEditor((s) => s.project.clips)
   const projectId = useEditor((s) => s.project.id ?? null)
 
-  // On screen whenever the box holds a link; its words are the link's own, or none yet.
-  if (!parseLink(ingest.url)) return null
-  const source = urlSourceFor({ urlSource, ingest })
+  const link = parseLink(ingest.url)
+  const source = link ? urlSourceFor({ urlSource, ingest }) : null
   const running = state.running !== null
   const here = runningHere(state, source)
-  const refusal = analyseRefusal(state, source)
-  // Whether the link on screen has words, whatever runs elsewhere.
-  const noWords = analyseRefusal({ ...state, running: null }, source) === 'no-transcript'
   const result = shownBestClips(state, source)
-  const fetching = source?.status === 'meta' || source?.status === 'captions'
-  const pointer =
-    // No captions: Best clips cannot listen yet with the AI helper or without it (Listen to it is not built), so
-    // no line sends the user to install the helper for it.
-    source?.status === 'none'
-      ? BEST_CLIPS_CANNOT_LISTEN
-      : noWords && !fetching
-        ? BEST_CLIPS_NEEDS_TRANSCRIPT
-        : null
+  const noWords = analyseRefusal({ ...state, running: null }, source) === 'no-transcript'
+  // Nothing to show and nothing running: one line saying what to press.
+  const empty =
+    running || result
+      ? null
+      : !link
+        ? FOLDOUT_CLIPS_NO_LINK
+        : source?.status === 'none'
+          ? BEST_CLIPS_CANNOT_LISTEN
+          : noWords
+            ? FOLDOUT_CLIPS_NO_WORDS
+            : FOLDOUT_CLIPS_EMPTY
 
   return (
-    <section data-best-clips="" className="mt-3 space-y-2 border-t border-ink-850 pt-2.5">
-      <h3 className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-        <Sparkles size={12} className="text-accent-400" aria-hidden />
-        Best clips
-      </h3>
-
-      <div role="group" aria-label="Clip length" className="flex flex-wrap items-center gap-1">
-        {BEST_CLIPS_LENGTHS.map((length) => {
-          const on = state.targetMs === length.ms
-          return (
-            <button
-              key={length.ms}
-              type="button"
-              data-best-length={length.ms}
-              aria-pressed={on}
-              // Greyed while Analyse runs: a length changed mid-run would drop its answer without a word.
-              disabled={running}
-              onClick={() => setLength(length.ms)}
-              className={`rounded px-2 py-1 text-[11px] transition-colors disabled:opacity-60 ${
-                on ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-              }`}
-            >
-              {length.label}
-            </button>
-          )
-        })}
-        <button
-          type="button"
-          data-best-analyse=""
-          onClick={() => void analyse()}
-          disabled={refusal !== null}
-          title={ANALYSE_TITLE}
-          className="ml-auto flex items-center gap-1.5 rounded bg-accent-500 px-2.5 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
-        >
-          {here && <Loader2 size={12} className="animate-spin" aria-hidden />}
-          Analyse
-        </button>
-      </div>
-
-      {pointer && (
-        <p data-best-pointer="" aria-live="polite" className="text-[10.5px] leading-snug text-ink-500">
-          {pointer}
-        </p>
-      )}
+    <div data-best-clips-tab="" className="space-y-2">
       {running && (
         <p data-best-running={here ? 'here' : 'elsewhere'} aria-live="polite" className="text-[10.5px] text-ink-500">
           {here ? BEST_CLIPS_RUNNING : BEST_CLIPS_RUNNING_ELSEWHERE}
+        </p>
+      )}
+      {empty && (
+        <p data-best-empty="" className="text-[11px] leading-snug text-ink-500">
+          {empty}
         </p>
       )}
 
       {result && (
         <div aria-live="polite" className="space-y-2">
           {result.cards.length > 0 && source && (
-            <>
-              {/* §7.5 step 0's switch: on, a card's clip is a 9:16 short; it never changes an edit's aspect without asking. */}
-              <button
-                type="button"
-                data-best-vertical=""
-                aria-pressed={vertical}
-                onClick={() => setVertical(!vertical)}
-                title={MAKE_IT_VERTICAL_TITLE}
-                className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
-                  vertical ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-                }`}
-              >
-                <Smartphone size={12} aria-hidden />
-                {MAKE_IT_VERTICAL}
-              </button>
-              <ul data-best-cards="" className="space-y-1.5">
-                {result.cards.map((card) => {
-                  const key = cardKey(source.linkKey, card)
-                  return (
-                    <Card
-                      key={card.windowId}
-                      card={card}
-                      foot={{
-                        record: clipped[key],
-                        clips,
-                        asking: question?.key === key,
-                        blocked: question !== null || ingest.busy,
-                        busy: ingest.busy,
-                        unsaved: unsavedWork({ dirty, projectPath }),
-                        pendingHere: cardDownloadsIn(clipped, projectId) > 0,
-                        portrait: isPortrait(settings),
-                        clipIt: () => void clipItFromCard(card),
-                        answer: (choice) => void answer(choice)
-                      }}
-                    />
-                  )
-                })}
-              </ul>
-            </>
+            // One card to a row in a narrow panel, more in a wide one; a card is never under 15rem, or the panel's width if less.
+            <ul data-best-cards="" className="grid items-start gap-1.5 [grid-template-columns:repeat(auto-fill,minmax(min(15rem,100%),1fr))]">
+              {result.cards.map((card) => {
+                const key = cardKey(source.linkKey, card)
+                return (
+                  <Card
+                    key={card.windowId}
+                    card={card}
+                    foot={{
+                      record: clipped[key],
+                      clips,
+                      asking: question?.key === key,
+                      blocked: question !== null || ingest.busy,
+                      busy: ingest.busy,
+                      unsaved: unsavedWork({ dirty, projectPath }),
+                      pendingHere: cardDownloadsIn(clipped, projectId) > 0,
+                      portrait: isPortrait(settings),
+                      clipIt: () => void clipItFromCard(card),
+                      answer: (choice) => void answer(choice)
+                    }}
+                  />
+                )
+              })}
+            </ul>
           )}
           {result.note && (
             <p data-best-note="" className="text-[10.5px] leading-snug text-ink-400">
@@ -336,6 +423,6 @@ export function BestClips(): ReactNode {
           )}
         </div>
       )}
-    </section>
+    </div>
   )
 }

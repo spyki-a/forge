@@ -82,3 +82,30 @@ describe('the fold-out panel in the store', () => {
     expect(state().foldout).toEqual({ open: true, tab: 'transcript', words: 'clip' })
   })
 })
+
+/*
+ * The one open fold-down list (store.ts `foldDownOpen`, components/ui/FoldDown.tsx):
+ * held in the store so Best clips' Duration keeps no hook of its own. View
+ * state, as the panel's is.
+ */
+describe('the open fold-down list in the store', () => {
+  it('starts with none open, holds one by its id, and opening another folds the last', () => {
+    expect(useEditor.getInitialState().foldDownOpen).toBe(null)
+    state().setFoldDownOpen('best-length')
+    expect(state().foldDownOpen).toBe('best-length')
+    state().setFoldDownOpen('another')
+    expect(state().foldDownOpen).toBe('another')
+    state().setFoldDownOpen(null)
+    expect(state().foldDownOpen).toBe(null)
+  })
+
+  it('leaves no undo step, never marks the project dirty, and leaves the project alone', () => {
+    const { past, future, project } = state()
+    state().setFoldDownOpen('best-length')
+    state().setFoldDownOpen(null)
+    expect(state().past).toBe(past)
+    expect(state().future).toBe(future)
+    expect(state().project).toBe(project)
+    expect(state().dirty).toBe(false)
+  })
+})

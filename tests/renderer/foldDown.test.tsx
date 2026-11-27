@@ -128,6 +128,15 @@ describe('FoldDown', () => {
     expect(folded.focused).toEqual([])
   })
 
+  it('puts the owner’s data attribute on every choice with its own value, and none without one', () => {
+    // Best clips' lengths keep the data-best-length their four buttons carried (the harness finds them by it).
+    const { props } = made(true)
+    const [head, ...choices] = buttons(FoldDown({ ...props, choiceData: 'data-best-length' }))
+    expect(choices.map((c) => c.props['data-best-length'])).toEqual(['60000', '120000', '180000', '240000'])
+    expect(head.props['data-best-length']).toBeUndefined()
+    for (const c of buttons(FoldDown(props))) expect(Object.keys(c.props).filter((k) => k.startsWith('data-'))).toEqual([])
+  })
+
   it('its button pressed again folds it', () => {
     const { props, said } = made(true)
     ;(buttons(FoldDown(props))[0].props.onClick as () => void)()

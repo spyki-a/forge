@@ -11,6 +11,7 @@ import {
 } from '@shared/foldout'
 import { useEditor, wordsShown } from '../store'
 import { ErrorBoundary } from './ErrorBoundary'
+import { BestClipsCards } from './tools/BestClips'
 
 /**
  * The fold-out panel beside the picture: Clips and Transcript (the clip
@@ -47,8 +48,6 @@ export const FOLDOUT_CLIPS_TAB_TITLE = 'The best clips found in the link'
 export const FOLDOUT_TRANSCRIPT_TAB_TITLE = 'The words of the link, or of the selected clip'
 export const FOLDOUT_CLOSE_TITLE = 'Close and give the picture its room back'
 
-/** The Clips tab with nothing to show yet. */
-export const FOLDOUT_CLIPS_EMPTY = 'No clips yet. Press Analyse under Best clips, in the URL tile.'
 /** The Transcript tab asked for the link's words, with none ready and no clip selected. */
 export const FOLDOUT_LINK_EMPTY = 'No words from a link yet. Paste a link in the URL tile and press Get transcript.'
 /** The Transcript tab asked for the selected clip's words, with no clip selected and no link words ready. */
@@ -119,9 +118,13 @@ export function Foldout(): ReactNode {
   )
 }
 
-/** The Clips tab. For now its empty state; the cards move in with the next piece. */
+/**
+ * The Clips tab: what Best clips found (tools/BestClips.tsx `BestClipsCards`:
+ * the running line, the cards, the notes, or what to press first). Its lines
+ * for nothing yet live there with the rest of Best clips' words.
+ */
 export function FoldoutClips(): ReactNode {
-  return <Line>{FOLDOUT_CLIPS_EMPTY}</Line>
+  return <BestClipsCards />
 }
 
 /**
