@@ -43,14 +43,29 @@ export const HOME_TITLE = 'All the tools'
 export function Shelf(): ReactNode {
   const open = useEditor((s) => s.shelfTool)
   const setShelfTool = useEditor((s) => s.setShelfTool)
+  const openFoldout = useEditor((s) => s.openFoldout)
   const tool = open === null ? null : shelfToolById(open)
 
-  if (!tool) return <ShelfHome onOpen={setShelfTool} />
+  /**
+   * A tile pressed. The Transcript tile's words are beside the picture since
+   * the clip maker's layout (TranscriptPanel.tsx `TranscriptTile`), so opening
+   * that tile opens the fold-out panel on the selected clip's words too: one
+   * click, as before. Only on the way IN: a press is the only thing that
+   * calls this, and the Transcript tile pressed while it is open goes home
+   * (StripTile), so a panel the person closes while the tile stays open stays
+   * closed — nothing in drawing the Shelf opens it.
+   */
+  const goTo = (next: ShelfToolId | null): void => {
+    setShelfTool(next)
+    if (next === 'transcript') openFoldout('transcript', 'clip')
+  }
+
+  if (!tool) return <ShelfHome onOpen={goTo} />
 
   const Panel = tool.panel
   return (
     <div data-shelf-tool={tool.id} className="flex h-full flex-col">
-      <ShelfStrip open={tool.id} onGo={setShelfTool} />
+      <ShelfStrip open={tool.id} onGo={goTo} />
       {/*
         The panel's box: everything under the strip. It scrolls whatever the
         panel does not scroll itself (the URL form, the one-click panels), and

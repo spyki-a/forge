@@ -25,7 +25,7 @@ import type { ShelfToolId, useEditor } from '../../store'
 import { Director } from '../Director'
 import { IngestPanel } from '../IngestPanel'
 import { MediaPool } from '../MediaPool'
-import { TranscriptPanel } from '../TranscriptPanel'
+import { TranscriptTile } from '../TranscriptPanel'
 import { BeatSync } from '../tools/BeatSync'
 import { DepthParallax } from '../tools/DepthParallax'
 import { FilmStrip } from '../tools/FilmStrip'
@@ -152,7 +152,8 @@ export const SHELF_TOOLS: readonly ShelfTool[] = [
     label: 'Transcript',
     icon: ScrollText,
     hint: 'The words spoken in the selected clip — click to jump, cut the clip to a run of them, correct a misheard one',
-    panel: TranscriptPanel,
+    // One line and a toggle: the words themselves unfold beside the picture (the clip maker's layout).
+    panel: TranscriptTile,
     takesMedia: false,
     // Transcribing, or finding graphics in a clip (docs/CLIPS.md §6.6).
     busy: (s) => any(s.transcribing) || s.findingGraphics !== null

@@ -249,8 +249,12 @@ describe('the Best clips section', () => {
     const panel = renderToStaticMarkup(createElement(IngestPanel))
     const at = panel.indexOf('data-best-clips')
     expect([...panel.matchAll(/data-best-clips=/g)]).toHaveLength(1)
-    expect(panel.indexOf('data-transcript-rows')).toBeGreaterThan(-1)
-    expect(at).toBeGreaterThan(panel.indexOf('data-transcript-rows'))
+    // The link's transcript in the tile is Get transcript and its toggle since the clip maker's
+    // layout; its rows are the panel's beside the picture (ingestPanel.test.tsx holds that).
+    expect([...panel.matchAll(/>Get transcript</g)]).toHaveLength(1)
+    expect(at).toBeGreaterThan(panel.indexOf('>Get transcript<'))
+    expect(at).toBeGreaterThan(panel.indexOf('data-link-transcript-toggle'))
+    expect(panel.indexOf('data-link-transcript-toggle')).toBeGreaterThan(-1)
   })
 
   it('points at Get transcript, with Analyse greyed, before there are words', () => {

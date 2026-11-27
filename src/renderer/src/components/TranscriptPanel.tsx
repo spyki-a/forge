@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Pencil, Scissors } from 'lucide-react'
+import { PanelLeftClose, PanelLeftOpen, Pencil, Scissors } from 'lucide-react'
 import { clipCoversFrame, formatTimecode, sourceFrameFor, timelineFrameAt, type Clip } from '@shared/timeline'
 import type { Segment, Transcript, Word } from '@shared/transcript'
 import {
@@ -16,7 +16,8 @@ import { formatMark } from '@shared/ingest/section'
 import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { helperCan } from '@shared/sidecar/helperCan'
 import { transcribeGate } from '@shared/sidecar/row'
-import { useEditor } from '../store'
+import { foldoutShowsWords } from '@shared/foldout'
+import { useEditor, wordsShown } from '../store'
 import { rowStamp, TranscriptRows } from './tools/TranscriptRows'
 import { SpeechModelPress, transcribeWhy } from './MediaPool'
 import { HelperPointer } from './SettingsPanel'
@@ -24,6 +25,11 @@ import { TranscriptGraphics } from './TranscriptGraphics'
 
 /**
  * Transcript for the selected clip — the words it plays — with click-to-seek,
+ * drawn in the fold-out panel's Transcript tab beside the picture since the
+ * clip maker's layout (the user's sketch of 2026-11-27): the Shelf's
+ * Transcript tile is now `TranscriptTile`, one line and a toggle, so the rows,
+ * Graphics and Listen for no longer share the left column with the Trimmer.
+ *
  * a run of them picked to cut the clip to (docs/CLIPS.md §3b.6, sheet 26),
  * and, in Edit, click-to-correct (FIX.md B3).
  *
@@ -52,6 +58,60 @@ import { TranscriptGraphics } from './TranscriptGraphics'
 export const CUT_TITLE = 'Trims this clip to the words you picked'
 export const CLIP_ROWS_HINT = 'Click a row to jump there and pick its words; shift-click another row, or a word, to extend. Or drag Start and End.'
 export const NO_WORDS_TEXT = 'No words are spoken in this clip'
+/** With no clip selected: the tile's line, and the panel's own if it is ever drawn without one. */
+export const SELECT_CLIP_TEXT = 'Select a clip to see its transcript'
+/** The tile's line for a selected clip with no transcript: Transcribe is in the panel, under the words' place. */
+export const TILE_NO_TRANSCRIPT = 'This clip has no transcript yet. Transcribe it beside the picture.'
+/** The tile's toggle: the URL tile's word for its own (tools/LinkTranscript.tsx TRANSCRIPT_TOGGLE). */
+export const CLIP_TRANSCRIPT_TOGGLE = 'Transcript'
+export const CLIP_TRANSCRIPT_TOGGLE_TITLE = 'Show or hide this clip’s words, beside the picture'
+
+/**
+ * The Shelf's Transcript tile: one line saying what there is — the selected
+ * clip's transcript (its language and word count), that it has none yet, or
+ * to select a clip — and the toggle that opens and closes the fold-out panel
+ * on that clip's words (`toggleTranscript('clip')`, decided on the words the
+ * tab shows). Opening the tile opens the panel on them as well (Shelf.tsx), so
+ * the words are still one click away.
+ *
+ * No hook but the store's, so a test can call it as a function.
+ */
+export function TranscriptTile(): ReactNode {
+  const project = useEditor((s) => s.project)
+  const selectedClipId = useEditor((s) => s.selectedClipId)
+  const foldout = useEditor((s) => s.foldout)
+  const link = useEditor((s) => wordsShown(s))
+  const toggleTranscript = useEditor((s) => s.toggleTranscript)
+
+  const clip = project.clips.find((c) => c.id === selectedClipId) ?? null
+  const transcript = clip ? project.transcripts[clip.assetId] ?? null : null
+  const showing = foldoutShowsWords(foldout, 'clip', { link, clip: clip !== null })
+  const Panel = showing ? PanelLeftClose : PanelLeftOpen
+  const line = !clip ? SELECT_CLIP_TEXT : transcript ? `${transcript.language} · ${transcript.words.length} words` : TILE_NO_TRANSCRIPT
+
+  return (
+    <div data-transcript-tile="" className="space-y-2 px-3 py-2.5">
+      <p data-transcript-tile-line="" className="text-[11px] leading-snug text-ink-500">
+        {line}
+      </p>
+      <button
+        type="button"
+        data-clip-transcript-toggle=""
+        aria-pressed={showing}
+        // With no clip there are no words of one to show: the tab would show the link's, and the press would do nothing.
+        disabled={!clip}
+        onClick={() => toggleTranscript('clip')}
+        title={CLIP_TRANSCRIPT_TOGGLE_TITLE}
+        className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors disabled:opacity-40 ${
+          showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
+        }`}
+      >
+        <Panel size={12} aria-hidden />
+        {CLIP_TRANSCRIPT_TOGGLE}
+      </button>
+    </div>
+  )
+}
 
 export function TranscriptPanel(): ReactNode {
   const project = useEditor((s) => s.project)
@@ -63,7 +123,7 @@ export function TranscriptPanel(): ReactNode {
   const fps = project.settings.fps
 
   if (!clip) {
-    return <Empty>Select a clip to see its transcript</Empty>
+    return <Empty>{SELECT_CLIP_TEXT}</Empty>
   }
 
   // Edit is offered while there is something of this clip's to correct.

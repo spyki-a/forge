@@ -3,6 +3,15 @@
  * clicked through in the running page (docs/CLIPS.md §3b.8: the URL tile's
  * half, then the Transcript tile's, §3b.6).
  *
+ * Since the clip maker's layout (2026-11-27) the words are not in either
+ * tile: the URL tile keeps Get transcript and its status lines, and the rows,
+ * the chips, the run's line, Clip download and Add another clip are the
+ * fold-out panel's Transcript tab beside the picture, which opens by itself
+ * when Get transcript's words arrive; the Transcript tile is one line and a
+ * toggle, and opening it opens the tab on the selected clip's transcript.
+ * So every step below finds the link box, Get and Get transcript in the URL
+ * tile, and the words in the panel — and checks the tile holds no row.
+ *
  *   await window.__forgeClipItCheck()   → the report, or throws with every failure
  *
  * Against the bridge's stubs: the twelve-row talk with three chapters, a link
@@ -11,7 +20,8 @@
  * screen — the panel is the thing under examination — and read back from the
  * store and the bridge:
  *
- *   1. Get transcript on the talk → twelve rows.
+ *   1. Get transcript on the talk → twelve rows, in the panel, which opened
+ *      on them by itself; none in the URL tile.
  *   2. Rows 3–6 by a click and a shift-click → the run is those rows' words,
  *      and the line under the rows says its range's length.
  *   2b. The arrow keys on the focused Start and End, across a row's edge each
@@ -34,16 +44,23 @@
  *      with its one "needs the AI helper" pointer titled "install it in
  *      Settings", and a chapter chip setting From and To,
  *      which are typed fields again.
- *   9. The Transcript tile: a clip of the same talk's words on the timeline at
- *      2× (an offline asset — the tile reads only its transcript), selected →
+ *   9. The Transcript tile, opened by its tile in the Shelf's strip: a clip of
+ *      the same talk's words on the timeline at 2× (an offline asset — the
+ *      panel reads only its transcript), selected → the panel opened on its
+ *      words,
  *      twelve rows, each row's time where it is on the TIMELINE (half its
  *      source time); rows 3–6 by a click and a shift-click → the run, the
  *      playhead on the cut's first frame and the cut's length under the rows;
  *      Cut to these words → the clip's in-point and length exactly
  *      `clipToRange`'s, its start unmoved, every kept frame showing the source
  *      it showed before, one undo step more; one undo → the clip as it was.
- *      And measured, with the dock open, as the tile opens and with the run
- *      picked: Cut to these words is never drawn over Listen for.
+ *      And measured, with the dock open, as the tab opens and with the run
+ *      picked: Cut to these words is never drawn over Listen for. And the
+ *      spot the user named (2026-11-27: "when i click on the current clip …
+ *      its own custom setting is overlapping … like find graphics"): a clip
+ *      selected, the dock open, the Transcript tile open, Find graphics
+ *      pressed and its run ended — Find graphics and the Graphics section sit
+ *      inside the panel, clear of the Trimmer dock.
  *
  * Run it in the FRONTED tab on a freshly loaded page: React's updates are
  * waited for with animation frames, which a background tab never runs. The
@@ -112,8 +129,10 @@ export interface ClipItReport {
     expectedAfter: Edges
     undoSteps: number
     undone: Edges
-    /** Cut to these words against Listen for, as the tile opens and with a run picked. */
+    /** Cut to these words against Listen for, as the tab opens and with a run picked. */
     layout: { idle: CutLayout; picked: CutLayout }
+    /** Find graphics pressed with the dock open: where its section sits. */
+    find: FindLayout
   } | null
   failures: string[]
   ms: number
@@ -151,19 +170,28 @@ async function until<T>(test: () => T | null | undefined | false, ms: number, wh
 /** The tile the steps are in: the URL tile for 1–8, the Transcript tile for 9. */
 let tool: 'url' | 'transcript' = 'url'
 
+/** That tile's panel in the Shelf: the link box, Get and Get transcript; the Transcript tile's line and toggle. */
 function panel(): Element {
   const found = document.querySelectorAll(`[data-shelf-tool="${tool}"] [data-shelf-panel]`)
   if (found.length !== 1) throw new Error(`clip-it check: expected the ${tool} tile's panel, found ${found.length}`)
   return found[0]
 }
 
+/** The fold-out panel's Transcript tab, beside the picture: the words, whichever they are; null while it is not open on them. */
+function tabBody(): Element | null {
+  const found = document.querySelectorAll('[data-foldout-body="transcript"]')
+  return found.length === 1 ? found[0] : null
+}
+
+/** A button by its words, in the tile or in the panel beside the picture. */
 function button(text: string): HTMLButtonElement | null {
-  return [...panel().querySelectorAll('button')].find((b) => (b.textContent ?? '').trim() === text) ?? null
+  const among = [panel(), tabBody()].filter((root): root is Element => root !== null)
+  return among.flatMap((root) => [...root.querySelectorAll('button')]).find((b) => (b.textContent ?? '').trim() === text) ?? null
 }
 
 function press(text: string): HTMLButtonElement {
   const b = button(text)
-  if (!b) throw new Error(`clip-it check: no "${text}" button in the ${tool} tile`)
+  if (!b) throw new Error(`clip-it check: no "${text}" button in the ${tool} tile or the panel beside the picture`)
   b.click()
   return b
 }
@@ -184,7 +212,7 @@ function labelLines(b: Element | null): number {
 
 const px = (el: Element | null): number => (el ? Math.round(el.getBoundingClientRect().width * 10) / 10 : 0)
 
-const rowsBox = (): Element | null => panel().querySelector('[data-transcript-rows]')
+const rowsBox = (): Element | null => tabBody()?.querySelector('[data-transcript-rows]') ?? null
 const rowCount = (): number => rowsBox()?.querySelectorAll('[data-row]').length ?? 0
 
 function rowTime(index: number): HTMLElement {
@@ -277,7 +305,9 @@ export async function runClipItCheck(): Promise<ClipItReport> {
     playhead: before.playhead,
     selectedClipIds: before.selectedClipIds,
     selectedClipId: before.selectedClipId,
-    clipRun: before.clipRun
+    clipRun: before.clipRun,
+    foldout: before.foldout,
+    lastGraphics: before.lastGraphics
   }
   const jobsBefore = harnessIngests.length
 
@@ -291,22 +321,45 @@ export async function runClipItCheck(): Promise<ClipItReport> {
     })
     editor().setIngest({ url: HARNESS_LINKS.talk, useRange: false, busy: false })
     useEditor.setState({ urlSource: null })
+    // Shut, so step 1 sees the words arriving open it.
+    editor().closeFoldout()
     await frames()
 
-    /* 1. Get transcript → rows */
+    /* 1. Get transcript → rows, beside the picture: the panel opens on them by itself */
     press('Get transcript')
-    await until(() => rowCount() > 0 && editor().urlSource?.status === 'ready', 3000, 'Get transcript showing rows')
+    await until(() => editor().urlSource?.status === 'ready', 3000, 'Get transcript fetching the words')
+    const opened = await until(
+      () => rowCount() > 0 || (!editor().foldout.open && 'refused'),
+      3000,
+      'the panel beside the picture opening on the link’s words'
+    )
+    if (opened === 'refused') {
+      throw new Error(
+        `the page is too narrow to open the panel beside the picture (the picture row is ${Math.round(document.querySelector('[data-foldout]')?.closest('[data-group]')?.getBoundingClientRect().width ?? 0)} px; the panel needs 280 px beside 35 % of the picture): widen the window and run it again`
+      )
+    }
     const t: Transcript = editor().urlSource!.transcript!
     const rows = rowCount()
     report.rows = rows
     expect(rows === 12, `Get transcript showed ${rows} rows, not 12`)
     expect(rows === rowsOf(t).length, `${rows} rows on screen for ${rowsOf(t).length} in the transcript`)
+    expect(
+      editor().foldout.open && editor().foldout.tab === 'transcript' && document.querySelector('[data-foldout-words="link"]') !== null,
+      `the panel is not open on the link’s words after Get transcript (${JSON.stringify(editor().foldout)})`
+    )
+    // The URL tile keeps the short things: no row, chip, run line or Clip download of the link's there.
+    expect(panel().querySelector('[data-transcript-rows], [data-chapter]') === null, 'the URL tile still draws the link’s rows or chapter chips')
+    expect(
+      ![...panel().querySelectorAll('button')].some((b) => (b.textContent ?? '').trim() === 'Clip download'),
+      'the URL tile still draws Clip download'
+    )
+    expect(panel().querySelector('[data-link-transcript-toggle][aria-pressed="true"]') !== null, 'the URL tile’s Transcript toggle is not there, pressed, while the panel shows the link’s words')
 
     /* 2. rows 3–6 by click and shift-click */
     await pickRows(2, 5)
     const expected = runFromRows(t, 2, 5)
     const pickedRun = editor().urlSource?.run ?? null
-    const line = [...panel().querySelectorAll('p')].find((p) => (p.textContent ?? '').endsWith('selected'))?.textContent ?? ''
+    const line = [...(tabBody()?.querySelectorAll('p') ?? [])].find((p) => (p.textContent ?? '').endsWith('selected'))?.textContent ?? ''
     const expectedRange = runRange(t, expected)
     const lineExpected = `${formatMark(expectedRange.endMs - expectedRange.startMs)} selected`
     report.picked = { run: pickedRun, expected, line: line.trim(), lineExpected }
@@ -406,7 +459,7 @@ export async function runClipItCheck(): Promise<ClipItReport> {
 
     /* 4. the second chapter's chip */
     const chapter = editor().urlSource?.meta?.chapters[1] ?? null
-    const chip = panel().querySelector<HTMLElement>('[data-chapter="1"]')
+    const chip = tabBody()?.querySelector<HTMLElement>('[data-chapter="1"]') ?? null
     if (!chapter || !chip) failures.push('no second chapter chip')
     else {
       chip.click()
@@ -509,7 +562,8 @@ export async function runClipItCheck(): Promise<ClipItReport> {
     expect(noCaptions.listenDisabled, 'Listen to it is not greyed')
     expect(reason !== null, `Listen to it does not point to Settings with "${NEEDS_THE_HELPER}" titled "${POINTER_TITLE}" (${pointers.length} pointers)`)
     expect(noCaptions.fieldsEditable, 'From and To are not typed fields for the no-caption link')
-    expect(rowsBox() === null, 'the no-caption link shows rows')
+    expect(document.querySelector('[data-foldout-words="link"] [data-transcript-rows]') === null, 'the no-caption link shows rows beside the picture')
+    expect(panel().querySelector('[data-transcript-rows]') === null, 'the no-caption link shows rows in the URL tile')
 
     /* 9. the Transcript tile: a clip of the talk's words at 2×, rows picked, Cut to these words, one undo */
     report.tile = await transcriptTile(t, expect)
@@ -529,7 +583,9 @@ export async function runClipItCheck(): Promise<ClipItReport> {
       playhead: kept.playhead,
       selectedClipIds: kept.selectedClipIds,
       selectedClipId: kept.selectedClipId,
-      clipRun: kept.clipRun
+      clipRun: kept.clipRun,
+      foldout: kept.foldout,
+      lastGraphics: kept.lastGraphics
     })
     editor().setHelperStatus(kept.helperStatus)
     editor().setShelfTool(kept.shelfTool)
@@ -545,15 +601,15 @@ export async function runClipItCheck(): Promise<ClipItReport> {
 
 /** Where Cut to these words sits against Listen for, px: the button's bottom never below the block's top. */
 export interface CutLayout {
-  /** The Transcript tile's column, and its scroll box's height and content height. */
+  /** The panel's Transcript tab (its body, the scroll box), and its height and content height. */
   column: number
   height: number
   scrollHeight: number
-  /** Whether the dock is on screen under the tile. */
+  /** Whether the dock is on screen in the left column. */
   dock: boolean
   buttonBottom: number
   listenTop: number
-  /** The tile's visible bottom, with its scroll at the top. */
+  /** The tab's visible bottom, with its scroll at the top. */
   tileBottom: number
   clear: boolean
   /** The button on screen in the tile as it is, unscrolled — not below every row. */
@@ -564,20 +620,22 @@ export interface CutLayout {
  * The review's geometry (2026-10-07): in the 240 px column with the dock open,
  * the rows' block was given 137.5 px of the 176 it needs, and the button was
  * drawn over Listen for — in the state the tile OPENS in, the hint three lines
- * long. `.click()` cannot see that; this measures it.
+ * long. `.click()` cannot see that; this measures it, now in the panel beside
+ * the picture, whose height is the picture's.
  */
 function cutLayout(): CutLayout {
   const cut = button('Cut to these words')
-  const listen = panel().querySelector('label[for="forge-vocabulary"]')?.parentElement ?? null
-  // The tile's own scroll box: the panel is the `data-shelf-panel`.
-  const box = panel()
+  // The tab's own scroll box: the fold-out's body.
+  const box = tabBody()
+  if (!box) throw new Error('clip-it check: the panel beside the picture is not open on the Transcript tab')
+  const listen = box.querySelector('label[for="forge-vocabulary"]')?.parentElement ?? null
   box.scrollTop = 0
   const b = cut?.getBoundingClientRect()
   const l = listen?.getBoundingClientRect()
   const t = box.getBoundingClientRect()
   const round = (n: number | undefined): number => (n === undefined ? -1 : Math.round(n * 10) / 10)
   return {
-    column: px(panel()),
+    column: px(box),
     height: box.clientHeight,
     scrollHeight: box.scrollHeight,
     dock: document.querySelector('[data-dock]') !== null,
@@ -586,6 +644,50 @@ function cutLayout(): CutLayout {
     tileBottom: round(t.top + box.clientHeight),
     clear: Boolean(b && l && b.height > 0 && b.bottom <= l.top + 0.5),
     visible: Boolean(b && b.height > 0 && b.bottom <= t.top + box.clientHeight + 0.5)
+  }
+}
+
+/**
+ * Where Find graphics and its section sit, px, with a clip selected, the
+ * Trimmer dock open in the left column and the Transcript tile open: inside
+ * the panel beside the picture, across its width, and nowhere over the dock.
+ */
+export interface FindLayout {
+  /** The panel's body and the dock, left/top/right/bottom. */
+  body: [number, number, number, number]
+  dock: [number, number, number, number] | null
+  /** The Find graphics button and the Graphics section. */
+  button: [number, number, number, number]
+  section: [number, number, number, number]
+  /** Inside the body's left and right edges. */
+  inside: boolean
+  /** Not over the dock, either of them. */
+  clearOfDock: boolean
+}
+
+const rect = (el: Element | null): [number, number, number, number] | null => {
+  if (!el) return null
+  const r = el.getBoundingClientRect()
+  const n = (v: number): number => Math.round(v * 10) / 10
+  return [n(r.left), n(r.top), n(r.right), n(r.bottom)]
+}
+const overlaps = (a: [number, number, number, number], b: [number, number, number, number]): boolean =>
+  a[0] < b[2] && b[0] < a[2] && a[1] < b[3] && b[1] < a[3]
+
+function findLayout(): FindLayout {
+  const body = rect(tabBody())
+  const button = rect(document.querySelector('[data-foldout-body="transcript"] [data-find-graphics]'))
+  const section = rect(document.querySelector('[data-foldout-body="transcript"] [data-transcript-graphics]'))
+  if (!body || !button || !section) throw new Error('clip-it check: no Find graphics in the panel beside the picture')
+  const dock = rect(document.querySelector('[data-dock]'))
+  const within = (r: [number, number, number, number]): boolean => r[0] >= body[0] - 0.5 && r[2] <= body[2] + 0.5
+  return {
+    body,
+    dock,
+    button,
+    section,
+    inside: within(button) && within(section),
+    clearOfDock: dock === null || (!overlaps(button, dock) && !overlaps(section, dock))
   }
 }
 
@@ -628,13 +730,25 @@ async function transcriptTile(talk: Transcript, expect: (ok: boolean, what: stri
   if (!V) throw new Error('the talk did not land on the timeline')
   editor().setClipSpeed(V, 2)
   editor().select(V)
+  // The panel shut first, so opening the tile is what opens it.
+  editor().closeFoldout()
+  await frames()
   tool = 'transcript'
-  editor().setShelfTool('transcript')
+  // The tile pressed in the Shelf's strip, as a person would: it opens the tile AND the panel on the clip's words.
+  const tileButton = document.querySelector<HTMLElement>('[data-shelf-strip] [data-shelf-tile="transcript"]')
+  if (!tileButton) throw new Error('no Transcript tile in the Shelf’s strip')
+  tileButton.click()
   await until(
-    () => document.querySelectorAll('[data-shelf-tool="transcript"] [data-shelf-panel]').length === 1 && rowCount() > 0,
+    () =>
+      document.querySelectorAll('[data-shelf-tool="transcript"] [data-shelf-panel]').length === 1 &&
+      document.querySelector('[data-foldout-words="clip"]') !== null &&
+      rowCount() > 0,
     3000,
-    'the Transcript tile showing rows'
+    'the Transcript tile open and the panel beside the picture showing the clip’s rows'
   )
+  // The tile itself is one line and a toggle, pressed: no row of the clip's in the left column.
+  expect(panel().querySelector('[data-transcript-rows]') === null, 'the Transcript tile still draws the clip’s rows in the left column')
+  expect(panel().querySelector('[data-clip-transcript-toggle][aria-pressed="true"]') !== null, 'the Transcript tile’s toggle is not pressed while the panel shows the clip’s words')
 
   const clip = (): Clip => {
     const found = editor().project.clips.find((c) => c.id === V)
@@ -659,25 +773,25 @@ async function transcriptTile(talk: Transcript, expect: (ok: boolean, what: stri
 
   // The tile as it opens, nothing picked (the hint at its longest): the cut never drawn over Listen for.
   const idle = cutLayout()
-  expect(idle.dock, 'the dock is not open under the Transcript tile, so the layout was not measured with it')
+  expect(idle.dock, 'the dock is not open in the left column, so the layout was not measured with it')
   expect(idle.clear, `with nothing picked, Cut to these words (bottom ${idle.buttonBottom}) is drawn over Listen for (top ${idle.listenTop}) in the ${idle.column} px column`)
   // …and on screen without scrolling: the rows scroll, not the tile (a rows' basis of 0 % made the block every row tall — measured).
-  expect(idle.visible, `with nothing picked, Cut to these words (bottom ${idle.buttonBottom}) is below the tile's visible bottom (${idle.tileBottom})`)
+  expect(idle.visible, `with nothing picked, Cut to these words (bottom ${idle.buttonBottom}) is below the tab's visible bottom (${idle.tileBottom})`)
 
   await pickRows(2, 5)
   const picked = cutLayout()
   expect(picked.clear, `with a run picked, Cut to these words (bottom ${picked.buttonBottom}) is drawn over Listen for (top ${picked.listenTop}) in the ${picked.column} px column`)
-  expect(picked.visible, `with a run picked, Cut to these words (bottom ${picked.buttonBottom}) is below the tile's visible bottom (${picked.tileBottom})`)
+  expect(picked.visible, `with a run picked, Cut to these words (bottom ${picked.buttonBottom}) is below the tab's visible bottom (${picked.tileBottom})`)
   const expected = runFromRows(w, 2, 5)
   const pick = editor().clipRun
   const run = pick && pick.clipId === V && pick.words === w ? pick.run : null
-  expect(same(run, expected), `rows 3–6 in the Transcript tile picked ${JSON.stringify(run)}, not ${JSON.stringify(expected)}`)
+  expect(same(run, expected), `rows 3–6 in the clip’s transcript picked ${JSON.stringify(run)}, not ${JSON.stringify(expected)}`)
   const startMs = w.words[expected.from].startMs
   const endMs = w.words[expected.to].endMs
   const cut = cutFrames(before, startMs, endMs, fps)
   const playhead = editor().playhead
   expect(cut !== null && playhead === cut.from, `the playhead is on ${playhead}, not the cut's first frame ${cut?.from}`)
-  const line = ([...panel().querySelectorAll('p')].find((p) => (p.textContent ?? '').endsWith('selected'))?.textContent ?? '').trim()
+  const line = ([...(tabBody()?.querySelectorAll('p') ?? [])].find((p) => (p.textContent ?? '').endsWith('selected'))?.textContent ?? '').trim()
   const lineExpected = cut ? `${formatMark(((cut.to - cut.from) / fps) * 1000)} selected` : '?'
   expect(line === lineExpected, `the cut's length line reads "${line}", not "${lineExpected}"`)
 
@@ -714,6 +828,17 @@ async function transcriptTile(talk: Transcript, expect: (ok: boolean, what: stri
   const undone = clip()
   expect(sameEdges(edges(undone), edges(before)), `one undo left ${JSON.stringify(edges(undone))}, not ${JSON.stringify(edges(before))}`)
 
+  // The user's spot: Find graphics pressed, the dock open, the tile open — and the run let end.
+  const findButton = document.querySelector<HTMLElement>('[data-foldout-body="transcript"] [data-find-graphics]')
+  if (!findButton) throw new Error('no Find graphics in the panel beside the picture')
+  findButton.click()
+  await until(() => editor().findingGraphics === null, 10_000, 'Find graphics ending')
+  await frames()
+  const find = findLayout()
+  expect(find.dock !== null, 'the dock is not open in the left column, so Find graphics was not measured beside it')
+  expect(find.inside, `Find graphics or its section runs past the panel beside the picture: body ${JSON.stringify(find.body)}, button ${JSON.stringify(find.button)}, section ${JSON.stringify(find.section)}`)
+  expect(find.clearOfDock, `Find graphics or its section is drawn over the Trimmer dock: dock ${JSON.stringify(find.dock)}, button ${JSON.stringify(find.button)}, section ${JSON.stringify(find.section)}`)
+
   return {
     rows,
     stamp,
@@ -727,7 +852,8 @@ async function transcriptTile(talk: Transcript, expect: (ok: boolean, what: stri
     expectedAfter: predicted ? edges(predicted) : { start: -1, inPoint: -1, duration: -1 },
     undoSteps,
     undone: edges(undone),
-    layout: { idle, picked }
+    layout: { idle, picked },
+    find
   }
 }
 

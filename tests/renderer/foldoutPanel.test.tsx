@@ -15,8 +15,9 @@ import type { Transcript } from '@shared/transcript'
  * - open on Clips: the bar (its two tabs, Clips selected, the close button)
  *   and the Clips tab's line for no link (no link in these tests), in a body
  *   that scrolls inside the panel;
- * - open on Transcript: the empty line of whichever transcript the rule picks
- *   (the link's, or the selected clip's), or nothing yet when it has words;
+ * - open on Transcript: the words of whichever transcript the rule picks
+ *   (the link's, or the selected clip's), or its empty line when it has none
+ *   (the faces themselves: foldoutTranscript.test.tsx);
  * - and each body in its own error boundary, keyed by the tab.
  *
  * Every transcript is made up.
@@ -146,20 +147,34 @@ describe('the fold-out panel, open', () => {
   })
 
   it('on Transcript, follows the rule: the other transcript when only it exists, and no empty line then', () => {
-    // The clip's asked, only the link has words: the link's, ready.
+    // The clip's asked, only the link has words: the link's, ready — its rows, no empty line, no switch.
     useEditor.getState().openFoldout('transcript', 'clip')
     linkWords(true)
     let page = renderToStaticMarkup(createElement(FoldoutTranscript))
-    expect(page).toBe('<div data-foldout-words="link"></div>')
-    // The link's asked, only a clip is selected: the clip's, ready.
+    expect(page).toContain('data-foldout-words="link"')
+    expect(page).not.toContain('data-foldout-words="clip"')
+    expect(page).toContain('data-transcript-rows')
+    expect(page).toContain('zorplim')
+    expect(page).not.toContain(escapeHtml(FOLDOUT_CLIP_EMPTY))
+    expect(page).not.toContain(escapeHtml(FOLDOUT_LINK_EMPTY))
+    expect(page).not.toContain('data-foldout-switch')
+    // The link's asked, only a clip is selected: the clip's, ready — its transcript, whose clip has none yet.
     linkWords(false)
     selected(true)
     useEditor.getState().openFoldout('transcript', 'link')
     page = renderToStaticMarkup(createElement(FoldoutTranscript))
-    expect(page).toBe('<div data-foldout-words="clip"></div>')
-    // Both exist: the one asked.
+    expect(page).toContain('data-foldout-words="clip"')
+    expect(page).not.toContain('data-foldout-words="link"')
+    expect(page).toContain('No transcript yet')
+    expect(page).not.toContain(escapeHtml(FOLDOUT_CLIP_EMPTY))
+    expect(page).not.toContain(escapeHtml(FOLDOUT_LINK_EMPTY))
+    expect(page).not.toContain('data-foldout-switch')
+    // Both exist: the one asked, and the switch to choose.
     linkWords(true)
-    expect(renderToStaticMarkup(createElement(FoldoutTranscript))).toBe('<div data-foldout-words="link"></div>')
+    page = renderToStaticMarkup(createElement(FoldoutTranscript))
+    expect(page).toContain('data-foldout-words="link"')
+    expect(page).not.toContain('data-foldout-words="clip"')
+    expect(page).toContain('data-foldout-switch')
   })
 
   it('a selection that outlived its clip is no clip', () => {

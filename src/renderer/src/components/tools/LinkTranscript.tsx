@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { Ear, FileText, Loader2, Plus, Scissors } from 'lucide-react'
-import { useEditor, urlSourceFor, type UrlSource } from '../../store'
+import { Ear, FileText, Loader2, PanelLeftClose, PanelLeftOpen, Plus, Scissors } from 'lucide-react'
+import { foldoutShowsWords } from '@shared/foldout'
+import { clipSelected, useEditor, urlSourceFor, wordsShown, type UrlSource } from '../../store'
 import { parseLink } from '@shared/ingest/url'
 import { formatMark } from '@shared/ingest/section'
 import { runOfChapter, runRange } from '@shared/ingest/wordRun'
@@ -11,13 +12,27 @@ import { transcribeGate } from '@shared/sidecar/row'
 import { HelperPointer } from '../SettingsPanel'
 
 /**
- * The URL tile's transcript of a link (docs/CLIPS.md §3b.1–3b.5, sheets 25
- * and 26): **Get transcript**, then rows of `time | text` to pick a run of
- * words from — by click and shift-click, by the Start and End handles, or by
- * a chapter chip — and Clip it, whose button reads **Clip download** (the
- * user's name, beside Get's **Full download**, sheet 25's "Clip downloads"):
- * it downloads exactly that run's span and lands it with its words and the
- * link's credit. **Add another clip** keeps the rows and clears the run.
+ * A link's transcript (docs/CLIPS.md §3b.1–3b.5, sheets 25 and 26), in two
+ * parts since the clip maker's layout (the user's sketch of 2026-11-27: the
+ * transcript unfolds beside the picture, "so that when the trim create wont
+ * ever collide"):
+ *
+ * IN THE URL TILE (`LinkTranscript`): **Get transcript** and its short status
+ * lines — reading, fetching, the failure, the language to choose, and a video
+ * with no captions (its chapter chips set the tile's From and To there) — and,
+ * once the words are ready, the **Transcript** toggle that opens and closes
+ * the fold-out panel on them. The panel opens on them by itself when they
+ * arrive, from Get transcript's own handler (`getTranscript` is left as it
+ * was). Nothing long is drawn here: the 240 px column also holds the Trimmer.
+ *
+ * IN THE PANEL (`LinkWords`, the fold-out's Transcript tab, Foldout.tsx): the
+ * chapter chips, rows of `time | text` to pick a run of words from — by click
+ * and shift-click, by the Start and End handles, or by a chip — the run's
+ * length with its read-only From and To, and Clip it, whose button reads
+ * **Clip download** (the user's name, beside Get's **Full download**, sheet
+ * 25's "Clip downloads"): it downloads exactly that run's span and lands it
+ * with its words and the link's credit. **Add another clip** keeps the rows
+ * and clears the run.
  *
  * YouTube's own caption track, fetched by yt-dlp with no media and no model:
  * none of this needs the AI helper. A video with no captions says so, and its
@@ -37,6 +52,9 @@ export const ADD_ANOTHER_TITLE = 'Keep the transcript and pick another run'
 export const LISTEN_TITLE = 'Transcribe the sound with the AI helper — downloads the audio and the speech model'
 export const PICK_CHAPTER_TITLE = 'Pick this chapter’s words'
 export const RANGE_CHAPTER_TITLE = 'Set From and To to this chapter'
+/** The toggle that opens and closes the panel beside the picture on the link's words (the Clips toggle's way). */
+export const TRANSCRIPT_TOGGLE = 'Transcript'
+export const LINK_TRANSCRIPT_TOGGLE_TITLE = 'Show or hide the link’s words, beside the picture'
 
 /** The languages offered when the video's details name none (§7.1, "the user's pick from a list"). */
 export const CAPTION_LANGUAGES: { code: string; label: string }[] = [
@@ -199,8 +217,7 @@ function NoCaptions({ source }: { source: UrlSource }): ReactNode {
   )
 }
 
-function Languages(): ReactNode {
-  const getTranscript = useEditor((s) => s.getTranscript)
+function Languages({ onPick }: { onPick: (language: string) => void }): ReactNode {
   return (
     <div className="mt-2">
       <p className="text-[10.5px] text-ink-500">Choose the language</p>
@@ -210,7 +227,7 @@ function Languages(): ReactNode {
             key={language.code}
             type="button"
             data-language={language.code}
-            onClick={() => void getTranscript(language.code)}
+            onClick={() => onPick(language.code)}
             className="rounded bg-ink-850 px-2 py-0.5 text-[10.5px] text-ink-400 transition-colors hover:bg-ink-800 hover:text-ink-200"
           >
             {language.label}
@@ -221,10 +238,27 @@ function Languages(): ReactNode {
   )
 }
 
+/**
+ * The fold-out's Transcript tab on the link's words: everything that was under
+ * Get transcript once the words were ready. Nothing while the box's link has
+ * none (the tab then shows the other transcript, or its empty line).
+ */
+export function LinkWords(): ReactNode {
+  const ingest = useEditor((s) => s.ingest)
+  const urlSource = useEditor((s) => s.urlSource)
+  const source = urlSourceFor({ urlSource, ingest })
+  if (source?.status !== 'ready') return null
+  return <Words source={source} />
+}
+
 export function LinkTranscript(): ReactNode {
   const ingest = useEditor((s) => s.ingest)
   const urlSource = useEditor((s) => s.urlSource)
   const getTranscript = useEditor((s) => s.getTranscript)
+  const openFoldout = useEditor((s) => s.openFoldout)
+  const toggleTranscript = useEditor((s) => s.toggleTranscript)
+  const foldout = useEditor((s) => s.foldout)
+  const clip = useEditor((s) => clipSelected(s))
   const link = parseLink(ingest.url)
   // Shown only while the box holds the link it belongs to.
   const source = urlSourceFor({ urlSource, ingest })
@@ -232,19 +266,46 @@ export function LinkTranscript(): ReactNode {
   // A language chosen by hand is offered again when it had nothing — unless
   // the video has no caption track in any language.
   const chosen = source !== null && source.meta !== null && source.meta.language === null && source.meta.hasCaptions !== false
+  const ready = source?.status === 'ready'
+  // Pressed while the panel shows the link's words, as shown (not merely asked for: shared/foldout.ts).
+  const showing = foldoutShowsWords(foldout, 'link', { link: ready, clip })
+  const Panel = showing ? PanelLeftClose : PanelLeftOpen
+
+  /** Get transcript, and a language chosen: the words, once they arrive, unfold beside the picture. */
+  const fetchWords = async (language?: string): Promise<void> => {
+    await getTranscript(language)
+    if (wordsShown(useEditor.getState())) openFoldout('transcript', 'link')
+  }
 
   return (
     <div className="mt-2.5">
-      <button
-        type="button"
-        onClick={() => void getTranscript()}
-        disabled={!link || fetching}
-        title={GET_TRANSCRIPT_TITLE}
-        className="flex items-center gap-1.5 rounded bg-ink-850 px-2.5 py-1 text-[11px] text-ink-300 transition-colors hover:bg-ink-800 hover:text-ink-100 disabled:opacity-40"
-      >
-        {fetching ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
-        Get transcript
-      </button>
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          onClick={() => void fetchWords()}
+          disabled={!link || fetching}
+          title={GET_TRANSCRIPT_TITLE}
+          className="flex items-center gap-1.5 rounded bg-ink-850 px-2.5 py-1 text-[11px] text-ink-300 transition-colors hover:bg-ink-800 hover:text-ink-100 disabled:opacity-40"
+        >
+          {fetching ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
+          Get transcript
+        </button>
+        {ready && (
+          <button
+            type="button"
+            data-link-transcript-toggle=""
+            aria-pressed={showing}
+            onClick={() => toggleTranscript('link')}
+            title={LINK_TRANSCRIPT_TOGGLE_TITLE}
+            className={`ml-auto flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
+              showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
+            }`}
+          >
+            <Panel size={12} aria-hidden />
+            {TRANSCRIPT_TOGGLE}
+          </button>
+        )}
+      </div>
 
       {source?.status === 'meta' && <p className="mt-1.5 text-[10.5px] text-ink-500">Reading the link…</p>}
       {source?.status === 'captions' && <p className="mt-1.5 text-[10.5px] text-ink-500">Fetching the captions…</p>}
@@ -254,14 +315,14 @@ export function LinkTranscript(): ReactNode {
           <p className="text-ink-500">{source.error}</p>
         </div>
       )}
-      {source?.status === 'language' && <Languages />}
+      {source?.status === 'language' && <Languages onPick={(language) => void fetchWords(language)} />}
       {source?.status === 'none' && (
         <>
           <NoCaptions source={source} />
-          {chosen && <Languages />}
+          {chosen && <Languages onPick={(language) => void fetchWords(language)} />}
         </>
       )}
-      {source?.status === 'ready' && <Words source={source} />}
+      {/* Ready: the words are the fold-out's Transcript tab (`LinkWords`), not drawn here. */}
     </div>
   )
 }

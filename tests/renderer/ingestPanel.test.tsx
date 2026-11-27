@@ -21,6 +21,13 @@ import type { SidecarStatus } from '@shared/sidecar/status'
  * when there are none — no captions, or a fetch that failed — where "This
  * video has no captions" and a greyed Listen to it say why.
  *
+ * Since the clip maker's layout (2026-11-27) the link's transcript is in two
+ * places: the URL tile keeps Get transcript, its status lines, the languages
+ * and the no-captions block (`LinkTranscript`); the rows, the chips, the run's
+ * line with its read-only From and To, Clip download and Add another clip are
+ * the fold-out panel's Transcript tab beside the picture (`LinkWords`). Each
+ * assertion reads the place its control is in now; "on screen" is both.
+ *
  * Rendered to static markup for what is on screen, and — for the presses —
  * called as functions, the store mocked to a plain selector over the REAL
  * store's state, so every press runs the real action. The panel's transcript
@@ -43,7 +50,7 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
 
 const { useEditor } = await import('../../src/renderer/src/store')
 const { IngestPanel, LinkBox, FULL_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/IngestPanel')
-const { LinkTranscript, CLIP_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/tools/LinkTranscript')
+const { LinkTranscript, LinkWords, CLIP_DOWNLOAD_TITLE } = await import('../../src/renderer/src/components/tools/LinkTranscript')
 
 const URL = 'https://www.youtube.com/watch?v=MadeUpTalk2'
 const NO_CAPTIONS = 'https://www.youtube.com/watch?v=MadeUpTalk3'
@@ -191,7 +198,8 @@ function textOf(node: ReactNode): string {
   return ''
 }
 
-const transcriptHosts = (): Host[] => hosts(createElement(LinkTranscript))
+/** The link's transcript as the window shows it: the URL tile's half, then the panel's beside the picture. */
+const transcriptHosts = (): Host[] => [...hosts(createElement(LinkTranscript)), ...hosts(createElement(LinkWords))]
 const buttonNamed = (label: string): Host | undefined =>
   transcriptHosts().find((h) => h.type === 'button' && textOf(h.props.children as ReactNode).trim() === label)
 const rowBox = (): Host => {
@@ -200,6 +208,8 @@ const rowBox = (): Host => {
   return box
 }
 const panel = (): string => renderToStaticMarkup(createElement(IngestPanel))
+/** The fold-out's Transcript tab on the link's words. */
+const words = (): string => renderToStaticMarkup(createElement(LinkWords))
 
 /** What `closest` finds from a pressed element: the attributes named, on the elements around it. */
 function under(attrs: Record<string, string>): { closest: (selector: string) => { getAttribute: (name: string) => string } | null } {
@@ -291,12 +301,15 @@ async function getTranscript(url = URL): Promise<void> {
 describe('Get transcript', () => {
   it('shows the link’s rows, time | text', async () => {
     expect(panel()).not.toContain('data-transcript-rows')
+    expect(words()).not.toContain('data-transcript-rows')
     await getTranscript()
     const t = state().urlSource!.transcript!
     const rows = transcriptHosts().filter((h) => h.props['data-row'] !== undefined)
     expect(rows).toHaveLength(rowsOf(t).length)
     expect(rows.length).toBe(4)
-    const html = panel()
+    // Beside the picture, not in the URL tile.
+    const html = words()
+    expect(panel()).not.toContain('data-transcript-rows')
     expect(html).toContain('data-transcript-rows')
     expect(html).toContain('>0:05</button>')
     expect(html).toContain('charlie')
@@ -325,6 +338,7 @@ describe('Get transcript', () => {
     expect(html).toContain('aria-label="To — minutes and seconds"')
     expect(html).not.toMatch(/readonly/i)
     expect(html).not.toContain('data-transcript-rows')
+    expect(words()).toBe('')
   })
 })
 
@@ -432,12 +446,12 @@ describe('picking a run', () => {
   it('says how long the run is: its range’s length', async () => {
     await getTranscript()
     const t = state().urlSource!.transcript!
-    expect(panel()).not.toContain(' selected')
+    expect(words()).not.toContain(' selected')
     pressRow(1)
     pressRow(2, true)
     const range = runRange(t, runFromRows(t, 1, 2))
     expect(range.endMs - range.startMs).toBeGreaterThan(5000)
-    expect(panel()).toContain(`<span class="tabular-nums">${formatMark(range.endMs - range.startMs)}</span> selected`)
+    expect(words()).toContain(`<span class="tabular-nums">${formatMark(range.endMs - range.startMs)}</span> selected`)
   })
 
   it('a chapter chip picks the words that start inside the chapter', async () => {
@@ -537,18 +551,18 @@ describe('the From and To fields', () => {
     await getTranscript()
     const t = state().urlSource!.transcript!
     pressRow(1)
-    let html = panel()
-    // The typed fields are gone…
-    expect(html).not.toContain('aria-label="From — minutes and seconds"')
-    expect(html).not.toContain('aria-label="To — minutes and seconds"')
-    // …and the run's own stand in their place, read-only.
+    // The typed fields are gone from the URL tile…
+    expect(panel()).not.toContain('aria-label="From — minutes and seconds"')
+    expect(panel()).not.toContain('aria-label="To — minutes and seconds"')
+    // …and the run's own stand in their place, read-only, beside its rows in the panel.
+    let html = words()
     let range = runRange(t, runFromRows(t, 1, 1))
     expect(html).toMatch(new RegExp(`<input readOnly="" data-mirror="from" class="[^"]*" value="${formatMark(range.startMs)}"/>`))
     expect(html).toMatch(new RegExp(`<input readOnly="" data-mirror="to" class="[^"]*" value="${formatMark(range.endMs)}"/>`))
     expect(html).toContain('set by the words you picked')
 
     pressRow(3, true)
-    html = panel()
+    html = words()
     range = runRange(t, runFromRows(t, 1, 3))
     expect(html).toMatch(new RegExp(`<input readOnly="" data-mirror="from" class="[^"]*" value="${formatMark(range.startMs)}"/>`))
     expect(html).toMatch(new RegExp(`<input readOnly="" data-mirror="to" class="[^"]*" value="${formatMark(range.endMs)}"/>`))

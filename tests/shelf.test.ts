@@ -195,12 +195,18 @@ describe('the Shelf', () => {
     expect(kids).toHaveLength(2)
     expect(kids[0]).toBe(strips[0])
     expect(/\bdata-shelf-panel\b/.test(opening(kids[1]).getText(shelf))).toBe(true)
-    // Told which tool is open, and given the store's setter — no other.
+    // Told which tool is open, and given the store's setter — through the
+    // Shelf's own goTo since the clip maker's layout, which calls the setter
+    // first and always, and then opens the panel beside the picture for the
+    // Transcript tile (tests/renderer/shelfRender.test.ts presses it).
     expect(attr(strips[0], 'open', shelf)).toBe('{tool.id}')
-    expect(attr(strips[0], 'onGo', shelf)).toBe('{setShelfTool}')
+    expect(attr(strips[0], 'onGo', shelf)).toBe('{goTo}')
     const fn = functionOf(strips[0])!
     const setter = declarations(shelf).filter((d) => d.name === 'setShelfTool' && functionOf(d.node) === fn)
     expect(setter.map((d) => d.init)).toEqual(['useEditor((s) => s.setShelfTool)'])
+    const goTo = declarations(shelf).filter((d) => d.name === 'goTo' && functionOf(d.node) === fn)
+    expect(goTo).toHaveLength(1)
+    expect(goTo[0].init).toMatch(/^\(next: ShelfToolId \| null\): void => \{\n\s*setShelfTool\(next\)\n/)
   })
 
   it('starts the strip with Home, then every tool in the registry, each a toggle of its own tool', () => {
@@ -248,7 +254,8 @@ describe('the Shelf', () => {
   it('opens a tool from its tile, and shows the home grid when none is open', () => {
     // Home is what the Shelf returns while the store's tool is null — or one
     // the registry does not have, which must not leave the column blank.
-    expect(text).toMatch(/const tool = open === null \? null : shelfToolById\(open\)\n\s*\n\s*if \(!tool\) return <ShelfHome onOpen=\{setShelfTool\} \/>/)
+    expect(text).toMatch(/const tool = open === null \? null : shelfToolById\(open\)\n/)
+    expect([...text.matchAll(/if \(!tool\) return <ShelfHome onOpen=\{goTo\} \/>/g)]).toHaveLength(1)
     // Every tile in the registry, in its order — no filter between them: once
     // on the home grid, once in the strip (step 11).
     const maps = [...text.matchAll(/SHELF_TOOLS\.map\(\(tool\) => \(/g)]
@@ -260,7 +267,7 @@ describe('the Shelf', () => {
     const homes = mounts(shelf, 'ShelfHome')
     expect(homes).toHaveLength(1)
     expect(written(text, 'ShelfHome')).toBe(1)
-    expect(attr(homes[0], 'onOpen', shelf)).toBe('{setShelfTool}')
+    expect(attr(homes[0], 'onOpen', shelf)).toBe('{goTo}')
     const shelfTiles = mounts(shelf, 'ShelfTile')
     expect(shelfTiles).toHaveLength(1)
     expect(written(text, 'ShelfTile')).toBe(1)

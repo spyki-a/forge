@@ -3,7 +3,8 @@ import { SHELF_TOOLS, shelfToolById } from '../../src/renderer/src/components/sh
 import { Director } from '../../src/renderer/src/components/Director'
 import { IngestPanel } from '../../src/renderer/src/components/IngestPanel'
 import { MediaPool } from '../../src/renderer/src/components/MediaPool'
-import { TranscriptPanel } from '../../src/renderer/src/components/TranscriptPanel'
+import { TranscriptPanel, TranscriptTile } from '../../src/renderer/src/components/TranscriptPanel'
+import { FoldoutTranscriptFace } from '../../src/renderer/src/components/Foldout'
 import { BeatSync } from '../../src/renderer/src/components/tools/BeatSync'
 import { DepthParallax } from '../../src/renderer/src/components/tools/DepthParallax'
 import { FilmStrip } from '../../src/renderer/src/components/tools/FilmStrip'
@@ -42,7 +43,12 @@ describe('the Shelf registry, loaded', () => {
     // Step 9's "nothing is lost": the pool, the link form and the transcript, whole.
     expect(shelfToolById('upload')?.panel).toBe(MediaPool)
     expect(shelfToolById('url')?.panel).toBe(IngestPanel)
-    expect(shelfToolById('transcript')?.panel).toBe(TranscriptPanel)
+    // The transcript, whole, since the clip maker's layout (2026-11-27): the tile is
+    // one line and a toggle, and the whole of the old panel is the fold-out's
+    // Transcript tab on the selected clip's words, beside the picture.
+    expect(shelfToolById('transcript')?.panel).toBe(TranscriptTile)
+    const face = FoldoutTranscriptFace({ words: 'clip', ready: true }) as { props: { children: { type: unknown } } }
+    expect(face.props.children.type).toBe(TranscriptPanel)
   })
 
   it('opens each automation tile on its own tool’s panel', () => {

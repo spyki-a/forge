@@ -1484,12 +1484,24 @@ const RECIPES: Record<string, (env: Env) => Promise<Built>> = {
   /*
    * The fold-out panel's Transcript tab asked for the selected clip's words,
    * with no clip selected and no link: its empty line for the clip. Asked
-   * through the store as the Transcript tile's toggle will ask; the home then
+   * through the store as the Transcript tile's toggle asks; the home then
    * opens the tab and keeps the words.
    */
   'foldout-clip-words': async () => {
     editor().openFoldout('transcript', 'clip')
     return {}
+  },
+  /*
+   * Both transcripts there (the clip maker's layout, piece 3): the talk's
+   * words ready in the URL tile's box AND the census video selected on the
+   * timeline. The Transcript tab then shows the asked one (the link's, as a
+   * window starts) with its two-way switch at the top: "The link" pressed,
+   * "The selected clip" one click away.
+   */
+  'foldout-both-words': async (env) => {
+    await linkWords()
+    const { V } = await videoClip(env)
+    return { ids: { V } }
   },
 
   /*

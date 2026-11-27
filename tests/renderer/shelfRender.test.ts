@@ -270,3 +270,57 @@ describe('an open tool', () => {
     expect(render()).toContain('data-shelf-tool="home"')
   })
 })
+
+/*
+ * The Transcript tile and the panel beside the picture (the clip maker's
+ * layout, 2026-11-27): the tile is one line and a toggle, and the clip's words
+ * are the fold-out's Transcript tab. Opening the tile opens that tab on them,
+ * so the words stay one click away — on the way IN only: a panel the person
+ * closes while the tile stays open is never opened again by the Shelf.
+ */
+describe('the Transcript tile opens the panel beside the picture', () => {
+  function pressing(): { opened: unknown[]; folded: unknown[][] } {
+    const opened: unknown[] = []
+    const folded: unknown[][] = []
+    fake.state.setShelfTool = (tool: unknown): void => void opened.push(tool)
+    fake.state.openFoldout = (...args: unknown[]): void => void folded.push(args)
+    return { opened, folded }
+  }
+
+  it('from the home grid: the tile, and the panel on the selected clip’s words; no other tile touches the panel', () => {
+    const { opened, folded } = pressing()
+    const tiles = buttons(createElement(Shelf)).filter((b) => b['data-shelf-tile'] !== undefined)
+    for (const [i, tool] of SHELF_TOOLS.entries()) {
+      ;(tiles[i].onClick as () => void)()
+      expect(opened, tool.id).toEqual([tool.id])
+      expect(folded, tool.id).toEqual(tool.id === 'transcript' ? [['transcript', 'clip']] : [])
+      opened.length = 0
+      folded.length = 0
+    }
+  })
+
+  it('from the strip: into the tile opens the panel; the tile pressed again, or Home, does not', () => {
+    const { opened, folded } = pressing()
+    for (const open of SHELF_TOOLS) {
+      fake.state.shelfTool = open.id
+      const pressable = buttons(createElement(Shelf))
+      ;(pressable.find((b) => b['data-shelf-home'] !== undefined)!.onClick as () => void)()
+      expect(folded, `${open.id}: Home`).toEqual([])
+      const strip = pressable.filter((b) => b['data-shelf-tile'] !== undefined)
+      ;(strip.find((b) => b['data-shelf-tile'] === 'transcript')!.onClick as () => void)()
+      // Pressed while it is the open tool, the tile goes home and leaves the panel alone.
+      expect(folded, `${open.id} open, pressing transcript`).toEqual(open.id === 'transcript' ? [] : [['transcript', 'clip']])
+      opened.length = 0
+      folded.length = 0
+    }
+  })
+
+  it('never opens it while drawing: a panel closed with the tile open stays closed', () => {
+    const { folded } = pressing()
+    fake.state.shelfTool = 'transcript'
+    fake.state.foldout = { open: false, tab: 'transcript', words: 'clip' }
+    render()
+    buttons(createElement(Shelf))
+    expect(folded).toEqual([])
+  })
+})

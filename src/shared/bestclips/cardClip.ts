@@ -257,7 +257,7 @@ export const STEP_TEXT = {
   /** The run ended and placed nothing and proposed nothing (`graphicsResultText(0, 0)`). */
   graphicsNone: 'none found in this stretch.',
   /** After the counts (`graphicsResultText`): where the graphics placed or waiting for Keep are listed. */
-  graphicsListed: ': listed in the Transcript tile.',
+  graphicsListed: ': listed under the clip’s words, beside the picture.',
   graphicsNoWords: 'skipped: the clip has no words to read.',
   graphicsFailed: 'could not be found.'
 } as const

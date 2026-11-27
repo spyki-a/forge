@@ -5560,7 +5560,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/Shelf.tsx",
-    "line": 98,
+    "line": 111,
     "newHome": "Shelf tile Narration (coming-soon)",
     "note": "Step 9: the note under the Narration tile’s label (its registry entry has `soon`), as it was beside the Narration mode."
   },
@@ -5591,7 +5591,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 231,
+    "line": 291,
     "newHome": "Shelf tile URL",
     "note": "M0 (CLIPS.md §3b.1): beside the link, greyed until the box holds a link, so it is on screen as soon as the URL tile opens."
   },
@@ -5601,7 +5601,7 @@
     "home": "url",
     "needs": "none",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 28,
+    "line": 49,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5629,7 +5629,7 @@
     "home": "url",
     "needs": "link-reading",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 234,
+    "line": 310,
     "newHome": "Shelf tile URL",
     "note": "The stubs answer at once, so the recipe holds the fetch at this state through the store."
   },
@@ -5639,7 +5639,7 @@
     "home": "url",
     "needs": "link-fetching",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 235,
+    "line": 311,
     "newHome": "Shelf tile URL",
     "note": "The stubs answer at once, so the recipe holds the fetch at this state through the store."
   },
@@ -5649,7 +5649,7 @@
     "home": "url",
     "needs": "link-failed",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 238,
+    "line": 314,
     "newHome": "Shelf tile URL",
     "note": "CLIPS.md §3b.8: the fetch failed (offline); From and To stay typed fields under it."
   },
@@ -5659,7 +5659,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 192,
+    "line": 223,
     "newHome": "Shelf tile URL",
     "note": "The details named no language (none of the eight measured videos did that, EFFECTS.md §40); the stub link NoLanguage1 gives that state."
   },
@@ -5669,7 +5669,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 37,
+    "line": 61,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5678,7 +5678,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 38,
+    "line": 62,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5687,7 +5687,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 39,
+    "line": 63,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5696,7 +5696,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 40,
+    "line": 64,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5705,7 +5705,7 @@
     "home": "url",
     "needs": "link-no-language",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 41,
+    "line": 65,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5714,7 +5714,7 @@
     "home": "url",
     "needs": "link-no-captions",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 167,
+    "line": 193,
     "newHome": "Shelf tile URL",
     "note": "CLIPS.md §3b.5: the stub link NoCaptions1 has details and chapters and no caption track."
   },
@@ -5724,7 +5724,7 @@
     "home": "url",
     "needs": "link-no-captions",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 180,
+    "line": 206,
     "newHome": "Shelf tile URL",
     "note": "Greyed in M0: it would download the sound for the AI helper to transcribe (Step P), and never downloads anything yet."
   },
@@ -5734,7 +5734,7 @@
     "home": "url",
     "needs": "link-no-captions",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 31,
+    "line": 52,
     "newHome": "Shelf tile URL"
   },
   {
@@ -5753,7 +5753,7 @@
     "home": "url",
     "needs": "link-no-captions-helper",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 194,
+    "line": 212,
     "newHome": "Shelf tile URL",
     "note": "With the AI helper able to transcribe AND the speech model on disk, Listen to it is still greyed: listening is not built in M0. Without the model it says \"needs the speech model\"; without the helper, the pointer."
   },
@@ -5764,39 +5764,39 @@
     "needs": "link-no-captions",
     "count": 3,
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 33,
+    "line": 54,
     "newHome": "Shelf tile URL",
     "note": "A chapter chip on a video with no captions sets the From and To fields (CLIPS.md §3b.3). Count 3: the stub’s three chapters."
   },
   {
     "label": "Pick this chapter’s words",
     "match": "title",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "count": 3,
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 32,
-    "newHome": "Shelf tile URL",
+    "line": 53,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The chapter chip (CLIPS.md §3b.3): its text is the chapter’s title, which is data; its tooltip is the interface’s. Count 3: the stub’s three chapters."
   },
   {
     "label": "Clip download",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 148,
-    "newHome": "Shelf tile URL",
+    "line": 171,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "Clip it’s button — the user’s name for it (2026-10-06), beside Get’s Full download. Greyed until a run is picked (CLIPS.md §3b.4)."
   },
   {
     "label": "Download only the words you picked and put them on the timeline",
     "match": "title",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 30,
-    "newHome": "Shelf tile URL"
+    "line": 50,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
     "label": "Best clips",
@@ -5955,7 +5955,7 @@
     "home": "url",
     "needs": "link-transcript",
     "file": "src/shared/bestclips/cardClip.ts",
-    "line": 155,
+    "line": 156,
     "newHome": "Shelf tile URL",
     "note": "Make it vertical's tooltip."
   },
@@ -6255,128 +6255,128 @@
   {
     "label": "Click a row to pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 119,
-    "newHome": "Shelf tile URL",
+    "line": 143,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The rows’ selection hint, while nothing is picked."
   },
   {
     "label": "Start",
     "match": "aria-label",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
-    "line": 124,
-    "newHome": "Shelf tile URL",
+    "line": 167,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The Start cut handle (CLIPS.md §3b.2), resting on the first word while nothing is picked."
   },
   {
     "label": "End",
     "match": "aria-label",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
-    "line": 124,
-    "newHome": "Shelf tile URL",
+    "line": 167,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The End cut handle (CLIPS.md §3b.2), resting on the last word while nothing is picked."
   },
   {
     "label": "Start — drag along the rows; it snaps to the start of a word",
     "match": "title",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
-    "line": 40,
-    "newHome": "Shelf tile URL"
+    "line": 55,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
     "label": "End — drag along the rows; it snaps to the end of a word",
     "match": "title",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
-    "line": 41,
-    "newHome": "Shelf tile URL"
+    "line": 56,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
     "label": "Click to pick this row’s words; shift-click to extend the pick to this row",
     "match": "title",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-transcript",
     "count": 12,
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
-    "line": 39,
-    "newHome": "Shelf tile URL",
+    "line": 54,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "One per row’s time: the stub talk’s twelve rows."
   },
   {
     "label": "selected",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 92,
-    "newHome": "Shelf tile URL",
+    "line": 116,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The run’s length, \"0:39.6 selected\" — the number is its own text node."
   },
   {
     "label": "From",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 97,
-    "newHome": "Shelf tile URL",
+    "line": 121,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The From field mirroring the run, read-only (CLIPS.md §3b.5); the typed one is `ingest-range`’s."
   },
   {
     "label": "To",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 106,
-    "newHome": "Shelf tile URL",
+    "line": 130,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "The To field mirroring the run, read-only (CLIPS.md §3b.5); the typed one is `ingest-range`’s."
   },
   {
     "label": "set by the words you picked",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-run",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 115,
-    "newHome": "Shelf tile URL"
+    "line": 139,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
     "label": "Clipping — it lands on the timeline when the download is done.",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-clipped",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 126,
-    "newHome": "Shelf tile URL"
+    "line": 150,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
     "label": "Add another clip",
     "match": "text",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-clipped",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 135,
-    "newHome": "Shelf tile URL",
+    "line": 159,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)",
     "note": "CLIPS.md §3b.4: keeps the rows, clears the run, starts nothing."
   },
   {
     "label": "Keep the transcript and pick another run",
     "match": "title",
-    "home": "url",
+    "home": "foldtranscript",
     "needs": "link-clipped",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 30,
-    "newHome": "Shelf tile URL"
+    "line": 51,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the link's words (tools/LinkTranscript.tsx LinkWords)"
   },
   {
     "label": "Add a video track",
@@ -6643,48 +6643,48 @@
   {
     "label": "Click to correct",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-editing",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 281,
-    "newHome": "Shelf tile Transcript"
+    "line": 349,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "Correct a misheard word: click it, type, Enter",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 87,
-    "newHome": "Shelf tile Transcript"
+    "line": 153,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "Done",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-editing",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 93,
-    "newHome": "Shelf tile Transcript"
+    "line": 159,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "Listen for — names and words, separated by commas",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "video-clip",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 328,
-    "newHome": "Shelf tile Transcript"
+    "line": 413,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "No transcript yet — transcribe it below",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "video-clip",
     "part": true,
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 115,
-    "newHome": "Shelf tile Transcript (text reworded \"in Media\" → \"in Upload\" in step 9)"
+    "line": 183,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "Select a clip to see its transcript",
@@ -6692,224 +6692,224 @@
     "home": "transcript",
     "needs": "none",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 60,
-    "newHome": "Shelf tile Transcript"
+    "line": 62,
+    "newHome": "Shelf tile Transcript: its one line with no clip selected (TranscriptPanel.tsx TranscriptTile)"
   },
   {
     "label": "Transcribe again with these words",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 349,
-    "newHome": "Shelf tile Transcript"
+    "line": 440,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "Transcribe this clip, listening for these words",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcribe-ready",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 373,
-    "newHome": "Shelf tile Transcript",
+    "line": 436,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The tile's own Transcribe, pressable only while the AI helper can asr.transcribe and the speech model is on disk (docs/CLIPS.md §3a.4); greyed, its title says why instead."
   },
   {
     "label": "needs the AI helper — install it in Settings",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "video-clip",
     "file": "src/renderer/src/components/MediaPool.tsx",
     "line": 90,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The tile's Transcribe greyed with no AI helper able to transcribe: its title, as the Media pool's (transcribeWhy). The bridge's own helper has failed by design."
   },
   {
     "label": "needs the AI helper",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "video-clip",
     "file": "src/renderer/src/components/SettingsPanel.tsx",
     "line": 91,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The pointer under the greyed Transcribe (HelperPointer): opens Settings at the AI helper row."
   },
   {
     "label": "install it in Settings",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "video-clip",
     "file": "src/renderer/src/components/SettingsPanel.tsx",
     "line": 93,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The pointer's title."
   },
   {
     "label": "needs the speech model",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-no-model",
     "file": "src/shared/asr/speechModel.ts",
     "line": 30,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The tile's Transcribe greyed while the helper can transcribe and the model is not on disk (§16.49)."
   },
   {
     "label": "needs the speech model",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-speech-press",
     "file": "src/shared/asr/speechModel.ts",
     "line": 30,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "\"Transcribe needs the speech model\" under the tile's Transcribe (MediaPool.tsx SpeechModelPress, inline), beside the sized press."
   },
   {
     "label": "Get",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-speech-press",
     "part": true,
     "file": "src/shared/asr/speechModel.ts",
     "line": 60,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The speech model's sized press under the tile's Transcribe, \"Get the speech model · 464 MB\"."
   },
   {
     "label": "the AI helper is starting",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-helper-starting",
     "file": "src/renderer/src/components/MediaPool.tsx",
     "line": 100,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The tile's Transcribe before main has answered (transcribeWhy's 'starting')."
   },
   {
     "label": "the AI helper is starting",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-starting-line",
     "file": "src/renderer/src/components/MediaPool.tsx",
     "line": 100,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The same words under the greyed Transcribe."
   },
   {
     "label": "Click a row to jump there and pick its words; shift-click another row, or a word, to extend. Or drag Start and End.",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 47,
-    "newHome": "Shelf tile Transcript",
+    "line": 59,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "CLIPS.md §3b.6: the rows’ hint in the Transcript tile, while nothing is picked; a click on a row also moves the playhead there, as the tile always did."
   },
   {
     "label": "Cut to these words",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 198,
-    "newHome": "Shelf tile Transcript",
+    "line": 266,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "CLIPS.md §3b.6 (sheet 26): the clip trimmed to the picked words, one undo; greyed until a run is picked. On a clip already on the timeline Clip it is a cut, not a download."
   },
   {
     "label": "Trims this clip to the words you picked",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 46,
-    "newHome": "Shelf tile Transcript"
+    "line": 58,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "Start",
     "match": "aria-label",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
     "line": 167,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The Start cut handle, the URL tile’s own (TranscriptRows), resting on the clip’s first word while nothing is picked."
   },
   {
     "label": "End",
     "match": "aria-label",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
     "line": 167,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The End cut handle, resting on the clip’s last word while nothing is picked."
   },
   {
     "label": "Start — drag along the rows; it snaps to the start of a word",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
     "line": 55,
-    "newHome": "Shelf tile Transcript"
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "End — drag along the rows; it snaps to the end of a word",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
     "line": 56,
-    "newHome": "Shelf tile Transcript"
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)"
   },
   {
     "label": "Click to pick this row’s words; shift-click to extend the pick to this row",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/tools/TranscriptRows.tsx",
     "line": 54,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "One per row’s time: the census transcript is one word, one row. The time is where the row is on the TIMELINE, through the clip’s speed."
   },
   {
     "label": "selected",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-run",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 185,
-    "newHome": "Shelf tile Transcript",
+    "line": 121,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The cut’s length on the timeline, \"0:00.5 selected\" — the number is its own text node; at 2× it is half the words’ span."
   },
   {
     "label": "this clip has a hold; cut it by hand",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-hold",
     "file": "src/shared/edit/clipIt.ts",
     "line": 32,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "CLIPS.md §3b.6: a hold shows one frame for its whole length, so it has no words of its own to cut to — a note in place of the rows, not a block: Edit (the whole transcript, as before §3b.6) and Listen for still work."
   },
   {
     "label": "No words are spoken in this clip",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-silent",
     "file": "src/renderer/src/components/TranscriptPanel.tsx",
-    "line": 48,
-    "newHome": "Shelf tile Transcript",
+    "line": 60,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The rows are the words the clip PLAYS (clipWords); the recipe trims the clip to two seconds after its transcript’s one word. Edit is not offered here: no word overlaps what the clip plays, so it has none to correct."
   },
   {
     "label": "this clip’s sound is on its own track; cut both by hand",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-detached",
     "file": "src/shared/edit/clipIt.ts",
     "line": 39,
-    "newHome": "Shelf tile Transcript",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "CLIPS.md §3b.6: a picture whose sound was lifted onto a track of its own (Detach audio, or a Director J-cut). Cut to these words keeps the start and moves the in-point, so the picture would go out of sync with its sound — a note in place of the rows, not a block: Edit and Listen for still work."
   },
   {
@@ -7382,7 +7382,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 161,
+    "line": 163,
     "newHome": "Shelf tile Director",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Director section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7392,7 +7392,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 170,
+    "line": 172,
     "newHome": "Shelf tile Depth / Parallax",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the reel’s Depth parallax box in the Create tab (WINDOW.md §3.14). With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7402,7 +7402,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 179,
+    "line": 183,
     "newHome": "Shelf tile Beat sync / Cut to words",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Beat-synced reel section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7412,7 +7412,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 190,
+    "line": 194,
     "newHome": "Shelf tile Transitions",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Library’s Transitions chip, which the Library keeps (§3.14)."
   },
@@ -7422,7 +7422,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 198,
+    "line": 202,
     "newHome": "Shelf tile One photo",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the One photo section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7432,7 +7432,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 208,
+    "line": 212,
     "newHome": "Shelf tile Grid split",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Grid split section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7442,7 +7442,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 217,
+    "line": 221,
     "newHome": "Shelf tile Strip flashes",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Strip flashes section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7452,7 +7452,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 228,
+    "line": 232,
     "newHome": "Shelf tile Film strip",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the Filmstrip section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7462,7 +7462,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 236,
+    "line": 240,
     "newHome": "Shelf tile 3D props",
     "note": "Step 9: the tile on the Shelf’s home grid that opens the 3D props section of the Create tab. With the other automation tiles, the successor of the left panel’s Create tab (LeftPanel.tsx:33), whose row went in this step."
   },
@@ -7472,7 +7472,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 244,
+    "line": 248,
     "newHome": "Shelf tile Text",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Text\" above the media grid."
   },
@@ -7482,7 +7482,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 252,
+    "line": 256,
     "newHome": "Shelf tile Colour cards",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Colour\" above the media grid."
   },
@@ -7492,7 +7492,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 262,
+    "line": 266,
     "newHome": "Shelf tile Grade",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Grade\" above the media grid."
   },
@@ -7502,7 +7502,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 270,
+    "line": 274,
     "newHome": "Shelf tile Newspaper clipping",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Newspaper clippings\" above the media grid."
   },
@@ -7512,7 +7512,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 278,
+    "line": 282,
     "newHome": "Shelf tile Card ring",
     "note": "Step 9: the tile on the Shelf’s home grid that opens \"+ Card ring\" above the media grid."
   },
@@ -7542,7 +7542,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 163,
+    "line": 165,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7552,7 +7552,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 172,
+    "line": 174,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7562,7 +7562,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 181,
+    "line": 185,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7572,7 +7572,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 192,
+    "line": 196,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7582,7 +7582,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 200,
+    "line": 204,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7592,7 +7592,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 210,
+    "line": 214,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7602,7 +7602,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 219,
+    "line": 223,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7612,7 +7612,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 230,
+    "line": 234,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7622,7 +7622,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 238,
+    "line": 242,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7632,7 +7632,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 246,
+    "line": 250,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7642,7 +7642,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 254,
+    "line": 258,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7652,7 +7652,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 264,
+    "line": 268,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7662,7 +7662,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 272,
+    "line": 276,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7672,7 +7672,7 @@
     "home": "shelf",
     "needs": "none",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 280,
+    "line": 284,
     "newHome": "Shelf home (the tile’s tooltip)",
     "note": "Step 9: one tile’s tooltip on the Shelf’s home grid, from the registry (shelf/tools.ts)."
   },
@@ -7785,7 +7785,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 161,
+    "line": 163,
     "newHome": "Shelf strip (a tool open): the Director tile",
     "note": "Step 11: the strip’s face of the Director tile — icon only, its name its tooltip; the home grid’s face is the “Director” text row (needs none)."
   },
@@ -7795,7 +7795,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 170,
+    "line": 172,
     "newHome": "Shelf strip (a tool open): the Depth / Parallax tile",
     "note": "Step 11: the strip’s face of the Depth / Parallax tile — icon only, its name its tooltip; the home grid’s face is the “Depth / Parallax” text row (needs none)."
   },
@@ -7805,7 +7805,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 179,
+    "line": 183,
     "newHome": "Shelf strip (a tool open): the Beat sync / Cut to words tile",
     "note": "Step 11: the strip’s face of the Beat sync / Cut to words tile — icon only, its name its tooltip; the home grid’s face is the “Beat sync / Cut to words” text row (needs none)."
   },
@@ -7815,7 +7815,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 190,
+    "line": 194,
     "newHome": "Shelf strip (a tool open): the Transitions tile",
     "note": "Step 11: the strip’s face of the Transitions tile — icon only, its name its tooltip; the home grid’s face is the “Transitions” text row (needs none)."
   },
@@ -7825,7 +7825,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 198,
+    "line": 202,
     "newHome": "Shelf strip (a tool open): the One photo tile",
     "note": "Step 11: the strip’s face of the One photo tile — icon only, its name its tooltip; the home grid’s face is the “One photo” text row (needs none)."
   },
@@ -7835,7 +7835,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 208,
+    "line": 212,
     "newHome": "Shelf strip (a tool open): the Grid split tile",
     "note": "Step 11: the strip’s face of the Grid split tile — icon only, its name its tooltip; the home grid’s face is the “Grid split” text row (needs none)."
   },
@@ -7845,7 +7845,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 217,
+    "line": 221,
     "newHome": "Shelf strip (a tool open): the Strip flashes tile",
     "note": "Step 11: the strip’s face of the Strip flashes tile — icon only, its name its tooltip; the home grid’s face is the “Strip flashes” text row (needs none)."
   },
@@ -7855,7 +7855,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 228,
+    "line": 232,
     "newHome": "Shelf strip (a tool open): the Film strip tile",
     "note": "Step 11: the strip’s face of the Film strip tile — icon only, its name its tooltip; the home grid’s face is the “Film strip” text row (needs none)."
   },
@@ -7865,7 +7865,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 236,
+    "line": 240,
     "newHome": "Shelf strip (a tool open): the 3D props tile",
     "note": "Step 11: the strip’s face of the 3D props tile — icon only, its name its tooltip; the home grid’s face is the “3D props” text row (needs none)."
   },
@@ -7875,7 +7875,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 244,
+    "line": 248,
     "newHome": "Shelf strip (a tool open): the Text tile",
     "note": "Step 11: the strip’s face of the Text tile — icon only, its name its tooltip; the home grid’s face is the “Text” text row (needs none)."
   },
@@ -7885,7 +7885,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 252,
+    "line": 256,
     "newHome": "Shelf strip (a tool open): the Colour cards tile",
     "note": "Step 11: the strip’s face of the Colour cards tile — icon only, its name its tooltip; the home grid’s face is the “Colour cards” text row (needs none)."
   },
@@ -7895,7 +7895,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 262,
+    "line": 266,
     "newHome": "Shelf strip (a tool open): the Grade tile",
     "note": "Step 11: the strip’s face of the Grade tile — icon only, its name its tooltip; the home grid’s face is the “Grade” text row (needs none)."
   },
@@ -7905,7 +7905,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 270,
+    "line": 274,
     "newHome": "Shelf strip (a tool open): the Newspaper clipping tile",
     "note": "Step 11: the strip’s face of the Newspaper clipping tile — icon only, its name its tooltip; the home grid’s face is the “Newspaper clipping” text row (needs none)."
   },
@@ -7915,7 +7915,7 @@
     "home": "shelf",
     "needs": "shelf-tool-open",
     "file": "src/renderer/src/components/shelf/tools.ts",
-    "line": 278,
+    "line": 282,
     "newHome": "Shelf strip (a tool open): the Card ring tile",
     "note": "Step 11: the strip’s face of the Card ring tile — icon only, its name its tooltip; the home grid’s face is the “Card ring” text row (needs none)."
   },
@@ -8718,7 +8718,7 @@
     "home": "url",
     "needs": "link-no-captions-starting",
     "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
-    "line": 194,
+    "line": 212,
     "newHome": "Shelf tile URL",
     "note": "Beside the greyed Listen to it while the helper has not answered."
   },
@@ -9630,184 +9630,184 @@
   {
     "label": "Graphics",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 34,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 49,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The section's heading (§6.6 \"By hand\"), written as GRAPHICS_HEADING; the only 'Graphics' text in the Transcript tile (OUTPUT's own heading is another home). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Find graphics in this clip",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 35,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 50,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "findGraphics on the selected clip (§6.6), written as FIND_GRAPHICS; pressable here: the census transcript's one word is shown by the clip. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Finding graphics…",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-finding",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 37,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 52,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The same button while the ask is out (findingGraphics is the clip), written as FINDING_GRAPHICS; Transcribe's \"Transcribing…\" pattern. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Transcribe this clip first — graphics are found in its words",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "video-clip",
     "count": 2,
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 54,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Count 2 since try-out 1's piece 5 (2026-11-15): on a clip with no transcript both Find and \"Add graphic from these words\" are greyed with this one title (FIND_NEEDS_TRANSCRIPT). It was count 1 (Find alone), read on screen 2026-11-11 at d33d5b4; the harness census at c29a5dd reported this row ambiguous (2 on screen), which is how the second control was found."
   },
   {
     "label": "Speaker",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 45,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 68,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The Speaker field's label (§6.6, §16.31), written as SPEAKER: MediaAsset.speaker, saved on leaving the field. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Keep",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-asr",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 40,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 55,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Keep on the one counter waiting to be checked (keepGraphic), written as KEEP. harness/graphicsStub.ts lands one keyword and one counter proposal. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Drop",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-asr",
     "count": 2,
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 41,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 56,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Drop on each listed graphic and each proposal (dropGraphic), written as DROP: the placed keyword's and the waiting counter's. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "check the number",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-asr",
     "file": "src/shared/graphics/apply.ts",
     "line": 65,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Beside the words the waiting counter heard (CHECK_THE_NUMBER), over a stub YouTube ASR track (model 'youtube-asr'). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "check the number",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-lines",
     "file": "src/shared/graphics/apply.ts",
     "line": 65,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The same, over a stub YouTube uploader track (model 'youtube-lines'). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "check the number",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-whisper",
     "file": "src/shared/graphics/apply.ts",
     "line": 65,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The same, over a stub Whisper transcript whose number word is under 0.5 confidence (wordSource 'whisper-unsure'). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Clear graphics",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-asr",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 42,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 65,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Clear graphics (§6.6), written as CLEAR_GRAPHICS; shown while the project holds a Clip-it graphic or proposal. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Direct's graphics stay; Direct's Clear takes them",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-asr",
     "file": "src/shared/graphics/apply.ts",
     "line": 43,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Clear graphics' note under the button (CLEAR_GRAPHICS_NOTE). Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Use the channel name",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-asr",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 47,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 70,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The press beside an empty Speaker on a link's asset (§6.6: \"press to use the channel's\"), written as USE_CHANNEL_NAME; the census's ASR run makes the video a link's asset with a channel. Count reasoned from the code by lane T2b piece 4. Read on screen 2026-11-11 by the harness census at d33d5b4: missing [], 907 checked, 8 skipped."
   },
   {
     "label": "Add",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-drops",
     "count": 2,
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
-    "line": 51,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "line": 58,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Add on each graphic the last Find dropped (addDroppedGraphic; try-out 1, 2026-11-15), written as ADD: a real Find with no model over harness/graphicsStub.ts' three sentences drops the counter \"$500\" (said negated) and the keyword \"gear\" (within 6 s of the ring). Count measured in node by tests/renderer/transcriptGraphics.test.tsx over the same transcript on a 6 s clip; not yet read on screen."
   },
   {
     "label": "Add graphic from these words",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 60,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The by-hand add from the transcript (addGraphicFromWords; try-out 1, 2026-11-15, piece 5), written as FROM_WORDS, under Find graphics; acts on the rows' pick as Cut to these words does. Greyed here: nothing is picked. Measured in node by tests/renderer/transcriptGraphics.test.tsx; not yet read on screen."
   },
   {
     "label": "Click a row above for its sentence, or drag Start and End inside it for a keyword",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 62,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Add graphic from these words greyed with nothing picked, its title saying why (FROM_WORDS_NEEDS_PICK). Not yet read on screen."
   },
   {
     "label": "A graphic for the picked sentence, read as Find reads it, or a keyword of exactly the picked words",
     "match": "title",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-words",
     "file": "src/renderer/src/components/TranscriptGraphics.tsx",
     "line": 64,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "Add graphic from these words pressable, the row \"I do not charge $500.\" picked (FROM_WORDS_TITLE). Not yet read on screen."
   },
   {
     "label": "Not added, for the reason above — press Add to place it anyway",
     "match": "text",
-    "home": "transcript",
+    "home": "foldtranscript",
     "needs": "transcript-graphics-words",
     "file": "src/shared/director/fromWords.ts",
     "line": 71,
-    "newHome": "Shelf tile Transcript (Graphics section, docs/CLIPS.md §6.6)",
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), the selected clip's transcript (TranscriptPanel.tsx)",
     "note": "The dropped row's note after Add graphic from these words on \"I do not charge $500.\": the validator refused the counter (said negated), so it is listed with its reason and Add (FROM_WORDS_LISTED_NOTE, shown where a refused Add's reason is). Measured in node by tests/renderer/transcriptGraphics.test.tsx; not yet read on screen."
   },
   {
@@ -10530,7 +10530,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 45,
+    "line": 47,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, its bar",
     "note": "The bar's first tab (the clip maker's layout, piece 1). Counted on the Clips face; the Transcript face shows the same bar."
   },
@@ -10540,7 +10540,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 46,
+    "line": 48,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, its bar",
     "note": "The bar's second tab. Counted on the Clips face, where nothing else says Transcript."
   },
@@ -10550,7 +10550,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 47,
+    "line": 49,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Clips tab's tooltip"
   },
   {
@@ -10559,7 +10559,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 48,
+    "line": 50,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab's tooltip"
   },
   {
@@ -10568,7 +10568,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 44,
+    "line": 46,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the tabs' group (role tablist)"
   },
   {
@@ -10577,7 +10577,7 @@
     "home": "foldclips",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 49,
+    "line": 51,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the close button at the bar's end",
     "note": "The same words are its aria-label (the button is an icon); one row per label, home and state, so the title stands for both, as Close keys & curves does."
   },
@@ -10597,7 +10597,7 @@
     "home": "foldtranscript",
     "needs": "none",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 52,
+    "line": 54,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab on the link's words, none ready and no clip selected"
   },
   {
@@ -10606,7 +10606,103 @@
     "home": "foldtranscript",
     "needs": "foldout-clip-words",
     "file": "src/renderer/src/components/Foldout.tsx",
-    "line": 54,
+    "line": 56,
     "newHome": "beside the picture: the fold-out panel (Foldout.tsx), between the tool strip and the picture, the Transcript tab asked for the selected clip's words, no clip selected and no link words"
+  },
+  {
+    "label": "Transcript",
+    "match": "text",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 56,
+    "newHome": "Shelf tile URL, beside Get transcript once the words are ready",
+    "note": "The clip maker's layout, piece 3: the toggle that opens and closes the panel beside the picture on the link's words (the Clips toggle's way). Drawn only while the words are ready. Count 1."
+  },
+  {
+    "label": "Show or hide the link’s words, beside the picture",
+    "match": "title",
+    "home": "url",
+    "needs": "link-transcript",
+    "file": "src/renderer/src/components/tools/LinkTranscript.tsx",
+    "line": 57,
+    "newHome": "Shelf tile URL, the Transcript toggle's tooltip"
+  },
+  {
+    "label": "Transcript",
+    "match": "text",
+    "home": "transcript",
+    "needs": "none",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 66,
+    "newHome": "Shelf tile Transcript (TranscriptTile): the toggle under its line",
+    "note": "The clip maker's layout, piece 3: the tile is one line and this toggle; the words are the panel's Transcript tab. Greyed with no clip selected, and still drawn. The strip's tiles are not in this home (only the open tool's panel), so count 1."
+  },
+  {
+    "label": "Show or hide this clip’s words, beside the picture",
+    "match": "title",
+    "home": "transcript",
+    "needs": "none",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 67,
+    "newHome": "Shelf tile Transcript, its toggle's tooltip"
+  },
+  {
+    "label": "This clip has no transcript yet. Transcribe it beside the picture.",
+    "match": "text",
+    "home": "transcript",
+    "needs": "video-clip",
+    "file": "src/renderer/src/components/TranscriptPanel.tsx",
+    "line": 64,
+    "newHome": "Shelf tile Transcript: its one line for a selected clip with no transcript",
+    "note": "Transcribe (Listen for's press) is in the panel's Transcript tab, which the tile opens."
+  },
+  {
+    "label": "Whose words",
+    "match": "aria-label",
+    "home": "foldtranscript",
+    "needs": "foldout-both-words",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 59,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), its two-way switch at the top",
+    "note": "The Transcript tab's two-way switch, drawn only while both transcripts are there: its group's name."
+  },
+  {
+    "label": "The link",
+    "match": "text",
+    "home": "foldtranscript",
+    "needs": "foldout-both-words",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 60,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), its two-way switch at the top",
+    "note": "The switch's first side, pressed: the window starts asking for the link's words."
+  },
+  {
+    "label": "The words of the video whose link is in the URL tile",
+    "match": "title",
+    "home": "foldtranscript",
+    "needs": "foldout-both-words",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 61,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), its two-way switch at the top"
+  },
+  {
+    "label": "The selected clip",
+    "match": "text",
+    "home": "foldtranscript",
+    "needs": "foldout-both-words",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 62,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), its two-way switch at the top",
+    "note": "The switch's second side, one click away."
+  },
+  {
+    "label": "The words of the clip selected on the timeline",
+    "match": "title",
+    "home": "foldtranscript",
+    "needs": "foldout-both-words",
+    "file": "src/renderer/src/components/Foldout.tsx",
+    "line": 63,
+    "newHome": "beside the picture: the fold-out panel's Transcript tab (Foldout.tsx), its two-way switch at the top"
   }
 ]

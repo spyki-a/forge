@@ -243,6 +243,7 @@ import {
   foldoutClosed,
   foldoutOpened,
   foldoutToggled,
+  foldoutToggledWords,
   type FoldoutState,
   type FoldoutTab,
   type FoldoutWords
@@ -542,6 +543,16 @@ export function urlSourceFor(s: { urlSource: UrlSource | null; ingest: { url: st
 export function wordsShown(s: { urlSource: UrlSource | null; ingest: { url: string } }): boolean {
   const source = urlSourceFor(s)
   return source !== null && source.status === 'ready' && source.transcript !== null
+}
+
+/**
+ * Whether a clip is selected that is still on the timeline: the fold-out's
+ * Transcript tab has the selected clip's words to show (shared/foldout.ts
+ * `foldoutTranscript`). A selection can outlive its clip (dock.ts's reason),
+ * so the id alone is not enough.
+ */
+export function clipSelected(s: { selectedClipId: string | null; project: { clips: readonly { id: string }[] } }): boolean {
+  return s.selectedClipId !== null && s.project.clips.some((c) => c.id === s.selectedClipId)
 }
 
 /**
@@ -1001,6 +1012,12 @@ interface EditorState {
   closeFoldout: () => void
   /** On what is already showing it closes; on anything else it opens there (shared/foldout.ts `foldoutToggled`). */
   toggleFoldout: (tab: FoldoutTab, words?: FoldoutWords) => void
+  /**
+   * A Transcript toggle (the URL tile's for the link's words, the Transcript
+   * tile's for the selected clip's): decided on the words the tab SHOWS, not
+   * the ones it was asked for (shared/foldout.ts `foldoutToggledWords`).
+   */
+  toggleTranscript: (words: FoldoutWords) => void
   /**
    * The fold-down list that is open (components/ui/FoldDown.tsx), by its id,
    * or none: one at a time, so opening one folds the last. Held here so the
@@ -2067,6 +2084,8 @@ export const useEditor = create<EditorState>((set, get) => ({
   openFoldout: (tab, words) => set((s) => ({ foldout: foldoutOpened(s.foldout, tab, words) })),
   closeFoldout: () => set((s) => ({ foldout: foldoutClosed(s.foldout) })),
   toggleFoldout: (tab, words) => set((s) => ({ foldout: foldoutToggled(s.foldout, tab, words) })),
+  toggleTranscript: (words) =>
+    set((s) => ({ foldout: foldoutToggledWords(s.foldout, words, { link: wordsShown(s), clip: clipSelected(s) }) })),
   foldDownOpen: null,
   setFoldDownOpen: (foldDownOpen) => set({ foldDownOpen }),
   settingsOpen: false,

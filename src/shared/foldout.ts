@@ -92,6 +92,28 @@ export function foldoutTranscript(
   return { words: asked, ready: false }
 }
 
+/**
+ * Is the Transcript tab showing THESE words — the ones it shows by
+ * `foldoutTranscript`, not merely the ones it was asked for?
+ *
+ * The two can differ: with no clip selected and the link's words ready, the
+ * tab can be asked for the clip's words and show the link's. A toggle that
+ * read the asked words would then say "pressed" for words that are not on
+ * screen, and close the panel when pressed. So the Transcript toggles (the
+ * URL tile's, the Transcript tile's) and the tab's two-way switch read this.
+ */
+export function foldoutShowsWords(state: FoldoutState, words: FoldoutWords, has: { link: boolean; clip: boolean }): boolean {
+  return state.open && state.tab === 'transcript' && foldoutTranscript(state.words, has).words === words
+}
+
+/**
+ * A Transcript toggle naming its words: on those words, as shown, it closes
+ * the panel; on anything else it opens the Transcript tab asking for them.
+ */
+export function foldoutToggledWords(state: FoldoutState, words: FoldoutWords, has: { link: boolean; clip: boolean }): FoldoutState {
+  return foldoutShowsWords(state, words, has) ? foldoutClosed(state) : foldoutOpened(state, 'transcript', words)
+}
+
 /*
  * Its sizes, in the row beside the tool strip that holds it and the picture.
  *

@@ -12,7 +12,9 @@ import {
   foldoutOpened,
   foldoutResized,
   foldoutShowing,
+  foldoutShowsWords,
   foldoutToggled,
+  foldoutToggledWords,
   foldoutTranscript,
   type FoldoutPanelHandle,
   type FoldoutState,
@@ -171,5 +173,33 @@ describe('keeping the Panel and the store in step', () => {
     expect(foldoutResized({ inPixels: 0, asPercentage: 0 })).toEqual({ open: false, width: null })
     expect(foldoutResized({ inPixels: 120, asPercentage: 10 })).toEqual({ open: false, width: null })
     expect(foldoutResized({ inPixels: 420, asPercentage: 42.5 })).toEqual({ open: true, width: '42.5%' })
+  })
+})
+
+describe('the Transcript toggles, on the words the tab shows (the clip maker’s layout, piece 3)', () => {
+  const both = { link: true, clip: true }
+
+  it('reads showing on the words the rule shows, not merely the ones asked for', () => {
+    // Asked for the clip, none selected, the link's words there: the tab shows the link's.
+    const asked = state(true, 'transcript', 'clip')
+    expect(foldoutShowsWords(asked, 'link', { link: true, clip: false })).toBe(true)
+    expect(foldoutShowsWords(asked, 'clip', { link: true, clip: false })).toBe(false)
+    // Both there: the one asked.
+    expect(foldoutShowsWords(asked, 'clip', both)).toBe(true)
+    expect(foldoutShowsWords(asked, 'link', both)).toBe(false)
+    // Neither there: the asked one's empty line is what shows.
+    expect(foldoutShowsWords(asked, 'clip', { link: false, clip: false })).toBe(true)
+    // Shut, or on Clips: nothing of the Transcript tab shows.
+    expect(foldoutShowsWords(state(false, 'transcript', 'clip'), 'clip', both)).toBe(false)
+    expect(foldoutShowsWords(state(true, 'clips', 'clip'), 'clip', both)).toBe(false)
+  })
+
+  it('closes on the words shown, and opens the Transcript tab asking for its words on anything else', () => {
+    const asked = state(true, 'transcript', 'clip')
+    expect(foldoutToggledWords(asked, 'link', { link: true, clip: false })).toEqual(state(false, 'transcript', 'clip'))
+    expect(foldoutToggledWords(asked, 'link', both)).toEqual(state(true, 'transcript', 'link'))
+    expect(foldoutToggledWords(asked, 'clip', both)).toEqual(state(false, 'transcript', 'clip'))
+    expect(foldoutToggledWords(state(false, 'clips', 'link'), 'clip', both)).toEqual(state(true, 'transcript', 'clip'))
+    expect(foldoutToggledWords(state(true, 'clips', 'clip'), 'clip', both)).toEqual(state(true, 'transcript', 'clip'))
   })
 })

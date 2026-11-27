@@ -539,9 +539,11 @@ describe('a Best clips card’s graphics line counts what Find graphics left (CL
   it('none, placed, waiting for Keep: the line says which, and never claims graphics that are not there', () => {
     expect(graphicsResultText(0, 0)).toBe(STEP_TEXT.graphicsNone)
     expect(graphicsResultText(0, 0)).not.toMatch(/listed|Drop/u)
-    expect(graphicsResultText(2, 0)).toBe('2 placed: listed in the Transcript tile.')
-    expect(graphicsResultText(0, 1)).toBe('1 waiting for Keep: listed in the Transcript tile.')
-    expect(graphicsResultText(1, 2)).toBe('1 placed and 2 waiting for Keep: listed in the Transcript tile.')
+    // Where they are listed, said true since the clip maker's layout: under the clip's words, in the panel beside the picture.
+    expect(graphicsResultText(2, 0)).toBe('2 placed: listed under the clip’s words, beside the picture.')
+    expect(graphicsResultText(0, 1)).toBe('1 waiting for Keep: listed under the clip’s words, beside the picture.')
+    expect(graphicsResultText(1, 2)).toBe('1 placed and 2 waiting for Keep: listed under the clip’s words, beside the picture.')
+    expect(graphicsResultText(2, 0)).not.toMatch(/Transcript tile/u)
   })
 
   it('counts the graphic clips over the card’s clip and its proposals under the clips rule, and nothing else', () => {

@@ -9,9 +9,11 @@ import {
   type FoldoutTab,
   type FoldoutWords
 } from '@shared/foldout'
-import { useEditor, wordsShown } from '../store'
+import { clipSelected, useEditor, wordsShown } from '../store'
 import { ErrorBoundary } from './ErrorBoundary'
 import { BestClipsCards } from './tools/BestClips'
+import { LinkWords } from './tools/LinkTranscript'
+import { TranscriptPanel } from './TranscriptPanel'
 
 /**
  * The fold-out panel beside the picture: Clips and Transcript (the clip
@@ -52,6 +54,13 @@ export const FOLDOUT_CLOSE_TITLE = 'Close and give the picture its room back'
 export const FOLDOUT_LINK_EMPTY = 'No words from a link yet. Paste a link in the URL tile and press Get transcript.'
 /** The Transcript tab asked for the selected clip's words, with no clip selected and no link words ready. */
 export const FOLDOUT_CLIP_EMPTY = 'Select a clip on the timeline to see its words here.'
+
+/** The Transcript tab's two-way switch, with both transcripts there: its name, and its two sides. */
+export const FOLDOUT_WORDS_LABEL = 'Whose words'
+export const FOLDOUT_LINK_WORDS = 'The link'
+export const FOLDOUT_LINK_WORDS_TITLE = 'The words of the video whose link is in the URL tile'
+export const FOLDOUT_CLIP_WORDS = 'The selected clip'
+export const FOLDOUT_CLIP_WORDS_TITLE = 'The words of the clip selected on the timeline'
 
 const TABS = [
   { id: 'clips', label: FOLDOUT_CLIPS_TAB, title: FOLDOUT_CLIPS_TAB_TITLE },
@@ -129,21 +138,85 @@ export function FoldoutClips(): ReactNode {
 
 /**
  * The Transcript tab: the link's words or the selected clip's, by
- * `foldoutTranscript`. For now its empty state; the rows move in later, and
- * with words ready it shows nothing until they do.
+ * `foldoutTranscript` — and, when both exist, a small two-way switch at its
+ * top to choose (no switch with one).
+ *
+ * The face sits in its own error boundary, keyed by the words SHOWN: a throw
+ * in one transcript is not carried over to the other by the switch, which
+ * stays outside it so the person can always switch away.
+ *
+ * A column the tab's height, so the selected clip's transcript gives its rows
+ * what is left and the body scrolls the rest (TranscriptPanel.tsx's own rule,
+ * kept in the picture's height, which can be short).
  */
 export function FoldoutTranscript(): ReactNode {
   // Three plain values, each its own selector: an object built in a selector is new every time.
   const asked = useEditor((s) => s.foldout.words)
   const link = useEditor((s) => wordsShown(s))
-  const clip = useEditor((s) => s.selectedClipId !== null && s.project.clips.some((c) => c.id === s.selectedClipId))
+  const clip = useEditor((s) => clipSelected(s))
+  const openFoldout = useEditor((s) => s.openFoldout)
   const shown = foldoutTranscript(asked, { link, clip })
-  return <FoldoutTranscriptFace words={shown.words} ready={shown.ready} />
+  return (
+    <div data-foldout-transcript="" className="flex h-full min-h-0 flex-col">
+      {link && clip && <WordsSwitch shown={shown.words} onPick={(words) => openFoldout('transcript', words)} />}
+      <ErrorBoundary key={`transcript:${shown.words}`}>
+        <FoldoutTranscriptFace words={shown.words} ready={shown.ready} />
+      </ErrorBoundary>
+    </div>
+  )
 }
 
-/** What the Transcript tab draws for one answer of `foldoutTranscript`. */
+const WORDS_SIDES = [
+  { id: 'link', label: FOLDOUT_LINK_WORDS, title: FOLDOUT_LINK_WORDS_TITLE },
+  { id: 'clip', label: FOLDOUT_CLIP_WORDS, title: FOLDOUT_CLIP_WORDS_TITLE }
+] as const satisfies readonly { id: FoldoutWords; label: string; title: string }[]
+
+/** The two-way switch: the side showing pressed, the other one click away. */
+export function WordsSwitch({ shown, onPick }: { shown: FoldoutWords; onPick: (words: FoldoutWords) => void }): ReactNode {
+  return (
+    <div role="group" aria-label={FOLDOUT_WORDS_LABEL} data-foldout-switch="" className="mb-2 flex shrink-0 flex-wrap gap-1">
+      {WORDS_SIDES.map(({ id, label, title }) => (
+        <button
+          key={id}
+          type="button"
+          data-foldout-side={id}
+          aria-pressed={shown === id}
+          onClick={() => onPick(id)}
+          title={title}
+          className={`rounded px-2 py-0.5 text-[10.5px] transition-colors ${
+            shown === id ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
+          }`}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * What the Transcript tab draws for one answer of `foldoutTranscript`: the
+ * link's words (tools/LinkTranscript.tsx `LinkWords`: the chapter chips, the
+ * rows, the run with its From and To, Clip download, Add another clip), or
+ * the selected clip's whole transcript (`TranscriptPanel`: Edit, the rows and
+ * Cut to these words, Graphics with Find graphics, Listen for and Transcribe),
+ * or the asked one's empty line.
+ */
 export function FoldoutTranscriptFace({ words, ready }: { words: FoldoutWords; ready: boolean }): ReactNode {
-  if (ready) return <div data-foldout-words={words} />
+  if (ready && words === 'link') {
+    return (
+      <div data-foldout-words="link">
+        <LinkWords />
+      </div>
+    )
+  }
+  if (ready) {
+    return (
+      <div data-foldout-words="clip" className="flex min-h-0 flex-1 flex-col">
+        <TranscriptPanel />
+      </div>
+    )
+  }
   return (
     <div data-foldout-words={words}>
       <Line>{words === 'link' ? FOLDOUT_LINK_EMPTY : FOLDOUT_CLIP_EMPTY}</Line>

@@ -21,12 +21,16 @@ import { BestClips } from './tools/BestClips'
  *
  * Get transcript (sheets 25–26, docs/CLIPS.md §3b) is `LinkTranscript`: rows
  * of the link's words, a run picked from them, and Clip it — its button
- * **Clip download**. While those words are on screen the From and To fields
- * below give way to the run's own, read-only (§3b.5); with no captions, or
- * none fetched, they are typed as before.
+ * **Clip download**. Since the clip maker's layout (2026-11-27) those rows are
+ * the fold-out panel's Transcript tab beside the picture (`LinkWords`), and
+ * this tile keeps Get transcript, its status lines and a Transcript toggle.
+ * While the link has those words (store `wordsShown`, wherever they are
+ * drawn) the From and To fields below give way to the run's own, read-only,
+ * beside the rows (§3b.5); with no captions, or none fetched, they are typed
+ * as before.
  *
- * And while they are on screen, Get says what it does — **Full download**, no
- * longer the accent button — because the run's range is shown right under it
+ * And while it has them, Get says what it does — **Full download**, no
+ * longer the accent button — because the run's range is shown with the rows
  * and Get does not take it: Clip download does. The two names are the user's
  * (2026-10-06: "let's specify the complete full download, clip download, so
  * that way it will be clear"). Enter in the link box, which would press Get
