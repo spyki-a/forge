@@ -319,12 +319,19 @@ describe('the Best clips section', () => {
     expect(tabMarkup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
     expect(tabMarkup()).not.toContain(BEST_CLIPS_RUNNING)
     expect(buttonNamed('Analyse')!.props.disabled).toBe(true)
+    // The tile says why Analyse is greyed, whether the panel is open or not: the pointer, never the running line.
+    expect(withAttr('data-best-pointer').map((h) => textOf(h.props.children as ReactNode))).toEqual([BEST_CLIPS_RUNNING_ELSEWHERE])
     // The same link, captions fetched again since: also not this panel's run.
     useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: madeUpTalk(60, 51) } } }))
     expect(tabMarkup()).toContain(BEST_CLIPS_RUNNING_ELSEWHERE)
+    expect(withAttr('data-best-pointer').map((h) => textOf(h.props.children as ReactNode))).toEqual([BEST_CLIPS_RUNNING_ELSEWHERE])
     // No words on this link: the pointer still shows while another link's run goes on.
     onLink(null, 'failed')
     expect(markup()).toContain(BEST_CLIPS_NEEDS_TRANSCRIPT)
+    // This link's own run: the spinner on Analyse and the tab's line, no pointer.
+    onLink(T)
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: { linkKey: LINK_KEY, targetMs: 60_000, transcript: T } } }))
+    expect(withAttr('data-best-pointer')).toHaveLength(0)
   })
 
   it('draws no card, no note and no running line in the URL tile, in any state', async () => {
@@ -352,9 +359,12 @@ describe('the Best clips section', () => {
       put()
       for (const attr of LONG_THINGS) expect(withAttr(attr), `${name}: ${attr}`).toHaveLength(0)
       const html = markup()
-      for (const words of [BEST_CLIPS_RUNNING, BEST_CLIPS_RUNNING_ELSEWHERE, NO_MODEL_NOTE, 'A plain made-up shortfall.', `${CLIP_IT_CARD}</button>`, ...result.cards.map((c) => c.why)]) {
+      // Running elsewhere, the tile's pointer says so (a greyed Analyse says why); the running line itself stays the tab's (data-best-running, above).
+      const elsewhere = name === 'running elsewhere'
+      for (const words of [BEST_CLIPS_RUNNING, ...(elsewhere ? [] : [BEST_CLIPS_RUNNING_ELSEWHERE]), NO_MODEL_NOTE, 'A plain made-up shortfall.', `${CLIP_IT_CARD}</button>`, ...result.cards.map((c) => c.why)]) {
         expect(html, `${name}: ${words}`).not.toContain(words)
       }
+      if (elsewhere) expect([...html.matchAll(new RegExp(BEST_CLIPS_RUNNING_ELSEWHERE.replace('.', '\\.'), 'g'))], name).toHaveLength(1)
     }
     // The last state is not vacuous: the tab draws them (Make it vertical's tooltip says "Clip it" too, so the button's own text is looked for).
     expect(inTab('data-best-card')).toHaveLength(result.cards.length)
@@ -394,6 +404,23 @@ describe('the Best clips section', () => {
       expect(useEditor.getState().foldout, String(from)).toMatchObject({ open: true, tab: 'clips' })
       expect(analyse, String(from)).toHaveBeenCalledTimes(1)
     }
+  })
+
+  it('folds the length list for good when Analyse is pressed: it does not unfold again when the run ends', () => {
+    onLink(T)
+    useEditor.setState({ analyseBestClips: vi.fn(async () => undefined) })
+    openLengths()
+    expect(withAttr('data-best-length')).toHaveLength(4)
+    ;(buttonNamed('Analyse')!.props.onClick as () => void)()
+    // The run ends (the stub never set it running): the list stays folded.
+    useEditor.setState((s) => ({ bestClips: { ...s.bestClips, running: null } }))
+    expect(useEditor.getState().foldDownOpen).toBe(null)
+    expect(withAttr('data-best-length')).toHaveLength(0)
+    expect(lengthButton().props['aria-expanded']).toBe(false)
+    // Another fold-down's open state is not Analyse's to fold.
+    useEditor.getState().setFoldDownOpen('another-list')
+    ;(buttonNamed('Analyse')!.props.onClick as () => void)()
+    expect(useEditor.getState().foldDownOpen).toBe('another-list')
   })
 
   it('has a Clips toggle that opens and closes the panel on Clips, pressed while it shows, saying how many were found', async () => {
@@ -526,8 +553,16 @@ describe('the cards', () => {
     const caseless = Array.from({ length: 60 }, (_, i) => String.fromCharCode(0x10d0 + ((i * 7) % 33))).join('')
     const marked = Array.from({ length: 20 }, (_, i) => String.fromCharCode(0x61 + (i % 26)) + '\u0301').join('')
     const title = `${caseless} ${marked}`
-    const card: BestClipCard = { windowId: 'w2', startMs: 0, endMs: 60_000, words: 140, title, why: 'It is.', scoredBy: 'model' }
+    // A why of 120 caseless graphemes with no space: it wraps too, in the grid a why that did not would run past its card.
+    const why = Array.from({ length: 120 }, (_, i) => String.fromCharCode(0x10d0 + ((i * 5) % 33))).join('')
+    const card: BestClipCard = { windowId: 'w2', startMs: 0, endMs: 60_000, words: 140, title, why, scoredBy: 'model' }
     withResult(fakeResult([card]))
+    const whyHost = inTab('data-card-why')[0]
+    expect(textOf(whyHost.props.children as ReactNode)).toBe(why)
+    const whyCls = String(whyHost.props.className)
+    expect(whyCls).toContain('[overflow-wrap:anywhere]')
+    expect(whyCls).toContain('whitespace-normal')
+    expect(whyCls).not.toMatch(/truncate|line-clamp|text-ellipsis|whitespace-nowrap|overflow-hidden/)
     const titleHost = inTab('data-card-title')[0]
     expect(textOf(titleHost.props.children as ReactNode)).toBe(title)
     const cls = String(titleHost.props.className)
@@ -546,7 +581,15 @@ describe('the cards', () => {
     expect(cls).toContain('grid')
     expect(cls).toContain('[grid-template-columns:repeat(auto-fill,minmax(min(15rem,100%),1fr))]')
     // A card's text column may shrink and wrap, never run out of the card.
-    for (const card of inTab('data-best-card')) expect(String(card.props.className)).toContain('flex')
+    // The text column is the card's second child, and it carries min-w-0: a flex item's floor is otherwise its longest word.
+    const cards = tab().filter((h) => h.props['data-best-card'] !== undefined)
+    expect(cards).toHaveLength(3)
+    for (const card of cards) {
+      expect(String(card.props.className).split(/\s+/)).toContain('flex')
+      const kids = (Array.isArray(card.props.children) ? card.props.children : [card.props.children]).filter((k: unknown) => isValidElement(k)) as { props: { className?: string } }[]
+      expect(kids).toHaveLength(2)
+      expect(String(kids[1].props.className).split(/\s+/)).toContain('min-w-0')
+    }
   })
 })
 
@@ -607,6 +650,16 @@ describe('Clip it on a card (§7.5 steps 0 to 5)', () => {
     for (const other of [A, C]) {
       const clipIt = footOf(other.windowId).find((h) => h.type === 'button')
       expect(clipIt?.props.disabled, other.windowId).toBe(true)
+    }
+  })
+
+  it('greys every card’s Clip it while a download is being asked for', () => {
+    for (const card of [A, B, C]) expect(footOf(card.windowId).find((h) => h.type === 'button')?.props.disabled, card.windowId).toBe(false)
+    useEditor.setState((s) => ({ ingest: { ...s.ingest, busy: true } }))
+    for (const card of [A, B, C]) {
+      const clipIt = footOf(card.windowId).filter((h) => h.type === 'button')
+      expect(buttonsIn(clipIt), card.windowId).toEqual([CLIP_IT_CARD])
+      expect(clipIt[0].props.disabled, card.windowId).toBe(true)
     }
   })
 

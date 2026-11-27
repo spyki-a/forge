@@ -53,7 +53,9 @@ import {
  * before there are words (it then points at Get transcript): the heading;
  * the length as one fold-down list, "Duration" (1 to 4 min); Make it
  * vertical, a choice made before Analyse as well as after; Analyse, which
- * downloads nothing and opens the panel on Clips; the pointer line; and the
+ * downloads nothing, folds the length list and opens the panel on Clips; the
+ * pointer line (what to press first, or that Analyse waits for another
+ * video's run, so a greyed Analyse always says why here); and the
  * "Clips" toggle that opens and closes the panel on its Clips tab, saying how
  * many clips were found. Nothing long: no card and no note is drawn here,
  * because the 240 px column also holds the Trimmer dock.
@@ -249,7 +251,10 @@ export function BestClips(): ReactNode {
       ? BEST_CLIPS_CANNOT_LISTEN
       : noWords && !fetching
         ? BEST_CLIPS_NEEDS_TRANSCRIPT
-        : null
+        : // Analyse greyed by another link's run: the tile says why, whether the panel is open or not.
+          running && !here
+          ? BEST_CLIPS_RUNNING_ELSEWHERE
+          : null
   const showing = foldoutShowing(foldout, 'clips')
   const Panel = showing ? PanelLeftClose : PanelLeftOpen
 
@@ -294,7 +299,9 @@ export function BestClips(): ReactNode {
           type="button"
           data-best-analyse=""
           onClick={() => {
-            // What it finds unfolds beside the picture; the store's Analyse is left as it was.
+            // What it finds unfolds beside the picture; the store's Analyse is left as it was. The length
+            // list folds for good: left open, it would unfold again by itself when the run ends.
+            if (foldDownOpen === BEST_CLIPS_LENGTH_LIST) setFoldDownOpen(null)
             openFoldout('clips')
             void analyse()
           }}

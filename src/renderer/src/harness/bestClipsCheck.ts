@@ -752,6 +752,17 @@ export async function runBestClipsCheck(): Promise<BestClipsCheckReport> {
 
   try {
     editor().setShelfTool('url')
+    // The cards are in the fold-out panel: a page too narrow to open it beside the picture would fail every
+    // pressed case alike, so it is said once, with the width, and the check stops.
+    editor().openFoldout('clips')
+    await frames()
+    await frames()
+    if (!editor().foldout.open) {
+      throw new Error(
+        `the page is too narrow to open the panel beside the picture (the picture row is ${Math.round(document.querySelector('[data-foldout]')?.closest('[data-group]')?.getBoundingClientRect().width ?? 0)} px; the panel needs 280 px beside 35 % of the picture): widen the window and run it again`
+      )
+    }
+    editor().closeFoldout()
     editor().setIngest({ url: HARNESS_LINKS.talk, useRange: false, busy: false })
     useEditor.setState({ urlSource: null, bestClips: initialBestClips(), bestClipsVertical: true, bestClipsQuestion: null, bestClipsClipped: {} })
     const talk = async (): Promise<void> => {
