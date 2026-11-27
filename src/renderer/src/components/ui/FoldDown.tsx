@@ -12,7 +12,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
  * and covering was the complaint ("its own custom setting is overlapping").
  *
  * Choosing folds it, and so does Escape anywhere inside it; the button opens
- * and folds it too. Every part is a real button, so it is reached and pressed
+ * and folds it too. A choice or Escape puts the keyboard back on the button. Every part is a real button, so it is reached and pressed
  * from the keyboard. `aria-expanded` on the button says whether the choices
  * are showing, and `aria-pressed` on each choice which one is chosen.
  *
@@ -22,6 +22,17 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
  * survives a re-render. Flat, and no transform, filter or backdrop-filter —
  * the chevron is two glyphs, not one rotated (Strip.tsx says why).
  */
+/**
+ * Puts the keyboard back on the list's own button before the list goes: a
+ * choice or Escape unmounts the button that has focus, and focus would fall to
+ * the page, so the next Tab would start again at the top of the window. Read
+ * from the event, not a ref, so the list still has no hook of its own.
+ */
+function refocus(event: { currentTarget?: unknown }): void {
+  const at = event.currentTarget as HTMLElement | null | undefined
+  at?.closest?.('[data-fold-down]')?.querySelector<HTMLButtonElement>(':scope > button[aria-expanded]')?.focus()
+}
+
 export interface FoldDownChoice<T extends string | number> {
   value: T
   /** As it is shown, on the choice and on the folded button. */
@@ -62,6 +73,7 @@ export function FoldDown<T extends string | number>({
     if (!open || event.key !== 'Escape') return
     // Folds this list only: the window's own Escape (leaving full screen) is not also run.
     event.stopPropagation()
+    refocus(event)
     onOpenChange(false)
   }
 
@@ -88,8 +100,9 @@ export function FoldDown<T extends string | number>({
               type="button"
               aria-pressed={choice.value === value}
               title={choice.title}
-              onClick={() => {
+              onClick={(event) => {
                 onChoose(choice.value)
+                refocus(event)
                 onOpenChange(false)
               }}
               className={`rounded px-2 py-0.5 text-[11px] transition-colors ${

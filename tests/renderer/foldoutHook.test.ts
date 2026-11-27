@@ -97,6 +97,18 @@ describe('useFoldoutPanel', () => {
     expect(useEditor.getState().foldout).toEqual({ open: false, tab: 'transcript', words: 'clip' })
   })
 
+  it('a drag shut and back open in one go keeps the tab it was on', () => {
+    // The library keeps an active drag's hit region after the divider turns
+    // disabled, so one drag can pull the panel shut and then open again.
+    fake.current = panel(1000)
+    const { onResize } = useFoldoutPanel()
+    useEditor.getState().openFoldout('transcript', 'clip')
+    onResize({ inPixels: 0, asPercentage: 0 })
+    expect(useEditor.getState().foldout.open).toBe(false)
+    onResize({ inPixels: 400, asPercentage: 40 })
+    expect(useEditor.getState().foldout).toEqual({ open: true, tab: 'transcript', words: 'clip' })
+  })
+
   it('reopens where a drag left it, as its share of the row', () => {
     fake.current = panel(1000)
     const { onResize } = useFoldoutPanel()

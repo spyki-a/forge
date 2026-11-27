@@ -28,14 +28,13 @@ import { OutputStrip } from './components/OutputStrip'
 import { ExportStrip } from './components/ExportStrip'
 import { isTextEntry } from '@shared/textEntry'
 
+/** The house divider between two side-by-side panels: shared with FoldoutDivider, so the two never drift apart. */
+const DIVIDER_ACROSS = 'w-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500'
+
 function Divider({ vertical = false }: { vertical?: boolean }): ReactNode {
   return (
     <Separator
-      className={
-        vertical
-          ? 'h-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500'
-          : 'w-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500'
-      }
+      className={vertical ? 'h-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500' : DIVIDER_ACROSS}
     />
   )
 }
@@ -56,7 +55,7 @@ function FoldoutDivider(): ReactNode {
     <Separator
       disabled={!open}
       disableDoubleClick
-      className={open ? 'w-px bg-ink-800 transition-colors hover:bg-accent-500 active:bg-accent-500' : 'w-0'}
+      className={open ? DIVIDER_ACROSS : 'w-0'}
     />
   )
 }
@@ -636,7 +635,9 @@ export default function App(): ReactNode {
         their content's width, the library measures the group as the sum of
         those, converts a pixel minSize against that short sum, and keeps the
         percentage it got when the real width arrives. That opened the left
-        column at 30 % (420 px at 1400 px) instead of 17 % (tests/trimmerDock.test.ts).
+        column at its maxSize, then 30 % (420 px at 1400 px), instead of 17 %
+        (tests/trimmerDock.test.ts); with maxSize now 45 % the same trap would
+        open it at 45 % (630 px).
       */}
       <Group orientation="horizontal" className="flex-1">
         {/*

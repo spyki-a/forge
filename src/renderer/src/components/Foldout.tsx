@@ -77,8 +77,10 @@ export function Foldout(): ReactNode {
               type="button"
               role="tab"
               aria-selected={tab === id}
-              aria-controls={`foldout-${id}`}
+              // Only the open tab's panel is in the page, so only it is pointed at.
+              aria-controls={tab === id ? `foldout-${id}` : undefined}
               data-foldout-tab={id}
+              id={`foldout-tab-${id}`}
               onClick={() => openFoldout(id)}
               title={title}
               className={`rounded px-1.5 py-0.5 text-[10.5px] transition-colors ${
@@ -107,6 +109,7 @@ export function Foldout(): ReactNode {
       <div
         id={`foldout-${tab}`}
         role="tabpanel"
+        aria-labelledby={`foldout-tab-${tab}`}
         data-foldout-body={tab}
         className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-2"
       >

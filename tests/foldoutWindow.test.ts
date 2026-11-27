@@ -98,6 +98,10 @@ describe('the fold-out panel in the window', () => {
     const group = enclosing(foldPanel, 'Group', app)!
     expect(enclosing(picturePanel, 'Group', app)).toBe(group)
     expect(attr(group, 'orientation', app)).toBe('"horizontal"')
+    // It stands where a `min-w-0 flex-1` div stood: the library writes width 100 % on it
+    // inline, so these are what let it share the row with the tool strip.
+    expect(attr(group, 'className', app)).toMatch(/\bmin-w-0\b/)
+    expect(attr(group, 'className', app)).toMatch(/\bflex-1\b/)
     expect(kids(group).map((k) => tag(k, app))).toEqual(['Panel', 'FoldoutDivider', 'Panel'])
     expect(kids(group)[0]).toBe(foldPanel)
     expect(kids(group)[2]).toBe(picturePanel)
@@ -156,6 +160,17 @@ describe('the fold-out panel in the window', () => {
     const separators = mounts(app, 'Separator').filter((s) => enclosing(s, 'Separator', app) === null && fn.getStart(app) <= s.getStart(app) && s.end <= fn.end)
     expect(separators).toHaveLength(1)
     expect(attr(separators[0], 'disabled', app)).toBe('{!open}')
-    expect(attr(separators[0], 'className', app)).toMatch(/^\{open \? '[^']*\bw-px\b[^']*' : 'w-0'\}$/)
+    // Open, the house Divider's own class (one constant, shared with Divider); shut, no width.
+    expect(attr(separators[0], 'className', app)).toBe("{open ? DIVIDER_ACROSS : 'w-0'}")
+    const across = [...text.matchAll(/^const DIVIDER_ACROSS = '([^']*)'$/gm)]
+    expect(across).toHaveLength(1)
+    expect(across[0][1]).toMatch(/\bw-px\b/)
+    const divider = app.statements.find(
+      (s): s is ts.FunctionDeclaration => ts.isFunctionDeclaration(s) && s.name?.text === 'Divider'
+    )!
+    expect(divider.getText(app)).toContain(': DIVIDER_ACROSS')
+    // No double-click: the panel's default size is shut, so "back to the default"
+    // would close it under the pointer.
+    expect(attr(separators[0], 'disableDoubleClick', app)).toBe('true')
   })
 })

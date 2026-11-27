@@ -99,9 +99,33 @@ describe('FoldDown', () => {
   it('a choice calls back with its value and folds the list', () => {
     const { props, said } = made(true)
     const [, , , three] = buttons(FoldDown(props))
-    ;(three.props.onClick as () => void)()
+    ;(three.props.onClick as (e: unknown) => void)({ currentTarget: null })
     expect(said.chose).toEqual([180_000])
     expect(said.open).toEqual([false])
+  })
+
+  it('a choice or Escape puts the keyboard back on its button; Escape while folded leaves focus alone', () => {
+    // The list unmounts under the focused choice; without this, focus falls to the
+    // page and the next Tab starts again at the top of the window.
+    const at = (): { event: { key: string; currentTarget: unknown; stopPropagation: () => void }; focused: string[] } => {
+      const focused: string[] = []
+      const head = { focus: () => focused.push('head') }
+      const root = {
+        querySelector: (sel: string) => (sel === ':scope > button[aria-expanded]' ? head : null)
+      }
+      const currentTarget = { closest: (sel: string) => (sel === '[data-fold-down]' ? root : null) }
+      return { event: { key: 'Escape', currentTarget, stopPropagation: () => undefined }, focused }
+    }
+    const chose = at()
+    const { props } = made(true)
+    ;(buttons(FoldDown(props))[2].props.onClick as (e: unknown) => void)(chose.event)
+    expect(chose.focused).toEqual(['head'])
+    const escaped = at()
+    ;(FoldDown(made(true).props) as ReactElement<{ onKeyDown: (e: unknown) => void }>).props.onKeyDown(escaped.event)
+    expect(escaped.focused).toEqual(['head'])
+    const folded = at()
+    ;(FoldDown(made(false).props) as ReactElement<{ onKeyDown: (e: unknown) => void }>).props.onKeyDown(folded.event)
+    expect(folded.focused).toEqual([])
   })
 
   it('its button pressed again folds it', () => {

@@ -1385,7 +1385,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 592,
+    "line": 591,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1396,7 +1396,7 @@
     "home": "header",
     "needs": "fullscreen",
     "file": "src/renderer/src/App.tsx",
-    "line": 614,
+    "line": 613,
     "newHome": "unchanged (app shell)"
   },
   {
@@ -1405,7 +1405,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 566,
+    "line": 565,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1416,7 +1416,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 586,
+    "line": 585,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1427,7 +1427,7 @@
     "home": "header",
     "needs": "none",
     "file": "src/renderer/src/App.tsx",
-    "line": 139,
+    "line": 138,
     "newHome": "unchanged (header gear, §3.1)",
     "note": "Step 6: the gear that replaced the \"AI\" status dot; it carries the AI helper's dot and opens the settings panel."
   },
@@ -1459,7 +1459,7 @@
     "home": "header",
     "needs": "none",
     "file": "src/renderer/src/App.tsx",
-    "line": 120,
+    "line": 119,
     "newHome": "unchanged",
     "note": "A new project's name, which the header shows; the path and the unsaved dot have no text of their own."
   },
@@ -1481,7 +1481,7 @@
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/App.tsx",
-    "line": 126,
+    "line": 125,
     "newHome": "unchanged (header)"
   },
   {

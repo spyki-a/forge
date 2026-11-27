@@ -117,6 +117,11 @@ describe('the fold-out panel, open', () => {
     expect(page).toContain(`title="${FOLDOUT_CLOSE_TITLE}"`)
     expect(page).toContain('data-foldout-close')
     expect(page).toContain(escapeHtml(FOLDOUT_CLIPS_EMPTY))
+    // The tabs and the panel name each other, and only the open tab points at a panel in the page.
+    expect(page).toMatch(/data-foldout-tab="clips" id="foldout-tab-clips"/)
+    expect(page).toMatch(/data-foldout-tab="transcript" id="foldout-tab-transcript"/)
+    expect([...page.matchAll(/aria-controls="([^"]*)"/g)].map((m) => m[1])).toEqual(['foldout-clips'])
+    expect(page).toContain('id="foldout-clips" role="tabpanel" aria-labelledby="foldout-tab-clips"')
     // Its body scrolls inside the panel, and nothing in it runs out sideways.
     expect(page).toMatch(/data-foldout-body="clips" class="[^"]*\boverflow-y-auto\b[^"]*\boverflow-x-hidden\b/)
   })
@@ -187,6 +192,9 @@ describe('the fold-out panel, open', () => {
       visit((node.props as { children?: unknown }).children)
     }
     visit(Foldout())
+    // The tab already open, pressed, keeps the panel open on it: a tab is not a toggle.
+    buttons.find((b) => b.props['data-foldout-tab'] === 'clips')!.props.onClick!()
+    expect(useEditor.getState().foldout).toMatchObject({ open: true, tab: 'clips' })
     buttons.find((b) => b.props['data-foldout-tab'] === 'transcript')!.props.onClick!()
     expect(useEditor.getState().foldout).toMatchObject({ open: true, tab: 'transcript' })
     buttons.find((b) => b.props['data-foldout-close'])!.props.onClick!()
