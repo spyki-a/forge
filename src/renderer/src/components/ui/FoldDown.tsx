@@ -81,7 +81,8 @@ export function FoldDown<T extends string | number>({
       <button
         type="button"
         aria-expanded={open}
-        aria-controls={list}
+        // Only while the list is in the page: folded, its id names nothing (as the fold-out's tabs do).
+        aria-controls={open ? list : undefined}
         title={title}
         disabled={disabled}
         onClick={() => onOpenChange(!open)}

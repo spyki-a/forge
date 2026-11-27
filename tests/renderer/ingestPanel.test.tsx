@@ -775,7 +775,8 @@ describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27
       'data-best-pointer',
       'Just a part of it',
       'data-url-toggles',
-      'data-best-clips',
+      // With its `=`: bare, it also matched the Clips tab's `data-best-clips-tab`, and found the tab by coincidence.
+      'data-best-clips="',
       'data-best-vertical'
     ]
     const at = marks.map((m) => {
@@ -807,7 +808,11 @@ describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27
     expect(chipText('video')).toBe('Video·1080p')
     expect(chip('video').props['aria-pressed']).toBe(true)
     expect(chip('video').props['aria-expanded']).toBe(false)
+    // Folded, its list is not in the page: the chip names no list until it unfolds.
+    expect(chip('video').props['aria-controls']).toBeUndefined()
+    state().setFoldDownOpen(QUALITY_LIST)
     expect(chip('video').props['aria-controls']).toBe(`fold-down-${QUALITY_LIST}`)
+    state().setFoldDownOpen(null)
     for (const id of ['audio', 'instrumental', 'vocal']) {
       expect(chipText(id)).toBe({ audio: 'Audio', instrumental: 'Instrumental', vocal: 'Vocal' }[id])
       expect(chip(id).props['aria-pressed']).toBe(false)
@@ -817,7 +822,10 @@ describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27
     expect(chipText('video')).toBe('Video·4K')
     state().setIngest({ kind: 'vocal', audioFormat: 'mp3' })
     expect(chipText('vocal')).toBe('Vocal·mp3')
+    expect(chip('vocal').props['aria-controls']).toBeUndefined()
+    state().setFoldDownOpen(FORMAT_LIST)
     expect(chip('vocal').props['aria-controls']).toBe(`fold-down-${FORMAT_LIST}`)
+    state().setFoldDownOpen(null)
     expect(renderToStaticMarkup(createElement(KindsRow))).toMatch(/<span class="uppercase">mp3<\/span>/)
   })
 

@@ -1385,7 +1385,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 591,
+    "line": 592,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1396,7 +1396,7 @@
     "home": "header",
     "needs": "fullscreen",
     "file": "src/renderer/src/App.tsx",
-    "line": 613,
+    "line": 614,
     "newHome": "unchanged (app shell)"
   },
   {
@@ -1405,7 +1405,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 565,
+    "line": 566,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1416,7 +1416,7 @@
     "home": "header",
     "needs": "recovery-offered",
     "file": "src/renderer/src/App.tsx",
-    "line": 585,
+    "line": 586,
     "newHome": "unchanged (app shell)",
     "harnessOnly": false,
     "note": "App keeps the banner in its own state, filled once at mount from window.forge.recoveries(), and the harness bridge answers [] — there is no autosave on a disk here. The membership test still covers the words."
@@ -1427,7 +1427,7 @@
     "home": "header",
     "needs": "none",
     "file": "src/renderer/src/App.tsx",
-    "line": 138,
+    "line": 139,
     "newHome": "unchanged (header gear, §3.1)",
     "note": "Step 6: the gear that replaced the \"AI\" status dot; it carries the AI helper's dot and opens the settings panel."
   },
@@ -1459,7 +1459,7 @@
     "home": "header",
     "needs": "none",
     "file": "src/renderer/src/App.tsx",
-    "line": 119,
+    "line": 120,
     "newHome": "unchanged",
     "note": "A new project's name, which the header shows; the path and the unsaved dot have no text of their own."
   },
@@ -1481,7 +1481,7 @@
     "needs": "none",
     "part": true,
     "file": "src/renderer/src/App.tsx",
-    "line": 125,
+    "line": 126,
     "newHome": "unchanged (header)"
   },
   {
@@ -5655,6 +5655,16 @@
     "newHome": "Shelf tile URL"
   },
   {
+    "label": "Download and put it on the timeline",
+    "match": "title",
+    "home": "url",
+    "needs": "link-no-captions",
+    "file": "src/renderer/src/components/IngestPanel.tsx",
+    "line": 57,
+    "newHome": "Shelf tile URL",
+    "note": "The link button's title while the box holds a link and no words are shown (the button reads Download). It had no row before the clip maker's layout either; the whole-lane review, 2026-11-27, found it on the line that lane renamed from Get. A link whose video has no captions is such a state."
+  },
+  {
     "label": "Reading the link…",
     "match": "text",
     "home": "url",
@@ -6949,7 +6959,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 54,
+    "line": 62,
     "newHome": "unchanged"
   },
   {
@@ -6958,7 +6968,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 48,
+    "line": 56,
     "newHome": "unchanged"
   },
   {
@@ -6967,7 +6977,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 78,
+    "line": 86,
     "newHome": "unchanged"
   },
   {
@@ -6976,7 +6986,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 126,
+    "line": 134,
     "newHome": "unchanged"
   },
   {
@@ -6985,7 +6995,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 51,
+    "line": 59,
     "newHome": "unchanged"
   },
   {
@@ -6994,7 +7004,7 @@
     "home": "transport",
     "needs": "photo-clip",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 119,
+    "line": 127,
     "newHome": "unchanged"
   },
   {
@@ -7003,7 +7013,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 106,
+    "line": 114,
     "newHome": "unchanged"
   },
   {
@@ -7012,7 +7022,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 112,
+    "line": 120,
     "newHome": "unchanged"
   },
   {
@@ -7021,7 +7031,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 137,
+    "line": 145,
     "newHome": "unchanged"
   },
   {
@@ -7030,7 +7040,7 @@
     "home": "transport",
     "needs": "none",
     "file": "src/renderer/src/components/Transport.tsx",
-    "line": 134,
+    "line": 142,
     "newHome": "unchanged"
   },
   {
@@ -10381,7 +10391,7 @@
     "home": "poolmenu",
     "needs": "poolmenu-busy",
     "file": "src/renderer/src/store.ts",
-    "line": 647,
+    "line": 758,
     "newHome": "Shelf tile Upload, the right-click menu on a tile",
     "note": "REMOVE_WAITS: Remove from project greyed while a reel, the grid or the Director is being built (removeWaits), since that build places clips of the files it read. The recipe sets the store's reelBuilding flag; no build runs. Count 1: the title is on the one Remove item (the question is not open)."
   },

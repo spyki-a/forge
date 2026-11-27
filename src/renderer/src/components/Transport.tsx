@@ -43,8 +43,16 @@ export function Transport(): ReactNode {
   const fps = project.settings.fps
   const total = projectDuration(project)
 
+  /*
+   * The row wraps rather than run past its Panel, which hides overflow: with
+   * the left column at its 45 % limit (the clip maker's layout, 2026-11-27)
+   * the timeline at the app's least window, 1100 px, is about 575 px wide, and
+   * this row's fixed content is about 710 px by its classes — the timecode and
+   * the zoom pair would be cut off and could not be pressed. Wide, it is one
+   * line as before; wrapping only ever adds a line.
+   */
   return (
-    <div className="flex items-center gap-1 border-t border-ink-800 bg-ink-900 px-3 py-1.5">
+    <div className="flex min-w-0 flex-wrap items-center gap-1 border-t border-ink-800 bg-ink-900 px-3 py-1.5">
       <Button onClick={() => setPlayhead(0)} title="Go to start (Home)">
         <SkipBack size={14} />
       </Button>

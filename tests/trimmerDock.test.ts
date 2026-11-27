@@ -3,6 +3,12 @@ import { resolve } from 'node:path'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { DOCK_FLOOR, SHELF_FLOOR } from '../src/renderer/src/dock'
+// leftColumn.ts is a renderer file, outside this (node) project: its limit is read from its text.
+const LEFT_MAX = (() => {
+  const found = [...readFileSync(resolve(__dirname, '../src/renderer/src/leftColumn.ts'), 'utf8').matchAll(/export const LEFT_MAX = '([^']+)'/g)]
+  if (found.length !== 1) throw new Error(`leftColumn.ts: ${found.length} LEFT_MAX declarations`)
+  return found[0][1]
+})()
 
 /**
  * The Trimmer dock, and the right column it replaces (docs/WINDOW.md §3.18,
@@ -142,6 +148,9 @@ describe('the right column is gone; its editor is in the dock', () => {
     // At most 45 %: 30 % until the clip maker's layout (the user, 2026-11-27:
     // "now there is a boundry just extend it a little bit").
     expect(attr(left, 'maxSize', app)).toBe('"45%"')
+    // The harness widens the column to that same limit (the overlap check's wide states): one value, two places.
+    expect(attr(left, 'maxSize', app)).toBe(JSON.stringify(LEFT_MAX))
+    expect(attr(left, 'panelRef', app)).toBe('{leftColumn}')
     for (const name of ['LeftSplit', 'OutputStrip', 'ExportStrip']) expect(holds(left, name), name).toBe(true)
     expect(written(text, 'SourceBar'), 'the source row').toBe(0)
     const [output] = mounts(app, 'OutputStrip')

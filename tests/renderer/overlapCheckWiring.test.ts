@@ -61,12 +61,30 @@ describe('what it stands up', () => {
     expect(has('link-best-clips', ['foldclips'])).toBe(true)
     expect(OVERLAP_STATES.some((s) => s.needs.startsWith('link-') && s.homes.includes('foldtranscript'))).toBe(true)
     expect(has('transcript-graphics-asr', ['transcript', 'foldtranscript'])).toBe(true)
+    // The whole-lane review's journeys: a card's question and steps, the link's words after Clip download, the
+    // short blocks the URL tile keeps, Edit's words and Find's drops, a graphic selected with its words open.
+    for (const [needs, homes] of [
+      ['link-best-clips-question', ['foldclips']],
+      ['link-best-clips-clipped', ['foldclips']],
+      ['link-clipped', ['foldtranscript']],
+      ['link-no-captions', ['url']],
+      ['link-no-language', ['url']],
+      ['transcript-editing', ['foldtranscript']],
+      ['transcript-graphics-drops', ['foldtranscript']],
+      ['graphic-lower-third', ['transcript', 'foldtranscript']]
+    ] as const) expect(has(needs, [...homes]), needs).toBe(true)
+    // The left column at its limit, with the URL tile and with the dock: only window size was varied before.
+    const wide = OVERLAP_STATES.filter((s) => s.left === 'widest')
+    expect(wide.some((s) => s.homes.includes('url')), 'wide with the URL tile').toBe(true)
+    expect(wide.some((s) => s.dock === true), 'wide with the dock').toBe(true)
     expect(has('none', ['output'])).toBe(true)
     expect(has('none', ['export'])).toBe(true)
   })
 
   it('reads a dock state only with the dock on screen, and a panel state only on its face', () => {
-    for (const name of ['dock', 'dock-url', 'dock-transcript', 'dock-library', 'dock-director']) {
+    // A selected clip puts the dock on screen, so a state whose recipe selects one says so (and is skipped, not
+    // counted clean, if the dock fails to appear). The panel's clip states and the graphic's are among them.
+    for (const name of ['dock', 'dock-url', 'dock-transcript', 'dock-library', 'dock-director', 'panel-clip-words', 'panel-both-words', 'panel-clip-editing', 'panel-clip-drops', 'dock-graphic', 'wide-left-dock']) {
       expect(OVERLAP_STATES.find((s) => s.state === name)?.dock, name).toBe(true)
     }
     for (const s of OVERLAP_STATES.filter((s) => s.homes.includes('foldclips'))) expect(s.foldout, s.state).toBe('clips')

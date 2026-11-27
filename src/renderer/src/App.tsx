@@ -12,6 +12,7 @@ import { useCatalog } from './catalog'
 import { activeCaptionStyle } from './captionPreview'
 import { stopVoiceOver } from './recorder'
 import { DOCK_FLOOR, SHELF_FLOOR, dockSubject, holderFloor } from './dock'
+import { leftColumn } from './leftColumn'
 import { Shelf } from './components/shelf/Shelf'
 import { Preview } from './components/Preview'
 import { Timeline } from './components/Timeline'
@@ -650,7 +651,7 @@ export default function App(): ReactNode {
           (the user, 2026-11-27: "now there is a boundry just extend it a
           little bit").
         */}
-        <Panel defaultSize="17%" minSize={240} maxSize="45%">
+        <Panel id="left" defaultSize="17%" minSize={240} maxSize="45%" panelRef={leftColumn}>
           {/*
             The Shelf with the Trimmer dock under it (LeftSplit), then the
             OUTPUT and EXPORT strips (WINDOW.md §3.16-3.17), at the foot of

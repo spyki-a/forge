@@ -57,6 +57,7 @@ function elements(node: ReactNode): ReactElement<Record<string, unknown>>[] {
 }
 
 const buttons = (node: ReactNode): ReactElement<Record<string, unknown>>[] => elements(node).filter((el) => el.type === 'button')
+const html0 = (tree: unknown): string => renderToStaticMarkup(tree as ReactElement)
 const textOf = (el: ReactElement<Record<string, unknown>>): string => renderToStaticMarkup(el).replace(/<[^>]+>/g, '')
 
 describe('FoldDown', () => {
@@ -66,7 +67,9 @@ describe('FoldDown', () => {
     const all = buttons(tree)
     expect(all).toHaveLength(1)
     expect(all[0].props['aria-expanded']).toBe(false)
-    expect(all[0].props['aria-controls']).toBe('fold-down-length')
+    // Folded, the list is not in the page, so the button names no list.
+    expect(all[0].props['aria-controls']).toBeUndefined()
+    expect(html0(tree)).not.toContain('aria-controls')
     expect(textOf(all[0])).toBe('Duration2 min')
     const html = renderToStaticMarkup(tree as ReactElement)
     expect(html).toContain('aria-expanded="false"')
@@ -86,6 +89,7 @@ describe('FoldDown', () => {
     const tree = FoldDown(props)
     const [head, ...choices] = buttons(tree)
     expect(head.props['aria-expanded']).toBe(true)
+    expect(head.props['aria-controls']).toBe('fold-down-length')
     expect(choices.map(textOf)).toEqual(['1 min', '2 min', '3 min', '4 min'])
     expect(choices.map((c) => c.props['aria-pressed'])).toEqual([false, true, false, false])
     expect(choices[2].props.title).toBe('About three minutes')

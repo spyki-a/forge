@@ -119,7 +119,7 @@ export function KindsRow(): ReactNode {
             type="button"
             data-want={want.id}
             aria-pressed={on}
-            {...(on ? { 'aria-expanded': open, 'aria-controls': `fold-down-${list}` } : {})}
+            {...(on ? { 'aria-expanded': open, ...(open ? { 'aria-controls': `fold-down-${list}` } : {}) } : {})}
             onClick={() => {
               if (on) return fold(!open)
               if (foldDownOpen === QUALITY_LIST || foldDownOpen === FORMAT_LIST) setFoldDownOpen(null)

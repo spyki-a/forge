@@ -330,7 +330,7 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  * A background tab never runs them, and a census that waited on one forever
  * would look exactly like a hang in the app. So it gives up, and says why.
  */
-async function frames(): Promise<void> {
+export async function frames(): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     await new Promise<void>((resolve, reject) => {

@@ -75,6 +75,7 @@ const {
   BestClipsPointer,
   ClipsToggle,
   BEST_CLIPS_DURATION,
+  BEST_CLIPS_DURATION_TITLE,
   CLIPS_TOGGLE,
   FOLDOUT_CLIPS_EMPTY,
   FOLDOUT_CLIPS_NO_LINK,
@@ -200,7 +201,7 @@ const inTab = (name: string): Host[] => tab().filter((h) => h.props[name] !== un
 const NO_EVENT = { currentTarget: null }
 /** The length list's own button, and its choices once open. */
 const lengthButton = (): Host => {
-  const found = shown().filter((h) => h.type === 'button' && h.props['aria-expanded'] !== undefined && h.props['aria-controls'] === 'fold-down-best-length')
+  const found = shown().filter((h) => h.type === 'button' && h.props['aria-expanded'] !== undefined && h.props.title === BEST_CLIPS_DURATION_TITLE)
   expect(found).toHaveLength(1)
   return found[0]
 }
@@ -378,6 +379,16 @@ describe('the Best clips section', () => {
         expect(html, `${name}: ${words}`).not.toContain(words)
       }
       if (elsewhere) expect([...html.matchAll(new RegExp(BEST_CLIPS_RUNNING_ELSEWHERE.replace('.', '\\.'), 'g'))], name).toHaveLength(1)
+      // The whole URL tile too, not only its four Best clips parts: the tile is what places them, so a
+      // tab put back into it (the cards beside the options) is caught here. Each attribute is matched with
+      // its `=` so `data-best-clips-tab` is not taken for `data-best-clips`, nor `data-best-card` for `data-best-cards`.
+      const tile = renderToStaticMarkup(createElement(IngestPanel))
+      for (const attr of [...LONG_THINGS, 'data-best-clips-tab', 'data-best-empty']) {
+        expect(tile.includes(`${attr}=`), `${name}: the URL tile draws ${attr}`).toBe(false)
+      }
+      for (const words of [BEST_CLIPS_RUNNING, NO_MODEL_NOTE, 'A plain made-up shortfall.', ...result.cards.map((c) => c.why)]) {
+        expect(tile, `${name}: the URL tile says ${words}`).not.toContain(words)
+      }
     }
     // The last state is not vacuous: the tab draws them (Make it vertical's tooltip says "Clip it" too, so the button's own text is looked for).
     expect(inTab('data-best-card')).toHaveLength(result.cards.length)

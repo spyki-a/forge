@@ -50,12 +50,18 @@
  * three clean), reads the page once, takes them out, and says whether each
  * fault was found and nothing clean was (`judgePlant`).
  *
+ * Two states (`left: 'widest'`) drag the left column to its 45 % limit
+ * through the Panel's handle (leftColumn.ts) before reading and put it back
+ * after: the right column at its narrowest, where the transport row and the
+ * canvas bar have the least room. Otherwise only the window's size varies.
+ *
  * It puts the page back as it was when done (the census's `restore`), unless
  * `keep` is passed, which leaves the last state on screen to look at.
  */
 
-import { HOMES, censusPage, standCensusState, toolHomeOf, windowRegions } from './census'
+import { HOMES, censusPage, frames, standCensusState, toolHomeOf, windowRegions } from './census'
 import { SHELF_TOOLS } from '../components/shelf/tools'
+import { LEFT_MAX, leftColumn } from '../leftColumn'
 import { boxFrom, collisions, measurable, intersect, pastEdges, sideways, type Box } from './overlapGeometry'
 
 /** One state: a census recipe, then the homes opened in turn, then what must be on screen before it is read. */
@@ -67,6 +73,12 @@ export interface OverlapState {
   dock?: boolean
   /** The fold-out panel must show this face. */
   foldout?: 'clips' | 'transcript'
+  /**
+   * Read with the left column dragged to its limit (LEFT_MAX), put back after:
+   * the right column at its narrowest, where the transport row and the canvas
+   * bar have the least room. Only window SIZE varied otherwise.
+   */
+  left?: 'widest'
 }
 
 /** The Shelf tools' homes, as the census names them. */
@@ -94,8 +106,25 @@ export const OVERLAP_STATES: readonly OverlapState[] = [
   // The panel beside the picture: the cards, the link's words, the selected clip's words with Find graphics' results.
   { state: 'panel-clips', needs: 'link-best-clips', foldout: 'clips', homes: ['url', 'foldclips'] },
   { state: 'panel-link-words', needs: 'link-run', foldout: 'transcript', homes: ['url', 'foldtranscript'] },
-  { state: 'panel-clip-words', needs: 'transcript-graphics-asr', foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
-  { state: 'panel-both-words', needs: 'foldout-both-words', foldout: 'transcript', homes: ['url', 'foldtranscript'] },
+  // A clip is selected in these two, so the Trimmer dock is on screen too: panel-both-words is the full URL tile beside the dock.
+  { state: 'panel-clip-words', needs: 'transcript-graphics-asr', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
+  { state: 'panel-both-words', needs: 'foldout-both-words', dock: true, foldout: 'transcript', homes: ['url', 'foldtranscript'] },
+  // The long things of each journey (the whole-lane review, 2026-11-27): a card's question and its steps, the
+  // link's words after Clip download, the short blocks the URL tile keeps (no captions, the language choice),
+  // Edit's words and Find graphics' dropped list in the clip's transcript.
+  { state: 'panel-card-question', needs: 'link-best-clips-question', foldout: 'clips', homes: ['url', 'foldclips'] },
+  { state: 'panel-card-steps', needs: 'link-best-clips-clipped', foldout: 'clips', homes: ['url', 'foldclips'] },
+  { state: 'panel-link-clipped', needs: 'link-clipped', foldout: 'transcript', homes: ['url', 'foldtranscript'] },
+  { state: 'url-no-captions', needs: 'link-no-captions', homes: ['url'] },
+  { state: 'url-no-language', needs: 'link-no-language', homes: ['url'] },
+  { state: 'panel-clip-editing', needs: 'transcript-editing', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
+  { state: 'panel-clip-drops', needs: 'transcript-graphics-drops', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
+  // The user's own complaint ("when i click on the current clip … its own custom setting is overlapping … find
+  // graphics"): a graphic selected, its settings in the dock, the Transcript tile open and the panel on its words.
+  { state: 'dock-graphic', needs: 'graphic-lower-third', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
+  // The left column dragged to its 45 % limit: the right column at its narrowest (the transport row, the canvas bar).
+  { state: 'wide-left-url', needs: 'link-transcript', left: 'widest', homes: ['url'] },
+  { state: 'wide-left-dock', needs: 'video-clip', dock: true, left: 'widest', homes: ['transcript'] },
   // The strips at the foot of the left column.
   { state: 'output-open', needs: 'none', homes: ['output'] },
   { state: 'export-open', needs: 'none', homes: ['export'] }
@@ -436,7 +465,21 @@ export async function runOverlapCheck(options: OverlapOptions = {}): Promise<Ove
         close = (await standCensusState(page.env, s.needs, s.homes)).close
         const missed = unmet(s)
         if (missed) throw new Error(missed)
-        states.push(readPage(s.state))
+        if (s.left) {
+          const column = leftColumn.current
+          if (!column) throw new Error(`${s.state}: the left column's Panel has no handle (App.tsx panelRef)`)
+          const was = column.getSize().asPercentage
+          column.resize(LEFT_MAX)
+          try {
+            await frames()
+            const at = column.getSize().asPercentage
+            if (Math.abs(at - parseFloat(LEFT_MAX)) > 0.5) throw new Error(`${s.state}: the left column went to ${at.toFixed(1)} %, not ${LEFT_MAX}`)
+            states.push(readPage(s.state))
+          } finally {
+            column.resize(`${was}%`)
+            await frames()
+          }
+        } else states.push(readPage(s.state))
       } catch (err) {
         skipped.push({ state: s.state, why: err instanceof Error ? err.message : String(err) })
       }
