@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement, Fragment, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
@@ -928,5 +930,48 @@ describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27
     const box = linkBox().find((h) => h.type === 'input')!
     expect(String(box.props.className).split(/\s+/)).toEqual(expect.arrayContaining(['min-w-[5.5rem]', 'basis-[5.5rem]', 'flex-1']))
     expect(String(getButton().props.className).split(/\s+/)).toContain('shrink-0')
+  })
+})
+
+describe('what the census counts in the empty project is what a fresh tile draws', () => {
+  /*
+   * The census counts a url row whose state is "none" against a base of
+   * nothing: it must be on screen the moment the URL tile opens, as a whole
+   * text node, a title or a placeholder. A control folded away by default (the
+   * quality list, since piece 4) belongs to the recipe that unfolds it — and
+   * no other test sees a row left behind, because only the page counts.
+   */
+  const census = JSON.parse(readFileSync(resolve(__dirname, '../fixtures/ui-census.json'), 'utf8')) as {
+    label: string
+    match: string
+    home: string
+    needs: string
+    file: string
+  }[]
+  /** The tile's own files; a row from elsewhere in the url home is not drawn by IngestPanel. */
+  const TILE = ['src/renderer/src/components/IngestPanel.tsx', 'src/shared/ingest/format.ts', 'src/renderer/src/components/tools/LinkTranscript.tsx']
+  /** Shown only once the tool check answers (an effect, which static markup never runs): the harness bridge answers it on the page. */
+  const AFTER_EFFECT = ['The first download fetches yt-dlp (about 30MB). After that it is instant.']
+  const escaped = (text: string): string => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+  const quoted = (text: string): string => escaped(text).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+  it('every url row with state "none" from the tile’s files is drawn by a fresh tile', () => {
+    const rows = census.filter((r) => r.home === 'url' && r.needs === 'none' && TILE.includes(r.file) && !AFTER_EFFECT.includes(r.label))
+    expect(rows.map((r) => r.label)).toEqual(expect.arrayContaining(['Download', 'Video', '1080p', 'Get transcript']))
+    const html = panel()
+    for (const row of rows) {
+      const where =
+        row.match === 'text'
+          ? new RegExp(`(?:>|-->)\\s*${quoted(row.label)}\\s*(?:<)`)
+          : new RegExp(`${row.match}="${quoted(row.label)}"`)
+      expect(html, `${row.match} ${row.label}`).toMatch(where)
+    }
+  })
+
+  it('the qualities folded away are counted where they unfold', () => {
+    for (const label of ['4K', '720p', '480p']) {
+      const row = census.find((r) => r.home === 'url' && r.label === label)
+      expect(row?.needs, label).toBe('link-qualities')
+    }
   })
 })

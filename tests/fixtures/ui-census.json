@@ -5224,11 +5224,11 @@
     "label": "480p",
     "match": "text",
     "home": "url",
-    "needs": "none",
+    "needs": "link-qualities",
     "file": "src/shared/ingest/format.ts",
     "line": 31,
     "newHome": "Shelf tile URL",
-    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
+    "note": "Video's quality is a fold-down list under the kinds since piece 4 (the sketch's \"collapsable\"); folded, the chip says the chosen one (1080p by default), so 720p and 480p are counted unfolded, as 4K is."
   },
   {
     "label": "4K",
@@ -5244,11 +5244,11 @@
     "label": "720p",
     "match": "text",
     "home": "url",
-    "needs": "none",
+    "needs": "link-qualities",
     "file": "src/shared/ingest/format.ts",
     "line": 31,
     "newHome": "Shelf tile URL",
-    "note": "Step 9: shown as soon as the URL tile opens, so its state is \"none\" — `ingest-range` only opened the YouTube form, which opening the url home now does, and with the form in the empty project’s count too a row that kept it would never add one."
+    "note": "Video's quality is a fold-down list under the kinds since piece 4 (the sketch's \"collapsable\"); folded, the chip says the chosen one (1080p by default), so 720p and 480p are counted unfolded, as 4K is."
   },
   {
     "label": "Audio",

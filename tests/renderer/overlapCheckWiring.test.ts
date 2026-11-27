@@ -1,9 +1,9 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SHELF_TOOLS } from '../../src/renderer/src/components/shelf/tools'
 import { CENSUS_STATES, HOMES, toolHomeOf } from '../../src/renderer/src/harness/census'
-import { BY_DESIGN, CONTROL, OVERLAP_STATES } from '../../src/renderer/src/harness/overlapCheck'
+import { BY_DESIGN, CONTROL, OVERLAP_STATES, installOverlapCheck } from '../../src/renderer/src/harness/overlapCheck'
 
 /*
  * The overlap check (harness/overlapCheck.ts, the clip maker's layout, piece
@@ -65,10 +65,45 @@ describe('what it stands up', () => {
     expect(has('none', ['export'])).toBe(true)
   })
 
+  it('reads a dock state only with the dock on screen, and a panel state only on its face', () => {
+    for (const name of ['dock', 'dock-url', 'dock-transcript', 'dock-library', 'dock-director']) {
+      expect(OVERLAP_STATES.find((s) => s.state === name)?.dock, name).toBe(true)
+    }
+    for (const s of OVERLAP_STATES.filter((s) => s.homes.includes('foldclips'))) expect(s.foldout, s.state).toBe('clips')
+    for (const s of OVERLAP_STATES.filter((s) => s.homes.includes('foldtranscript'))) expect(s.foldout, s.state).toBe('transcript')
+  })
+
   it('leaves out only what it names, each with its reason, and counts the controls the design lists', () => {
-    for (const entry of BY_DESIGN) expect(entry.why.length, entry.selector).toBeGreaterThan(20)
+    // Every entry names something a component still draws: a selector for a thing gone excuses nothing, silently.
+    const components = join(root, 'src', 'renderer', 'src', 'components')
+    const sources = (readdirSync(components, { recursive: true }) as string[])
+      .filter((f) => f.endsWith('.tsx'))
+      .map((f) => readFileSync(join(components, f), 'utf8'))
+      .join('\n')
+    for (const entry of BY_DESIGN) {
+      expect(entry.why.length, entry.selector).toBeGreaterThan(20)
+      for (const [, attr] of entry.selector.matchAll(/\[(data-[a-z-]+)/g)) expect(sources, `${entry.selector}: ${attr}`).toContain(attr)
+    }
     for (const part of ['button', 'input', 'select', 'textarea', 'summary', '[role="tab"]', '[role="switch"]', '[role="slider"]', '[role="button"]']) {
       expect(CONTROL.split(', '), part).toContain(part)
     }
+  })
+})
+
+describe('one run at a time', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('refuses a second call while a run is going, and leaves that run’s progress alone', async () => {
+    const running = { running: true, done: 3, of: 36, state: 'dock-url' }
+    const page: Record<string, unknown> = { __forgeOverlapLast: running }
+    vi.stubGlobal('window', page)
+    installOverlapCheck()
+    const call = page.__forgeOverlapCheck as (o?: unknown) => Promise<unknown>
+    await expect(call()).rejects.toThrow(/already running \(state 4 of 36, dock-url\)/)
+    await expect(call({ plant: true })).rejects.toThrow(/already running/)
+    expect(page.__forgeOverlapLast).toBe(running)
+    expect(running).toEqual({ running: true, done: 3, of: 36, state: 'dock-url' })
   })
 })

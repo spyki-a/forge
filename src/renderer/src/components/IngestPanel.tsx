@@ -17,7 +17,7 @@ import { foldDownChoices, foldDownKeyDown, type FoldDownChoice } from './ui/Fold
  * afterwards, so they live here as one row, inside the Shelf's URL tile.
  *
  * The count that matters is clicks from paste to clip. With the defaults it is
- * two: paste, Get. Everything else on this panel is optional and stays out of
+ * two: paste, Download. Everything else on this panel is optional and stays out of
  * the way until it is wanted.
  *
  * The rows, in the order of the user's sketch of 2026-11-27 (the clip
@@ -28,11 +28,11 @@ import { foldDownChoices, foldDownKeyDown, type FoldDownChoice } from './ui/Fold
  * Clips toggles; Best clips' options; the download lines. Nothing in it
  * floats: a floating menu is one more thing that can cover another.
  *
- * Get transcript (sheets 25–26, docs/CLIPS.md §3b) is `LinkTranscript`'s: rows
+ * Get transcript (sheets 25–26, docs/CLIPS.md §3b) was `LinkTranscript`'s: rows
  * of the link's words, a run picked from them, and Clip it — its button
  * **Clip download**. Since the clip maker's layout (2026-11-27) those rows are
  * the fold-out panel's Transcript tab beside the picture (`LinkWords`), and
- * this tile keeps Get transcript, its status lines and a Transcript toggle.
+ * this tile keeps Get transcript, its status lines and a Transcript toggle (`GetTranscriptButton`, `LinkTranscriptStatus`, `LinkTranscriptToggle`).
  * While the link has those words (store `wordsShown`, wherever they are
  * drawn) the From and To fields below give way to the run's own, read-only,
  * beside the rows (§3b.5); with no captions, or none fetched, they are typed
@@ -238,14 +238,14 @@ function MarkField({
 }
 
 /**
- * The link box and Get. No hook but the store's, so a test can call it as a
+ * The link box and Download. No hook but the store's, so a test can call it as a
  * function and press what it returns (tests/renderer/ingestPanel.test.tsx).
  */
 export function LinkBox(): ReactNode {
   const ingest = useEditor((s) => s.ingest)
   const setIngest = useEditor((s) => s.setIngest)
   const startIngest = useEditor((s) => s.startIngest)
-  // The link's words are on screen: Get takes the whole video, and says so — "Full download".
+  // The link's words are on screen: the button takes the whole video, and says so — "Full download".
   const words = useEditor((s) => wordsShown(s))
   const link = parseLink(ingest.url)
   const problem = linkProblem(ingest.url)
