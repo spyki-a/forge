@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { SHELF_TOOLS } from '../../src/renderer/src/components/shelf/tools'
-import { HOMES, TOOL_HOMES, toolHomeOf } from '../../src/renderer/src/harness/census'
+import { FOLDOUT_NOTHING_YET, HOMES, TOOL_HOMES, toolHomeOf } from '../../src/renderer/src/harness/census'
 
 /**
  * The UI census's Shelf homes (src/renderer/src/harness/census.ts, docs/WINDOW.md
@@ -90,5 +90,32 @@ describe('the census’s reframe rows', () => {
   it('has no row for the salient finder’s controls (§16.35)', () => {
     expect(homesOf('Get the subject model')).toEqual([])
     expect(homesOf('Find subjects without faces')).toEqual([])
+  })
+})
+
+/*
+ * The fold-out panel's lines for nothing yet are left out of a fold-out
+ * home's empty-project count (census.ts FOLDOUT_NOTHING_YET): a state with
+ * words or cards replaces them, so what they say is not there to add to.
+ * Found on the page, 2026-11-27: the Transcript tab's line ends "press Get
+ * transcript", and the speech model's press ("Get", a part) was read absent.
+ * The page's census is what proves the count; this holds the two marks it
+ * leans on to the components that draw them, and the subtraction to the loop.
+ */
+describe('the census’s empty-project count of a fold-out home', () => {
+  const src = (...parts: string[]): string => readFileSync(resolve(__dirname, '..', '..', 'src', 'renderer', 'src', ...parts), 'utf8')
+
+  it('names the two lines for nothing yet, each drawn once by its component', () => {
+    expect(FOLDOUT_NOTHING_YET.split(', ').sort()).toEqual(['[data-best-empty]', '[data-foldout-empty]'])
+    expect([...src('components', 'Foldout.tsx').matchAll(/<div[^>]*\sdata-foldout-empty=""/g)]).toHaveLength(1)
+    expect([...src('components', 'tools', 'BestClips.tsx').matchAll(/<p data-best-empty=""/g)]).toHaveLength(1)
+  })
+
+  it('takes them out of both counts, for the fold-out homes only', () => {
+    const census = src('harness', 'census.ts')
+    const gone = [...census.matchAll(/const gone = home in FOLDOUT_FACES \? screen\(homeRoots\(home\)\.flatMap\(\(root\) => \[\.\.\.root\.querySelectorAll\(FOLDOUT_NOTHING_YET\)\]\)\) : null/g)]
+    expect(gone).toHaveLength(1)
+    expect([...census.matchAll(/count\(row, Boolean\(row\.part\)\)\.shown - \(gone \? gone\(row, Boolean\(row\.part\)\)\.shown : 0\)/g)]).toHaveLength(1)
+    expect([...census.matchAll(/count\(row, !row\.part\)\.shown - \(gone \? gone\(row, !row\.part\)\.shown : 0\)/g)]).toHaveLength(1)
   })
 })

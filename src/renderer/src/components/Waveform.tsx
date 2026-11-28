@@ -62,6 +62,14 @@ export function Waveform(): ReactNode {
    * ref held on mount — null — and never re-attaches when the real element
    * appears, so the canvas stays 0x0 and nothing is ever drawn.
    */
+  /*
+   * The box the waveform and its two handles are drawn in. Both places that
+   * draw it give it `mx-1.5` (6 px each side): a handle is `w-3` centred on
+   * its point, so at the very start and the very end half of it — 6 px — hung
+   * outside the box, cut on the left and, on the right, making the Trimmer
+   * dock scroll sideways by those 6 px (read off the page by the overlap
+   * check, 2026-11-27: scroll width 242 in a 236 px dock).
+   */
   const attachBox = useCallback((element: HTMLDivElement | null) => {
     observerRef.current?.disconnect()
     boxRef.current = element
@@ -267,7 +275,7 @@ export function Waveform(): ReactNode {
             {peaks ? `${(peaks.durationMs / 1000).toFixed(2)}s` : ''}
           </span>
         </div>
-        <div ref={attachBox} className="relative min-h-0 flex-1">
+        <div ref={attachBox} data-wave-box="" className="relative mx-1.5 min-h-0 flex-1">
           <canvas ref={canvasRef} className="absolute inset-0" />
           {loading && (
             <div className="absolute inset-0 flex items-center justify-center gap-1.5 text-[11px] text-ink-600">
@@ -328,7 +336,7 @@ export function Waveform(): ReactNode {
         </span>
       </div>
 
-      <div ref={attachBox} className="relative min-h-0 flex-1">
+      <div ref={attachBox} data-wave-box="" className="relative mx-1.5 min-h-0 flex-1">
         <canvas ref={canvasRef} className="absolute inset-0" />
 
         {loading && (

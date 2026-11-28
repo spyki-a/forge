@@ -182,6 +182,22 @@ describe('the page read: each fault found', () => {
     const r = page(wide)
     expect(r.sideways.map((s) => [s.element.data, s.scrollWidth, s.clientWidth])).toEqual([[{ 'data-row': '' }, 240, 200]])
   })
+
+  it('a word wider than its button is sideways, though it stays inside the column (the Export strip’s "Standard", 55 px in 50)', () => {
+    const button = el('button', [66, 0, 116, 29], {}, {}, 'Standard')
+    button.scrollWidth = 55
+    const r = page(button)
+    expect(r.sideways.map((s) => [s.element.text, s.scrollWidth, s.clientWidth])).toEqual([['Standard', 55, 50]])
+  })
+
+  it('the waveform box’s handle with NO gutter is found on the box that holds it, though the waveform box itself is excused', () => {
+    const wave = el('div', [0, 0, 236, 82], { 'data-wave-box': '' })
+    wave.scrollWidth = 242
+    const dock = el('div', [0, 0, 236, 200], { 'data-dock': 'true' }, { overflowX: 'auto', overflowY: 'auto' }).add(wave)
+    dock.scrollWidth = 242
+    const r = page(dock)
+    expect(r.sideways.map((s) => [s.element.data, s.scrollWidth, s.clientWidth])).toEqual([[{ 'data-dock': 'true' }, 242, 236]])
+  })
 })
 
 describe('the page read: nothing found where nothing is wrong', () => {
@@ -210,6 +226,67 @@ describe('the page read: nothing found where nothing is wrong', () => {
     const picker = el('div', [0, 0, 300, 300], {}, { position: 'fixed' }).add(el('button', [0, 0, 100, 30]))
     const r = page(el('button', [0, 0, 100, 30]), picker, el('span', [150, 0, 250, 30], { tabindex: '-1' }))
     expect(r.overlaps).toEqual([])
+  })
+
+  /*
+   * The one-pixel rule for what can be seen of a control. Found in every
+   * state by the first runs on the page (2026-11-27): the transport's Loop and
+   * Scrub checkboxes (1 px, beside their drawn box) and every panel divider (a
+   * line 1 px thick). A control with more of it showing is still covered: the
+   * twins below, and 'a button whose centre a later sibling is drawn over'.
+   */
+  it('a 1 px checkbox with its drawn box over it', () => {
+    const label = el('label', [0, 0, 80, 22]).add(el('input', [14, 10, 15, 11], { type: 'checkbox' }), el('span', [8, 4, 22, 18], { 'data-box': '' }))
+    expect(page(label).covered).toEqual([])
+  })
+
+  it('the same checkbox at 6 px under its drawn box is covered', () => {
+    const r = page(el('label', [0, 0, 80, 22]).add(el('input', [12, 8, 18, 14], { type: 'checkbox' }), el('span', [8, 4, 22, 18], { 'data-box': '' })))
+    expect(r.covered).toHaveLength(1)
+    expect(r.covered[0].by.data).toEqual({ 'data-box': '' })
+  })
+
+  it('a panel divider one pixel thick, the next panel answering at its centre', () => {
+    const r = page(el('div', [0, 99, 300, 100], { 'data-separator': 'inactive', tabindex: '0' }), el('div', [0, 99.4, 300, 300], { 'data-next': '' }))
+    expect(r.covered).toEqual([])
+  })
+
+  it('a divider 4 px thick with the next panel drawn over its middle is covered', () => {
+    const r = page(el('div', [0, 96, 300, 100], { 'data-separator': 'inactive', tabindex: '0' }), el('div', [0, 97, 300, 300], { 'data-next': '' }))
+    expect(r.covered).toHaveLength(1)
+    expect(r.covered[0].by.data).toEqual({ 'data-next': '' })
+  })
+
+  it('the waveform box’s end handle hanging into the gutter kept for it, the dock around it not scrolling', () => {
+    const wave = el('div', [6, 0, 230, 82], { 'data-wave-box': '' })
+    wave.scrollWidth = 230
+    const dock = el('div', [0, 0, 236, 200], { 'data-dock': 'true' }, { overflowX: 'auto', overflowY: 'auto' }).add(wave)
+    expect(page(dock).sideways).toEqual([])
+  })
+
+  it('a long link typed in the link box: a box for typing scrolls its own text', () => {
+    const box = el('input', [12, 0, 111, 31], { placeholder: 'Paste a video link' })
+    box.scrollWidth = 272
+    expect(page(box).sideways).toEqual([])
+  })
+
+  /*
+   * Found at 1100×680 (2026-11-27): a dock slider and a transcript row's time,
+   * each scrolled so that a pixel or so of it showed at the foot of its list —
+   * the strip below the list answered at that sliver's centre.
+   */
+  it('a row scrolled until 1.3 px of it shows at the foot of its list: the next thing answers there, and nothing is covered', () => {
+    const list = el('div', [0, 0, 300, 100], { 'data-list': '' }, { overflowX: 'hidden', overflowY: 'auto' }).add(el('button', [0, 98.7, 100, 123], { 'data-plant': 'sliver' }))
+    const r = page(list, el('div', [0, 99.3, 300, 130], { 'data-strip': '' }))
+    expect(r.covered).toEqual([])
+  })
+
+  it('the same row with 10 px showing and something drawn over that part is covered', () => {
+    const list = el('div', [0, 0, 300, 100], { 'data-list': '' }, { overflowX: 'hidden', overflowY: 'auto' }).add(el('button', [0, 90, 100, 114], { 'data-plant': 'part' }))
+    const r = page(list, el('div', [0, 85, 300, 130], { 'data-strip': '' }))
+    expect(r.covered).toHaveLength(1)
+    expect(plantOf(r.covered[0].control)).toBe('part')
+    expect(r.covered[0].by.data).toEqual({ 'data-strip': '' })
   })
 })
 

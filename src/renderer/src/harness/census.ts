@@ -175,6 +175,20 @@ type TrayFace = (typeof TRAY_FACES)[keyof typeof TRAY_FACES]
 const FOLDOUT_FACES = { foldclips: 'clips', foldtranscript: 'transcript' } as const satisfies Record<string, FoldoutTab>
 type FoldoutHome = keyof typeof FOLDOUT_FACES
 /**
+ * The fold-out's lines for nothing yet (Foldout.tsx's empty face of the
+ * Transcript tab, BestClips.tsx's of the Clips tab). On an empty project they
+ * are all the panel shows, and any state with words or cards REPLACES them —
+ * so what they say is not there for a state to add to, and the empty-project
+ * count of a fold-out home leaves them out.
+ *
+ * Found on the page, 2026-11-27: the Transcript tab's line ends "press Get
+ * transcript", the speech model's press reads "Get the speech model · 464 MB",
+ * and its row ("Get", a part) was read absent — one "Get" before, one after.
+ * A state that still shows the line and adds a label the line holds is then
+ * read ambiguous, which is the loud way to be wrong.
+ */
+export const FOLDOUT_NOTHING_YET = '[data-foldout-empty], [data-best-empty]'
+/**
  * The OUTPUT and EXPORT strips under the Shelf (step 7), each a home in
  * two faces, as the tray is: open (`output`, `export`) — the body, the settings
  * themselves — and closed (`outputbar`, `exportbar`) — the header row, and what
@@ -3328,11 +3342,13 @@ export async function runCensus(options: CensusOptions = {}): Promise<CensusResu
         for (let pass = 0; pass < 2; pass++) {
           if (pass > 0) await sleep(250)
           const count = screen(homeRoots(home))
+          // A fold-out home's lines for nothing yet are replaced by any state's face: not counted (FOLDOUT_NOTHING_YET).
+          const gone = home in FOLDOUT_FACES ? screen(homeRoots(home).flatMap((root) => [...root.querySelectorAll(FOLDOUT_NOTHING_YET)])) : null
           for (const row of needBase.filter((r) => r.home === home)) {
             const was = base.get(row) ?? { own: 0, other: 0 }
             base.set(row, {
-              own: Math.max(was.own, count(row, Boolean(row.part)).shown),
-              other: Math.max(was.other, count(row, !row.part).shown)
+              own: Math.max(was.own, count(row, Boolean(row.part)).shown - (gone ? gone(row, Boolean(row.part)).shown : 0)),
+              other: Math.max(was.other, count(row, !row.part).shown - (gone ? gone(row, !row.part).shown : 0))
             })
           }
         }

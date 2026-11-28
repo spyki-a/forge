@@ -121,6 +121,31 @@ describe('useFoldoutPanel', () => {
     expect(fake.current.calls.at(-1)).toBe('resize(52.5%)')
   })
 
+  it('dragged shut, it opens next at its first size — not at the floor the drag passed on the way', () => {
+    fake.current = panel(1000)
+    const { onResize } = useFoldoutPanel()
+    useEditor.getState().openFoldout('clips')
+    // A drag from 46.3 % down to the floor, then past the midpoint: shut.
+    onResize({ inPixels: 463, asPercentage: 46.3 })
+    onResize({ inPixels: FOLDOUT_MIN, asPercentage: 28 })
+    onResize({ inPixels: 0, asPercentage: 0 })
+    expect(useEditor.getState().foldout.open).toBe(false)
+    useEditor.getState().openFoldout('clips')
+    expect(fake.current.calls.at(-1)).toBe(`resize(${FOLDOUT_OPEN})`)
+  })
+
+  it('left at the floor on purpose and shut with the close button, it opens at the floor again', () => {
+    fake.current = panel(1000)
+    const { onResize } = useFoldoutPanel()
+    useEditor.getState().openFoldout('clips')
+    onResize({ inPixels: FOLDOUT_MIN, asPercentage: 28 })
+    useEditor.getState().closeFoldout()
+    // The Panel reports the collapse the store asked for: not a drag, nothing forgotten.
+    onResize({ inPixels: 0, asPercentage: 0 })
+    useEditor.getState().openFoldout('clips')
+    expect(fake.current.calls.at(-1)).toBe('resize(28%)')
+  })
+
   it('an open panel resized wider leaves the store as it is', () => {
     fake.current = panel(1000)
     const { onResize } = useFoldoutPanel()

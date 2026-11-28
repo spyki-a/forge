@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SHELF_TOOLS } from '../../src/renderer/src/components/shelf/tools'
 import { CENSUS_STATES, HOMES, toolHomeOf } from '../../src/renderer/src/harness/census'
-import { BY_DESIGN, CONTROL, OVERLAP_STATES, installOverlapCheck } from '../../src/renderer/src/harness/overlapCheck'
+import { BY_DESIGN, CONTROL, OVERHANG_BY_DESIGN, OVERLAP_STATES, installOverlapCheck } from '../../src/renderer/src/harness/overlapCheck'
 
 /*
  * The overlap check (harness/overlapCheck.ts, the clip maker's layout, piece
@@ -98,13 +98,43 @@ describe('what it stands up', () => {
       .filter((f) => f.endsWith('.tsx'))
       .map((f) => readFileSync(join(components, f), 'utf8'))
       .join('\n')
-    for (const entry of BY_DESIGN) {
+    for (const entry of [...BY_DESIGN, ...OVERHANG_BY_DESIGN]) {
       expect(entry.why.length, entry.selector).toBeGreaterThan(20)
       for (const [, attr] of entry.selector.matchAll(/\[(data-[a-z-]+)/g)) expect(sources, `${entry.selector}: ${attr}`).toContain(attr)
     }
     for (const part of ['button', 'input', 'select', 'textarea', 'summary', '[role="tab"]', '[role="switch"]', '[role="slider"]', '[role="button"]']) {
       expect(CONTROL.split(', '), part).toContain(part)
     }
+  })
+})
+
+describe('a state named for a transcript is read on that transcript', () => {
+  /*
+   * Found on the page, 2026-11-27: after a run kept on a link's words, the
+   * states named for the selected clip's transcript (Find graphics among
+   * them — the user's own complaint) stood up with the tab open on the LINK's
+   * rows, met their precondition (tab open on Transcript) and were read
+   * clean. Each such state now says whose words it needs, and is skipped
+   * with the reason when those are not what is drawn.
+   */
+  it('every panel-clip-* state and the graphic’s needs the clip’s words; every panel-link-* state the link’s', () => {
+    const clip = OVERLAP_STATES.filter((s) => s.state.startsWith('panel-clip-') || s.state === 'dock-graphic')
+    const link = OVERLAP_STATES.filter((s) => s.state.startsWith('panel-link-'))
+    expect(clip.length).toBeGreaterThanOrEqual(4)
+    expect(link.length).toBeGreaterThanOrEqual(2)
+    for (const s of clip) expect([s.state, s.foldout, s.words]).toEqual([s.state, 'transcript', 'clip'])
+    for (const s of link) expect([s.state, s.foldout, s.words]).toEqual([s.state, 'transcript', 'link'])
+  })
+
+  it('asks the page whose words are drawn, by the mark Foldout.tsx puts on them, and refuses the line for nothing yet', () => {
+    const check = read('src', 'renderer', 'src', 'harness', 'overlapCheck.ts')
+    const unmet = check.slice(check.indexOf('function unmet('), check.indexOf('export async function runOverlapCheck('))
+    expect(unmet).toContain("document.querySelector('[data-foldout] [data-foldout-words]')")
+    expect(unmet).toContain("if (whose !== s.words) return")
+    expect(unmet).toContain("drawn?.hasAttribute('data-foldout-empty')")
+    const foldout = read('src', 'renderer', 'src', 'components', 'Foldout.tsx')
+    expect([...foldout.matchAll(/data-foldout-words="(link|clip)"/g)].map((m) => m[1]).sort()).toEqual(['clip', 'link'])
+    expect([...foldout.matchAll(/data-foldout-words=\{words\} data-foldout-empty=""/g)]).toHaveLength(1)
   })
 })
 

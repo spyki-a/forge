@@ -217,8 +217,9 @@ export function FoldoutTranscriptFace({ words, ready }: { words: FoldoutWords; r
       </div>
     )
   }
+  // `data-foldout-empty`: the line for nothing yet, which words replace (the census leaves it out of what a state adds to).
   return (
-    <div data-foldout-words={words}>
+    <div data-foldout-words={words} data-foldout-empty="">
       <Line>{words === 'link' ? FOLDOUT_LINK_EMPTY : FOLDOUT_CLIP_EMPTY}</Line>
     </div>
   )
@@ -273,7 +274,18 @@ export function useFoldoutPanel(): {
     const { foldout, openFoldout, closeFoldout } = useEditor.getState()
     if (now.open !== foldout.open) {
       if (now.open) openFoldout(foldout.tab)
-      else closeFoldout()
+      else {
+        /*
+         * Shut from the Panel's side: a drag on its divider. On its way shut
+         * that drag passed through the floor, which is the last width it
+         * recorded — so the next open would be the narrowest panel there is
+         * (measured on the page, 2026-11-27: dragged shut from 463 px, opened
+         * again at 280). A panel dragged away opens next at its first size;
+         * one shut with the close button or a toggle keeps where it was left.
+         */
+        width.current = FOLDOUT_OPEN
+        closeFoldout()
+      }
     }
   }, [])
 

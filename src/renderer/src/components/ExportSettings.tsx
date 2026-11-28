@@ -36,8 +36,20 @@ const SPEEDS: { id: SpeedPreset; label: string }[] = [
   { id: 'slow', label: 'Smallest' }
 ]
 
-const segment = (on: boolean): string =>
-  `rounded px-2 py-1.5 text-[11px] transition-colors disabled:opacity-30 ${
+/*
+ * One button of a row of choices; `four` for the rows that are four to a row
+ * (Quality, Speed).
+ *
+ * In the left column at about its 240 px floor a cell of those rows is 50 px
+ * wide, and at 11 px "Standard" is 47.1 px and "Balanced" 47.8 px (measured on
+ * the page, 2026-11-27). With 8 px of padding each side the word started at
+ * the padding and ran 5 and 6 px past the button, under its neighbour — found
+ * by the overlap check as 55 and 56 px in 50. The cell sets the width there,
+ * so those rows take no side padding and the UI's 10.5 px: 45.6 px of word in
+ * 50, with room for a font that runs wider. The other rows are as they were.
+ */
+const segment = (on: boolean, four = false): string =>
+  `rounded ${four ? 'px-0 text-[10.5px]' : 'px-2 text-[11px]'} py-1.5 transition-colors disabled:opacity-30 ${
     on ? 'bg-accent-500 text-ink-950' : 'bg-ink-800 text-ink-400 hover:bg-ink-700 hover:text-ink-200'
   }`
 
@@ -127,7 +139,7 @@ export function ExportSettings({
                 key={q.id}
                 onClick={() => setChoice({ crf: q.crf, bitrateKbps: null })}
                 title={`Constant quality, CRF ${q.crf}`}
-                className={segment(!bitrate && choice.crf === q.crf)}
+                className={segment(!bitrate && choice.crf === q.crf, true)}
               >
                 {q.label}
               </button>
@@ -137,7 +149,7 @@ export function ExportSettings({
                 setChoice({ bitrateKbps: bitrateForCrf(choice.crf, canvas.width * canvas.height) })
               }
               title="A fixed bitrate — what a platform means by “upload at 8 Mbps”"
-              className={segment(bitrate)}
+              className={segment(bitrate, true)}
             >
               Bitrate
             </button>
@@ -173,7 +185,7 @@ export function ExportSettings({
                   key={s.id}
                   onClick={() => setChoice({ preset: s.id })}
                   title="How hard the encoder works: slower is smaller for the same quality"
-                  className={segment(choice.preset === s.id)}
+                  className={segment(choice.preset === s.id, true)}
                 >
                   {s.label}
                 </button>

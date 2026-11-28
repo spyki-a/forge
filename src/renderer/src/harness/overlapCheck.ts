@@ -62,7 +62,7 @@
 import { HOMES, censusPage, frames, standCensusState, toolHomeOf, windowRegions } from './census'
 import { SHELF_TOOLS } from '../components/shelf/tools'
 import { LEFT_MAX, leftColumn } from '../leftColumn'
-import { boxFrom, collisions, measurable, intersect, pastEdges, sideways, type Box } from './overlapGeometry'
+import { OVERLAP_SLACK_PX, boxFrom, collisions, heightOf, measurable, intersect, pastEdges, sideways, widthOf, type Box } from './overlapGeometry'
 
 /** One state: a census recipe, then the homes opened in turn, then what must be on screen before it is read. */
 export interface OverlapState {
@@ -73,6 +73,14 @@ export interface OverlapState {
   dock?: boolean
   /** The fold-out panel must show this face. */
   foldout?: 'clips' | 'transcript'
+  /**
+   * On the Transcript face, whose words must be drawn, and drawn as words —
+   * not the line for nothing yet. The tab can be open on the OTHER transcript
+   * (a page left with a link's words by an earlier kept run shows them over a
+   * selected clip's): a state named for the clip's transcript and Find
+   * graphics would then be read clean off the link's rows.
+   */
+  words?: 'link' | 'clip'
   /**
    * Read with the left column dragged to its limit (LEFT_MAX), put back after:
    * the right column at its narrowest, where the transport row and the canvas
@@ -105,23 +113,23 @@ export const OVERLAP_STATES: readonly OverlapState[] = [
   { state: 'url-range', needs: 'ingest-range', homes: ['url'] },
   // The panel beside the picture: the cards, the link's words, the selected clip's words with Find graphics' results.
   { state: 'panel-clips', needs: 'link-best-clips', foldout: 'clips', homes: ['url', 'foldclips'] },
-  { state: 'panel-link-words', needs: 'link-run', foldout: 'transcript', homes: ['url', 'foldtranscript'] },
+  { state: 'panel-link-words', needs: 'link-run', foldout: 'transcript', words: 'link', homes: ['url', 'foldtranscript'] },
   // A clip is selected in these two, so the Trimmer dock is on screen too: panel-both-words is the full URL tile beside the dock.
-  { state: 'panel-clip-words', needs: 'transcript-graphics-asr', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
+  { state: 'panel-clip-words', needs: 'transcript-graphics-asr', dock: true, foldout: 'transcript', words: 'clip', homes: ['transcript', 'foldtranscript'] },
   { state: 'panel-both-words', needs: 'foldout-both-words', dock: true, foldout: 'transcript', homes: ['url', 'foldtranscript'] },
   // The long things of each journey (the whole-lane review, 2026-11-27): a card's question and its steps, the
   // link's words after Clip download, the short blocks the URL tile keeps (no captions, the language choice),
   // Edit's words and Find graphics' dropped list in the clip's transcript.
   { state: 'panel-card-question', needs: 'link-best-clips-question', foldout: 'clips', homes: ['url', 'foldclips'] },
   { state: 'panel-card-steps', needs: 'link-best-clips-clipped', foldout: 'clips', homes: ['url', 'foldclips'] },
-  { state: 'panel-link-clipped', needs: 'link-clipped', foldout: 'transcript', homes: ['url', 'foldtranscript'] },
+  { state: 'panel-link-clipped', needs: 'link-clipped', foldout: 'transcript', words: 'link', homes: ['url', 'foldtranscript'] },
   { state: 'url-no-captions', needs: 'link-no-captions', homes: ['url'] },
   { state: 'url-no-language', needs: 'link-no-language', homes: ['url'] },
-  { state: 'panel-clip-editing', needs: 'transcript-editing', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
-  { state: 'panel-clip-drops', needs: 'transcript-graphics-drops', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
+  { state: 'panel-clip-editing', needs: 'transcript-editing', dock: true, foldout: 'transcript', words: 'clip', homes: ['transcript', 'foldtranscript'] },
+  { state: 'panel-clip-drops', needs: 'transcript-graphics-drops', dock: true, foldout: 'transcript', words: 'clip', homes: ['transcript', 'foldtranscript'] },
   // The user's own complaint ("when i click on the current clip … its own custom setting is overlapping … find
   // graphics"): a graphic selected, its settings in the dock, the Transcript tile open and the panel on its words.
-  { state: 'dock-graphic', needs: 'graphic-lower-third', dock: true, foldout: 'transcript', homes: ['transcript', 'foldtranscript'] },
+  { state: 'dock-graphic', needs: 'graphic-lower-third', dock: true, foldout: 'transcript', words: 'clip', homes: ['transcript', 'foldtranscript'] },
   // The left column dragged to its 45 % limit: the right column at its narrowest (the transport row, the canvas bar).
   { state: 'wide-left-url', needs: 'link-transcript', left: 'widest', homes: ['url'] },
   { state: 'wide-left-dock', needs: 'video-clip', dock: true, left: 'widest', homes: ['transcript'] },
@@ -140,6 +148,19 @@ export const OVERLAP_STATES: readonly OverlapState[] = [
  * to a reason and to a selector some component still draws.
  */
 export const BY_DESIGN: readonly { selector: string; why: string }[] = []
+
+/**
+ * What runs past its own box on purpose, into room kept for it. Each entry
+ * excuses that ELEMENT's sideways finding and nothing else: the boxes around
+ * it are still read, so an overhang with no room kept for it is found on
+ * them. The same test holds these to a reason and to a selector still drawn.
+ */
+export const OVERHANG_BY_DESIGN: readonly { selector: string; why: string }[] = [
+  {
+    selector: '[data-wave-box]',
+    why: 'The Trimmer\'s end handle is centred on the last point of the waveform, so half of it (6 px) hangs past the waveform box, into the 6 px gutter the box keeps on each side (Waveform.tsx mx-1.5). Before the gutter the same 6 px ran past the dock, which is still read.'
+  }
+]
 
 /** Things that can be pressed or typed in, by tag or by role. A tabindex of -1 is focusable by script only, and left out. */
 export const CONTROL = [
@@ -312,6 +333,20 @@ export function readPage(state: string, regions: Record<string, Element[]> = win
 
   const covered: OverlapStateResult['covered'] = []
   for (const { el, box } of controls) {
+    /*
+     * The one-pixel rule (overlapGeometry.ts), for what can be seen of a
+     * control: its centre must be MORE than a pixel from each of its edges to
+     * be its own, so two pixels or less of it, either way, is not asked —
+     * the point lies within the slack of an edge, and whatever is next may
+     * answer. All found by the first runs on the page (2026-11-27), none of
+     * them a fault: a row scrolled until a sliver of it shows at the foot of
+     * its list (a dock slider with 1.3 px showing, a transcript row's time, at
+     * 1100×680); a checkbox kept for the keyboard at 1 px beside its drawn box
+     * (the transport's Loop and Scrub, pressed through their label); a panel
+     * divider, a line 1 px thick that react-resizable-panels takes the pointer
+     * for by its own region.
+     */
+    if (widthOf(box) <= 2 * OVERLAP_SLACK_PX || heightOf(box) <= 2 * OVERLAP_SLACK_PX) continue
     const x = (box.left + box.right) / 2
     const y = (box.top + box.bottom) / 2
     const hit = document.elementFromPoint(x, y)
@@ -345,7 +380,12 @@ export function readPage(state: string, regions: Record<string, Element[]> = win
       if (!(el instanceof HTMLElement) || !visible(el)) continue
       // A text cut with an ellipsis is cut on purpose (a chapter chip's long title); its own box says so.
       if (getComputedStyle(el).textOverflow === 'ellipsis') continue
-      if (sideways(el.scrollWidth, el.clientWidth)) side.push({ element: nameOf(el), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })
+      // A box for typing scrolls its own text: a long link in the link box is not the layout running over.
+      if (el.matches('input, textarea')) continue
+      if (!sideways(el.scrollWidth, el.clientWidth)) continue
+      // Only the element named is excused: what holds it is still read, so an overhang that reaches further is found there.
+      if (OVERHANG_BY_DESIGN.some(({ selector }) => el.matches(selector))) continue
+      side.push({ element: nameOf(el), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth })
     }
   }
 
@@ -440,6 +480,12 @@ function unmet(s: OverlapState): string | null {
   if (s.foldout) {
     const face = document.querySelector('[data-foldout]')?.getAttribute('data-foldout') ?? null
     if (face !== s.foldout) return `${s.state}: the fold-out panel shows ${JSON.stringify(face)}, not ${JSON.stringify(s.foldout)}`
+  }
+  if (s.words) {
+    const drawn = document.querySelector('[data-foldout] [data-foldout-words]')
+    const whose = drawn?.getAttribute('data-foldout-words') ?? null
+    if (whose !== s.words) return `${s.state}: the Transcript tab shows ${whose ? `the ${whose}'s words` : 'no words'}, not the ${s.words}'s`
+    if (drawn?.hasAttribute('data-foldout-empty')) return `${s.state}: the Transcript tab shows its line for nothing yet, not the ${s.words}'s words`
   }
   return null
 }

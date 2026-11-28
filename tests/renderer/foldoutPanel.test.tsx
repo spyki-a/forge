@@ -137,6 +137,9 @@ describe('the fold-out panel, open', () => {
     expect(page).toContain(escapeHtml(FOLDOUT_LINK_EMPTY))
     expect(page).not.toContain(escapeHtml(FOLDOUT_CLIP_EMPTY))
     expect(page).not.toContain(escapeHtml(FOLDOUT_CLIPS_NO_LINK))
+    // The line for nothing yet is marked, and it is that line: the census leaves it out of what a state adds to.
+    expect([...page.matchAll(/data-foldout-empty=""/g)]).toHaveLength(1)
+    expect(page).toContain(`data-foldout-empty=""><p class="text-[11px] leading-snug text-ink-500">${escapeHtml(FOLDOUT_LINK_EMPTY)}</p>`)
   })
 
   it('on Transcript, the clip’s words asked, no clip and no link words: the clip’s empty line', () => {
@@ -144,6 +147,7 @@ describe('the fold-out panel, open', () => {
     const page = html()
     expect(page).toContain(escapeHtml(FOLDOUT_CLIP_EMPTY))
     expect(page).not.toContain(escapeHtml(FOLDOUT_LINK_EMPTY))
+    expect([...page.matchAll(/data-foldout-empty=""/g)]).toHaveLength(1)
   })
 
   it('on Transcript, follows the rule: the other transcript when only it exists, and no empty line then', () => {
@@ -157,6 +161,7 @@ describe('the fold-out panel, open', () => {
     expect(page).toContain('zorplim')
     expect(page).not.toContain(escapeHtml(FOLDOUT_CLIP_EMPTY))
     expect(page).not.toContain(escapeHtml(FOLDOUT_LINK_EMPTY))
+    expect(page).not.toContain('data-foldout-empty')
     expect(page).not.toContain('data-foldout-switch')
     // The link's asked, only a clip is selected: the clip's, ready — its transcript, whose clip has none yet.
     linkWords(false)
@@ -168,6 +173,7 @@ describe('the fold-out panel, open', () => {
     expect(page).toContain('No transcript yet')
     expect(page).not.toContain(escapeHtml(FOLDOUT_CLIP_EMPTY))
     expect(page).not.toContain(escapeHtml(FOLDOUT_LINK_EMPTY))
+    expect(page).not.toContain('data-foldout-empty')
     expect(page).not.toContain('data-foldout-switch')
     // Both exist: the one asked, and the switch to choose.
     linkWords(true)
