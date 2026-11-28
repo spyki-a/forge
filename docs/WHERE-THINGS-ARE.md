@@ -26,12 +26,12 @@ process — which the screen calls **the AI helper**.
 │ header             project name • path              build stamp   ⚙ •     │
 ├─────────────────────────┬─────────────────────────────────────────────────┤
 │ SHELF                   │ canvas bar: 16:9 · 9:16 · 1:1   Source|Split|Out│
-│  home: 19 tool tiles,   ├──┬──────────────────────────────────────────────┤
-│  or an icon strip over  │t │                                              │
-│  the open tool's panel  │o │                   Preview                    │
-├─────────────────────────┤o │                                              │
-│ TRIMMER DOCK            │l │                                              │
-│  only while a clip is   ├──┴──────────────────────────────────────────┬───┤
+│  home: 19 tool tiles,   ├──┬───────────────┬──────────────────────────────┤
+│  or an icon strip over  │t │ FOLD-OUT      ┆  shrinks beside the panel    │
+│  the open tool's panel  │o │ Clips |       ┆                              │
+├─────────────────────────┤o │ Transcript    ┆           Preview            │
+│ TRIMMER DOCK            │l │ shut: 0 px    ┆                              │
+│  only while a clip is   ├──┴───────────────┴──────────────────────────┬───┤
 │  selected, or a Library │ Transport                                   │ K │
 │  sound is auditioned    │ legend · Mark in · Mark out                 │ e │
 ├─────────────────────────┤ Tracks │ ruler and lanes                    │ y │
@@ -43,10 +43,12 @@ process — which the screen calls **the AI helper**.
 Two columns. The **left column** runs the full height: the Shelf, the Trimmer
 dock under it when there is something to trim, and the OUTPUT and EXPORT strips
 at its foot. It opens at about 240 px on the default 1400 px window and drags
-wider to 30 % (`App.tsx`). The **right column** is the picture over the
-timeline, 64 / 36, with the divider between them draggable. There is no
-right-hand column any more: the clip editor that lived there is the Trimmer
-dock.
+wider to 45 % (`App.tsx`; 30 % until 2026-11-27). The **right column** is the
+picture over the timeline, 64 / 36, with the divider between them draggable.
+There is no right-hand column any more: the clip editor that lived there is
+the Trimmer dock. Between the tool strip and the picture is **the panel
+beside the picture** (since 2026-11-27; below): shut by default, it takes
+no width at all; open, the picture shrinks beside it and is never covered.
 
 **Full screen** is View → Toggle Full Screen. The way out is an **Exit full
 screen** button across the top of the window, or **Esc** when nothing else — a
@@ -336,22 +338,57 @@ grouped by kind (sheet 21), image presets (sheet 23) and per-item audio trim
 
 ### URL
 
-Paste a link and press **Get** (`IngestPanel.tsx`; `docs/INGEST.md`). Under the
-link: **Video / Audio / Instrumental / Vocal**, then the quality for video (4K,
-1080p, 720p, 480p) or the format for sound (m4a, which copies what the site
-stores, or mp3). **Just a part of it** opens **From** and **To** — typed, not
-dragged, because the video's length is unknown until it is fetched — with
-**Fast cut** or **Exact cut — slower**. While downloads run, a line says how
-many and that the progress is under EXPORT, at the bottom left. The first
-download fetches yt-dlp (about 30 MB) and says so beforehand. A link pastes
-into the box with ⌘V / Ctrl+V, Edit → Paste, or a right-click's **Paste**
-(since 2026-11-25; the header's note above).
+Paste a link and press **Download** (`IngestPanel.tsx`; `docs/INGEST.md`).
+Since 2026-11-27 (the clip maker's layout, `docs/CLIPS.md` §10a) the tile
+is in the order of the sketch (`docs/SHEETS.md` sheet 30), and its long
+things — the link's rows and Best clips' cards — are in the panel beside
+the picture (below). Top to bottom:
 
-**Get transcript** sits under Video / Audio and the quality, greyed until the
-box holds a link (`tools/LinkTranscript.tsx`; `docs/CLIPS.md` §3b). It reads
-the video's details and then its own captions — YouTube's track, no media, no
-model, no AI helper — saying **Reading the link…** and **Fetching the
-captions…** meanwhile. Then, top to bottom:
+- **The link box** ("Paste a video link") and **Download** (its tooltip
+  "Download and put it on the timeline"; it read **Get** until 2026-11-27).
+  While the link's words are shown it reads **Full download** and is no
+  longer the blue button — it downloads the whole video, not a pick (its
+  tooltip: "Download the whole video and put it on the timeline") — and
+  Enter in the link box does not press it. If the box would be squeezed
+  under 5.5rem the button goes under it. A link pastes into the box with ⌘V
+  / Ctrl+V, Edit → Paste, or a right-click's **Paste** (since 2026-11-25;
+  the header's note above). What is wrong with a link is said under it as
+  it is typed.
+- **The kinds**, one row: **Video**, **Audio**, **Instrumental**,
+  **Vocal**. The chosen one is blue and says its choice — **Video · 1080p**
+  (2160p reads 4K), or **Audio · M4A** — with a small chevron: press it and
+  its list unfolds on a line under the row (under the row's last line when
+  the row wraps), pushing what is below down: the quality for video (**4K**,
+  **1080p**, **720p**, **480p**) or the format for sound (**M4A**, which
+  copies what the site stores, or **MP3**). A choice folds it, and so do
+  Escape and pressing another kind; only one such list is open in the window
+  at a time. With Instrumental or Vocal chosen, **split after downloading**
+  on a line of its own.
+- **Get transcript** and **Analyse**, one row (Analyse only with a link in
+  the box; Best clips, below).
+- Under that row, what Get transcript is doing and Best clips' pointer
+  (below).
+- **Just a part of it** (not shown while the link's words are), and at the
+  same row's right end the **Transcript** toggle (once the link's words are
+  ready) and the **Clips** toggle (with a link in the box); at the 240 px
+  column the toggles may wrap to a line of their own, right-aligned. Just a
+  part of it opens **From** and **To** — typed, not dragged, because the
+  video's length is unknown until it is fetched — with **Fast cut** or
+  **Exact cut — slower**.
+- Best clips' options: the heading **Best clips**, **Duration** and **Make
+  it vertical** (below).
+- While downloads run, a line says how many and that the progress is under
+  EXPORT, at the bottom left. The first download fetches yt-dlp (about 30
+  MB) and says so beforehand.
+
+**Get transcript** is greyed until the box holds a link
+(`tools/LinkTranscript.tsx`; `docs/CLIPS.md` §3b). It reads the video's
+details and then its own captions — YouTube's track, no media, no model, no
+AI helper — saying **Reading the link…** and **Fetching the captions…**
+under its row meanwhile. When the words arrive, the panel beside the
+picture opens on them by itself, on its Transcript tab; the **Transcript**
+toggle ("Show or hide the link’s words, beside the picture") opens and
+closes it there. In the Transcript tab, top to bottom:
 
 - **Chapter chips**, one per chapter the video has, each named by its title;
   pressing one picks the words that start inside that chapter.
@@ -368,15 +405,11 @@ captions…** meanwhile. Then, top to bottom:
   keys move it a word, and it keeps the focus as it moves from row to row
   (those keys stay with the handle — the window's arrows would move the
   playhead). With nothing picked they rest at the first and last word, and a
-  line under the rows says how to pick.
+  line under the rows says how to pick. The rows scroll in their own list
+  inside the tab.
 - **"0:39.6 selected"**, the picked span's length, and under it **From** and
   **To** as read-only fields with **set by the words you picked** — sheet 12's
-  fields, mirroring the run. **Just a part of it** and its typed From and To
-  are not shown while there are words. **Get**, beside the link, then reads
-  **Full download** and is no longer the blue button — it downloads the whole
-  video, not the pick (its tooltip: "Download the whole video and put it on the
-  timeline") — and Enter in the link box does not press it. With no words on
-  screen it is plain **Get**, as before.
+  fields, mirroring the run.
 - **Clip download** (Clip it; its tooltip: "Download only the words you picked
   and put them on the timeline") downloads exactly the picked words' span (an
   exact cut) — the
@@ -389,7 +422,8 @@ captions…** meanwhile. Then, top to bottom:
   is done, and **Add another clip** keeps the rows and clears the pick for the
   next one; each clip is its own download.
 
-When the details name no language, **Choose the language** offers English,
+In the tile, under Get transcript's row: when the details name no language,
+**Choose the language** offers English,
 Hindi, Telugu, Tamil and Spanish — unless the video has no caption track at
 all, which is said at once instead. A video with no captions says **This video
 has no captions**, its chapter chips set From and To instead, and **Listen to
@@ -402,30 +436,43 @@ offline, say — **Could not get the transcript.** with the reason, and From
 and To stay typed fields.
 
 **Best clips** (sheet 27; `tools/BestClips.tsx`, `docs/CLIPS.md` §7.5,
-built 2026-11-23 to 25) sits under the link's rows and Clip download, above
-From and To, and is there whenever the box holds a link. **1 min · 2 min · 3
-min · 4 min** (one choice, greyed while it looks) and **Analyse** ("Find the
+built 2026-11-23 to 25, split in two 2026-11-27) is there whenever the box
+holds a link. **In the tile**: **Analyse** beside Get transcript ("Find the
 stretches of this video most worth posting, from its captions — nothing is
-downloaded"); at the Shelf's narrowest, Analyse wraps to a second row,
-right-aligned. Analyse reads the transcript Get transcript fetched and
-downloads nothing; with no words yet it is greyed under **Best clips reads
-the video’s captions: press Get transcript first.**, and a video with no
-captions says **This video has no captions, and Best clips cannot listen to
-a video yet.**, with the AI helper or without it. While it looks: **Looking
-for the best stretches…** with a spinner in Analyse, or **Best clips is
-still looking at another video.** when the run is another link's (one
-Analyse at a time: Analyse stays greyed until it ends, at most three
-minutes, after which the talk's own signals pick). Then **Make it vertical** (on by default; its
-tooltip says what it does) and up to three cards, stacked, in the video's
-order. Each card: a tall 9:16 face with the stretch's length on it (no
-thumbnail), the title, the why, the range ("0:01.0 – 1:04.6") and the word
-count, who picked it (**Picked by the model** or **Picked from the talk's own
-signals**), a note when the model's pick, title or reason was not used, and
-**Clip it** ("Download just this stretch and put it on the timeline, with its
-words and the link’s credit"). Under the cards, why there are fewer than
-three, and how the model did (with no model: **Picked without a model, from
-the talk's own signals.**). A model is the one set up in Settings; with none,
-the talk's own signals pick.
+downloaded"); under that row the pointer, one line saying why Analyse is
+greyed: **Best clips reads the video’s captions: press Get transcript
+first.**, or for a video with no captions **This video has no captions, and
+Best clips cannot listen to a video yet.** (with the AI helper or without
+it), or **Best clips is still looking at another video.** while another
+link's run goes on (one Analyse at a time: Analyse stays greyed until it
+ends, at most three minutes, after which the talk's own signals pick); the
+**Clips** toggle ("Show or hide the clips Analyse found, beside the
+picture"), blue while the Clips tab shows, with the number of clips found
+on it; and, under the toggles, the heading **Best clips**, **Duration**
+(its tooltip "How long each clip should be"), a button saying the chosen
+length that unfolds **1 min · 2 min · 3 min · 4 min** under it (greyed and
+folded while Analyse looks), and **Make it vertical** (on by default; its
+tooltip says what it does). Analyse reads the transcript Get transcript
+fetched and downloads nothing; pressed, it folds the Duration list and
+opens the panel beside the picture on its Clips tab.
+
+**In the Clips tab**: **Looking for the best stretches…** while it looks
+(or **Best clips is still looking at another video.**), then up to three
+cards in the video's order, one to a row in a narrow panel and two or more
+in a wide one (no card under 15rem). Each card: a tall 9:16 face with the
+stretch's length on it (no thumbnail), the title, the why, the range
+("0:01.0 – 1:04.6") and the word count, who picked it (**Picked by the
+model** or **Picked from the talk's own signals**), a note when the model's
+pick, title or reason was not used, and **Clip it** ("Download just this
+stretch and put it on the timeline, with its words and the link’s credit").
+Under the cards, why there are fewer than three, and how the model did
+(with no model: **Picked without a model, from the talk's own signals.**).
+A model is the one set up in Settings; with none, the talk's own signals
+pick. With nothing found yet the tab says what to press, one line: **No
+clips yet. Paste a video link in the URL tile to find its best clips.**,
+**No clips yet. Press Get transcript in the URL tile, then Analyse.**,
+**No clips yet. Press Analyse in the URL tile, beside Get transcript.**,
+or, for a video with no captions, the cannot-listen line.
 
 **Clip it on a card** downloads exactly the card's stretch (an exact cut)
 with its words and credit, as Clip download does. With Make it vertical on
@@ -454,8 +501,12 @@ card whose clip was undone or removed offers Clip it again.
 **Not there:** no thumbnail on a card; nothing listens to a video without
 captions (Listen to it is not built); no button for the face finder on a
 card: a missing one is a line pointing at the Trimmer's **Follow the
-subject**, which fetches it. Picking rows of a clip already on the timeline
-is the Transcript tile's (below).
+subject**, which fetches it; no choice of how many clips, no size, caption
+set, music or transition option yet (the clip maker's lanes 2 to 5,
+`docs/CLIPS.md` §10a). Picking rows of a clip already on the timeline is
+the Transcript tile's (below). **Read where**: the tile's rows and the
+panel were read on the harness page on the Mac on 2026-11-27, not in the
+app or on the Surface.
 
 ### Narration
 
@@ -535,15 +586,29 @@ remove.
 
 ### Transcript
 
+**The tile** (since 2026-11-27, `TranscriptPanel.tsx` `TranscriptTile`;
+`docs/CLIPS.md` §10a) is one line and a toggle. The line is the selected
+clip's transcript, its language and word count ("<language> · <N> words"), or
+**This clip has no transcript yet. Transcribe it beside the picture.**, or
+**Select a clip to see its transcript**. The toggle, **Transcript** ("Show
+or hide this clip’s words, beside the picture"), is blue while the panel
+beside the picture shows the clip's words, and greyed with no clip selected
+unless the panel already shows the clip's empty face (then it closes it).
+Pressing the Transcript tile opens that panel on the selected clip's words
+(or, with no clip, on the link's words if there are some, else on **Select
+a clip on the timeline to see its words here.**). Everything below — the
+rows, Edit, Cut to these words, Graphics with Find graphics, Listen for —
+is in the panel's Transcript tab, not the tile.
+
 The **selected timeline clip's** words — the ones it PLAYS: a clip trimmed to
-part of a long talk lists that part — as rows of `time | text`, the URL
-tile's own rows (`TranscriptPanel.tsx`, `tools/TranscriptRows.tsx`; `docs/CLIPS.md`
-§3b.6, sheet 26). With no clip selected it says to select one. A row's time is
+part of a long talk lists that part — as rows of `time | text`, the same
+rows as the link's (`TranscriptPanel.tsx`, `tools/TranscriptRows.tsx`; `docs/CLIPS.md`
+§3b.6, sheet 26). A row's time is
 where it is on the **timeline**, through the clip's speed (at 2× a word ten
 seconds into the source is five seconds into the clip), and the row under the
 playhead is tinted.
 
-- **Picking a run**, as in the URL tile: click a row's time or a word to pick
+- **Picking a run**, as in the link's rows: click a row's time or a word to pick
   that row — and the playhead jumps there, as a click always did; shift-click
   another row, or a word, to extend; or drag **Start** and **End** in the
   gutter (the arrow keys move a focused one a word). With nothing picked, a
@@ -568,8 +633,9 @@ playhead is tinted.
   spoken in this clip**.
 
 The rows scroll; the line and the cut stay under them, never over **Listen
-for** — in a column too short for both (the dock open under a 240 px tile) the
-tile itself scrolls a little instead. **Edit** turns the clip's words into
+for** — in a tab too short for both (the panel is the picture's height) the
+tab itself scrolls instead (reasoned from the classes; a short picture has
+not been read on the page). **Edit** turns the clip's words into
 something to click and correct — every word the clip plays any part of, which
 is what its captions show (a word its edge cuts through included), or, on a
 hold, the whole transcript; it is not offered when the clip plays no word.
@@ -936,7 +1002,7 @@ field: **Value**, **Label**, **Title**, **Quote**, **Words**, **Lit word**,
 **Before label**, **Before value**, **After label**, **After value**, a
 versus' **Left label**, **Left value**, **Right label**, **Right value**,
 a quote's or lower third's
-**Speaker** (the file's Speaker, as in the Transcript tile: changing it
+**Speaker** (the file's Speaker, as under Graphics in the panel's Transcript tab: changing it
 here renames every graphic that drew it), a lower third's **Role**
 (filled in from that file's last lower third), and a social card's
 **Name**, **Handle**, **Date**, **Link**. Each text field saves when you
@@ -1290,6 +1356,53 @@ Output alone mid-reframe takes the drags away until the source is back.
 
 ---
 
+## The panel beside the picture — Clips and Transcript
+
+Since 2026-11-27 (the clip maker's layout, `docs/CLIPS.md` §10a; in the code
+the **Foldout**, `Foldout.tsx`, store `foldout`). It sits between the tool
+strip and the picture, the height of the picture, and has no name on
+screen: only its two tabs. **Shut by default**, it takes no width and its
+border cannot be grabbed. It opens:
+
+- on **Clips** with the **Clips** toggle in the URL tile, and when
+  **Analyse** is pressed;
+- on **Transcript** with the **Transcript** toggle in the URL tile (the
+  link's words) or in the Transcript tile (the selected clip's words), when
+  Get transcript's words arrive, and when the Transcript tile is pressed.
+
+A toggle is blue while the panel shows what it opens, and pressed then it
+closes the panel. Across the top, a bar with the two tabs, **Clips** ("The
+best clips found in the link") and **Transcript** ("The words of the link,
+or of the selected clip"), the open one blue, and at its right an **X**
+("Close and give the picture its room back"). Under it the open tab, which
+scrolls inside the panel:
+
+- **Clips**: Best clips' running line, cards and notes, or the line saying
+  what to press (the URL tile's Best clips, above).
+- **Transcript**: the link's words (chapter chips, rows, the pick, Clip
+  download, Add another clip; the URL tile, above) or the selected clip's
+  whole transcript (rows, Edit, Cut to these words, Graphics with Find
+  graphics, Listen for; the Transcript tile, above). With both there, a
+  switch at the top, **The link** / **The selected clip**, says whose words
+  show and changes them. With neither, one line: **No words from a link
+  yet. Paste a link in the URL tile and press Get transcript.** or **Select
+  a clip on the timeline to see its words here.**
+
+**Its border drags**, between 280 px and 60 % of the row, and the picture
+never goes under 35 %: the picture shrinks beside the panel and is never
+covered or moved. Dragging the border all the way shut closes the panel. It
+opens at 40 % of the row the first time and after a drag shut; closed with
+the X or a toggle, it reopens where it was left (for the session; nothing
+of it is saved). On a window with no room for 280 px beside 35 % of the
+picture it does not open.
+
+**Read where**: on the harness page, on the Mac, 2026-11-27 (open on Clips
+at 1440×900: the row 1158 px, the panel 463 px, 40 %, the picture 694 px;
+dragged to 280 px and shut by hand); not in the app, not on the Surface, not
+with a real video playing; two cards to a row in a wide panel not seen.
+
+---
+
 ## Preview — direct manipulation
 
 Select a clip and you can work on it where you can see it.
@@ -1347,7 +1460,10 @@ clip here, or open Director and press Direct.
 Under the picture: the **transport** first (`Transport.tsx`) — start, play,
 end, **Loop**, **Scrub** (hearing the sound while you drag the playhead), split
 at the playhead, remove the selected clip, the master meter, the timecode, and
-zoom out / in. ⇧Z fits the whole project.
+zoom out / in. ⇧Z fits the whole project. When the timeline is too narrow for
+one line (the left column dragged wide on a small window) the row wraps to a
+second line rather than cut the timecode and the zoom off (since
+2026-11-27; read on the harness page at 1100×680 with the column at 45 %).
 
 Video tracks are listed **highest first**, like every other editor: the track
 at the top of the list draws on top of the picture. Audio sits below.
@@ -1630,4 +1746,13 @@ each entry in it says why — absent, not rendered, or **ambiguous**, meaning
 something else on screen wears the same label, so the control could go
 unnoticed. It takes about a minute (64 s at `49c836e`) and must run in the fronted tab
 (`harness/census.ts` says why). A control added anywhere in the window gets a
-row there, or this map and the census drift apart.
+row there, or this map and the census drift apart. Since 2026-11-27 (`docs/CLIPS.md`
+§10a, `docs/WINDOW.md` §6's last part) the page also has
+**`__forgeOverlapCheck()`** — controls that sit on one another, are covered
+or cut off, or make a column scroll sideways, read state by state (46
+states); start it with `void`, read `__forgeOverlapLast` until `running` is
+false; `{ plant: true }` proves it on made-up faults first —
+**`__forgeFoldoutCheck()`** (the panel beside the picture opened, switched
+and shut, and the Preview the same element after) and
+**`__forgeClipsLayout()`** (the URL tile and the Clips tab measured for
+anything past their edge).

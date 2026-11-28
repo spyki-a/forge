@@ -27,6 +27,7 @@ under "Decisions the user has to make".
 | OUTPUT / EXPORT | `components/OutputStrip.tsx`, `components/ExportStrip.tsx`; store `outputOpen`, `exportOpen` | OUTPUT ▲ / EXPORT ▲ | store fields deliberately avoid a `strip…` prefix: `stripLayout`, `stripCount`, `stripPerHit`, `stripLook`, `stripBeatsPerHit`, `stripBursts`, `stripsBuilding` already mean Strip flashes |
 | Canvas shape + view switch above the preview | `components/CanvasBar.tsx` | 16:9 Landscape · 9:16 Vertical · 1:1 Square | — |
 | Settings, top right | `components/SettingsPanel.tsx`, store `settingsOpen` | ⚙ with a status dot | replaces the "AI" dot at `App.tsx:84-94` |
+| The panel beside the picture (2026-11-27, the clip maker's layout, `docs/CLIPS.md` §10a) | **Foldout** — `components/Foldout.tsx`, `src/shared/foldout.ts`, store `foldout`, `data-foldout` | no name of its own: only its two tabs, "Clips" and "Transcript" | never "sidecar": that is the user's word for the left panel (the Shelf) and the code's for the Python process ("the AI helper" on screen) |
 
 And one user-facing rename that follows from the first row: the Python helper's
 on-screen name becomes **"AI helper"** (`App.tsx:86` "AI sidecar running/starting",
@@ -47,6 +48,17 @@ honest without re-pointing. The component's title on screen becomes "Clip".
 > explicit `%` — `defaultSize="17"` with no unit opened the column at 420 px (step 8). The
 > numbers measured on the built window, the Shelf's and the dock's floors among them
 > (`dock.ts`), are in each step's As built note.
+>
+> **Changed 2026-11-27 (the clip maker's layout, `docs/CLIPS.md` §10a, `f8bd957` …
+> `3d19ea0`):** the picture's row is now Toolbox | an always-rendered horizontal Group of
+> the **fold-out panel** (`<Panel id="foldout" collapsible collapsedSize={0}
+> defaultSize={0} minSize={280} maxSize="60%">`: shut by default, 40 % of the row at its
+> first open), `FoldoutDivider` (disabled and `w-0` while shut, the house
+> `DIVIDER_ACROSS` open, no double-click) and the picture (`<Panel id="picture"
+> minSize="35%">`), the user's sketch's order: tool strip, panel, picture. The picture
+> shrinks beside the panel and is never covered; the Preview never moves or remounts
+> (§5's note). The left column's `maxSize` is `"45%"` (it was `"30%"`; the
+> user, 2026-11-27: "now there is a boundry just extend it a little bit").
 
 ```
 ┌──────────────────────────────────────────────────────────────── ⚙• ┐  header (drag region; gear is no-drag)
@@ -327,6 +339,31 @@ development app or on the Surface; a Devanagari, Telugu or emoji title, the
 question's buttons and the step lines at the narrowest have not been looked
 at. The store state is §3.22's note.)
 
+(2026-11-27, the clip maker's layout, `docs/CLIPS.md` §10a; pieces 2–4,
+`88f63ae` … `9a667f7`, and `7e7bfa5`. **The tile's rows are in the order of
+the user's sketch** (`docs/SHEETS.md` sheet 30): `LinkBox` (the box, and the
+button that read "Get", now **Download**, the sketch's word, or **Full
+download** with the link's words shown; the row wraps only below a 5.5rem
+box); `KindsRow`, the four kinds as one row whose chosen chip ("Video ·
+1080p") is the button of a fold-down list in the flow under the row
+(quality `link-quality`, format `link-format`; the store's `foldDownOpen`,
+one list open at a time; a press on another kind chooses it and folds the
+list; FoldDown's own `foldDownChoices` and `foldDownKeyDown`); Get
+transcript and Analyse on one row; `LinkTranscriptStatus` and
+`BestClipsPointer`; Just a part of it with the Transcript and Clips toggles
+at its right end (`data-url-toggles`); Best clips' options (heading,
+**Duration** as one fold-down list, Make it vertical); the download lines.
+**What left the tile**: the link's rows, chips, run line, Clip download and
+Add another clip (`LinkWords`), and Best clips' running line, cards and
+notes (`BestClipsCards`), to the fold-out panel beside the picture: the
+240 px column also holds the Trimmer dock. The "Clip length" group of four
+buttons became the Duration list. `data-url-tile` is on the root. Read on
+the harness page on the Mac, 2026-11-27: the overlap check clean at
+1100×680 (the column at its 240 px floor), 1440×900 and 1920×1080, and
+`__forgeClipsLayout()`'s left part `{ width: 244.6, sideways: false, past:
+[] }` at 1440×900 and `{ width: 240 }` at 1100×680. Not read in the
+development app or on the Surface.)
+
 ### 3.5 Narration tile
 
 | control | today | new home | how | note |
@@ -387,6 +424,24 @@ read in the development app or on the Surface.)
 | Listen for (vocabulary) | `TranscriptPanel.tsx:220` | Shelf tile Transcript | move | |
 | Transcribe / again with these words | `TranscriptPanel.tsx:230` | Shelf tile Transcript | move | |
 | Row selection + Clip it | none (sheet 08) | Shelf tile Transcript | build | phase 3, first of the three |
+
+(2026-11-27, the clip maker's layout, `docs/CLIPS.md` §10a; piece 3,
+`0d6b7f9`, `2e8f937`. **The tile is `TranscriptTile`**, one line (the
+selected clip's language and word count, "This clip has no transcript yet.
+Transcribe it beside the picture.", or "Select a clip to see its
+transcript") and a **Transcript** toggle, pressed while the fold-out
+panel's Transcript tab shows the clip's words (`foldoutShowsWords`), greyed
+with no clip selected unless that tab shows the clip's empty face. Every
+control in the table above, with Graphics and Find graphics, is the whole
+`TranscriptPanel`, unchanged, drawn in the fold-out panel's Transcript tab
+beside the picture. Pressing the tile opens the panel on the clip's words
+(`Shelf.tsx` `goTo`, never `setShelfTool`). The Shelf registry's
+`transcript` panel is `TranscriptTile`. What the user reported, Find
+graphics' settings overlapping when a clip is selected, was read on the
+harness page on the Mac, 2026-11-27: with the dock open, the Transcript tab
+on the clip's transcript with Find graphics' results and dropped list, and
+a graphic on the timeline, nothing overlaps (by eye, and
+`__forgeClipItCheck`'s find `inside` and `clearOfDock` true).)
 
 ### 3.8 Director tile
 
@@ -595,6 +650,18 @@ standing for 31 carriers; the session read `__forgeCensus()` there at
 | onExport flow | `Inspector.tsx:218` | export strip | move | moved verbatim; re-point `tests/exportB2.test.ts:296-341` |
 | File > Export listener | `Inspector.tsx:367` | export strip (component always mounted) | move | collapse hides the body by class, never by unmount |
 
+(2026-11-27, `3d19ea0`, found by the overlap check on its first run: the
+`grid-cols-4` rows this table said to check at 240 px did not fit. At the
+left column's default width a cell of the Quality row (with Bitrate) and
+the Speed row is 49.9 px, and at 11 px "Standard" measured 47.1 px,
+"Balanced" 47.8 px, "Smallest" 44.2 px (a Range, on the harness page, the
+Mac); with `px-2` each side "Standard" and "Balanced" ran past their
+buttons (scroll widths 55 and 56 in 50). `ExportSettings.tsx`'s
+`segment(on, four)`: the four-to-a-row buttons take `px-0 text-[10.5px]`
+(45.6 px of word in 50 on the Mac's font), the other rows keep `px-2
+text-[11px]`. A first fix, `px-1`, left "Balanced" at 52 in 50. Older than
+the lane; not measured on Windows' fonts.)
+
 ### 3.18 Trimmer dock (shown only when a clip — or a Library sound — is selected)
 
 | control | today | new home | how | note |
@@ -655,6 +722,18 @@ standing for 31 carriers; the session read `__forgeCensus()` there at
 | TextAnimationPicker | `TextAnimationPicker.tsx:125` | trimmer dock + output strip (hosts) | move | |
 | Voice presets (Chipmunk … Radio) | `ClipMenu.tsx:226` | unchanged (right-click) | — | built and exported; Decision 4 |
 | Pool item selected → Trimmer as a source monitor | none (sheets 03, 21) | trimmer dock | build | phase 2 |
+
+(2026-11-27, `3d19ea0`, found by the overlap check on its first run: the
+waveform's handles are `w-3` centred on their points, so at the very start
+and end 6 px of a handle hung outside the waveform box: the start handle
+cut on the left, and the end handle making the dock scroll sideways by 6 px
+in every state with a clip selected (scroll width 242 in a 236 px dock at
+the default column; 645 in 639 with the column at 45 %; the harness page,
+the Mac). `Waveform.tsx`'s box takes `mx-1.5`, a 6 px gutter each side, in
+both places it is drawn, and `data-wave-box`; the overlap check excuses
+that box's own overhang into the gutter (`OVERHANG_BY_DESIGN`) and still
+reads the dock around it. Read clean after it at 1100×680, 1440×900 and
+1920×1080. Older than the lane.)
 
 (2026-11-25, after the 14 steps: the dock's **Graphic** panel
 (`GraphicPanel.tsx`, built 2026-11-11 with the graphics pass, `docs/CLIPS.md`
@@ -743,6 +822,16 @@ note): same items, look, position and dismissal, and its submenus (Speed,
 Voice, Look) now open up or down from their row by the room measured when
 they open and scroll inside the window (`submenuPlacement`, `49c836e`).)
 
+(2026-11-27, `7e7bfa5`: **the transport row wraps**. Its root is `flex
+min-w-0 flex-wrap`: with the left column at its new 45 % limit the timeline
+at the 1100 px least window is about 575 px wide, and the row's fixed
+content about 710 px by its classes; the Panel hides overflow, so the
+timecode and the zoom pair would have been cut off and unpressable. Wide,
+it is one line as before; narrow, it adds a line. Reasoned from the
+classes by the whole-lane critic; read on the harness page on the Mac by
+the overlap check's `wide-left-*` states, the column at 45 %, at 1100×680,
+1440×900 and 1920×1080: 0 cut off.)
+
 ### 3.22 Store state touched by the move
 
 | state | today | becomes | note |
@@ -812,6 +901,20 @@ None of it is saved in a project, and none is in the undo history (applying
 a look is, through the project). newProject and loadProject clear
 `lookNotes` and leave `savedLooks` and `lookDraft` alone.)
 
+(2026-11-27, the store state the clip maker's layout added (`docs/CLIPS.md`
+§10a), by `store.ts` at `3d19ea0`: `foldout` (`FoldoutState`, `{ open, tab,
+words }`, `src/shared/foldout.ts`, from `FOLDOUT_START`: shut, on Clips,
+the link's words) with `openFoldout(tab, words?)`, `closeFoldout`,
+`toggleFoldout(tab, words?)` and `toggleTranscript(words)` (decided on the
+words the tab shows); `foldDownOpen` (the one fold-down list open in the
+window, by id, or null) with `setFoldDownOpen`; and the exported
+`clipSelected(s)`. All view state: none in the project, none in the undo
+history, never dirty, not kept across launches; newProject and loadProject
+leave them alone. The opening on Analyse, on Get transcript's words and on
+the Transcript tile's press is in those components' handlers, not in
+`analyseBestClips`, `getTranscript` or `setShelfTool`, which are
+unchanged.)
+
 ---
 
 ## 4. Decisions the user has to make (no home in the sketches)
@@ -862,6 +965,12 @@ in `App.tsx` and `catalog.ts` since step 1. The Inspector line numbers this plan
 from `bd58eb5`; the Inspector is now the dock's clip editor and much shorter.
 **Never remounted**: the Preview (its rAF loop is the playback clock and the mixer,
 `Preview.tsx:1785-1868`); exactly one `canvas[data-forge-preview="1"]`.
+(2026-11-27, the clip maker's layout: the fold-out panel beside the picture opens and
+shuts by resizing an always-rendered Group, and nothing conditional stands between the
+picture's Panel and the Preview, `tests/foldoutWindow.test.ts`. `__forgeFoldoutCheck()`'s
+case "the Preview never remounted" reads the canvas before an open, a switch and a
+close and after: on the harness page, the Mac, 2026-11-27, at 1440×900, "1 canvas
+before, 1 after, same element: true".)
 **Harness hooks**: `window.forgeStore`, `window.forgeCatalog` (`harness/main.tsx:44, 56`),
 `__forgeEvalRelay`, `__forgeEvalCards`, `__forgeEvalMoments` and their progress globals
 (`harness/evalRelay.ts:60, 122, 163, 200-202`), `__forgeMomentCheck`
@@ -1550,6 +1659,71 @@ Anchors are counted with `matchAll` before being trusted.
   - **A stale comment:** `MediaPool.tsx` still calls the Upload button "the one way in from a file
     dialog"; since step 12 every media tool's Upload a file, and Beat sync's Add music, open the
     same `pickMedia` dialog.
+
+### After the steps — the clip maker's layout, and the overlap check · 2026-11-27
+
+Not one of the fourteen steps: lane 1 of the clip maker section
+(`docs/CLIPS.md` §10a, whose Built notes are the full record; `f8bd957` …
+`3d19ea0`, pushed once, CI green on both runners at `3d19ea0`, run
+46086275446). The user's two sketches are `docs/SHEETS.md` sheets 30 and
+31. In this file: §1's Foldout row, §2's note, and the notes under §3.4,
+§3.7, §3.17, §3.18, §3.21, §3.22 and §5. The user has not seen it.
+
+**The overlap check** (`src/renderer/src/harness/overlapCheck.ts`, the pure
+box rules in `overlapGeometry.ts`) is the standing answer to the user's
+"as we are bulding we should see the tiny spots too" (2026-11-27, with
+"in some sopts when i click on the current clip or any element its own
+custom setting is overlapping in the menu bar option like find graphics").
+For each of 46 states, each a census recipe and the homes opened over it,
+it reads the header's row, the left column, the fold-out panel, the canvas
+bar, the tool strip and the transport, and reports controls that share
+more than one pixel each way (overlaps), a control whose centre answers
+with something else (covered; two pixels or less of a control showing is
+not asked), a control or a scroll box past a clipping box that does not
+scroll (cut off), and an element of the left column or the panel that
+scrolls sideways by more than a pixel. The Preview, the timeline and the
+Curve tray are not read: their overlays and handles overlap on purpose. A
+state whose precondition is not met (the Trimmer dock on screen, the
+panel's face, whose words the Transcript tab shows, the left column at
+45 %) is skipped with its reason, never read clean. `BY_DESIGN` is empty;
+`OVERHANG_BY_DESIGN` holds the waveform box (§3.18's note).
+
+**How to run it**, on the harness page with the tab in front: first `await
+window.__forgeOverlapCheck({ plant: true })` (seven made-up layouts at the
+top of the left column, four faults it must find and three clean ones it
+must not name: `ok: true`); then `void window.__forgeOverlapCheck()` and
+read `window.__forgeOverlapLast` until `running` is false (one run at a
+time; a second call is refused); one state with `await
+window.__forgeOverlapCheck({ states: ['dock-graphic'] })`, and `keep: true`
+to leave it on screen, then reload before the next full run. Clean reads
+"46 states read at W×H, 0 skipped: 0 overlaps, 0 covered, 0 cut off, 0
+sideways".
+
+**Its first runs** (the session, the harness page, the Mac, 2026-11-27).
+The plant: ok true at 1100×680, 1440×900 and 1920×1080. The first full run,
+at 1440×900 with the left column left at 45 %: "46 states read at
+1440x900, 0 skipped: 0 overlaps, 104 covered, 0 cut off, 44 sideways". Two
+real spots, both older than the lane, fixed in `3d19ea0`: the Trimmer's
+waveform handles 6 px past their box (§3.18's note) and the Export strip's
+"Standard" and "Balanced" past their buttons (§3.17's note). The rest were
+the check's own false alarms, fixed in the check: the transport's Loop and
+Scrub checkboxes (a 1 px input beside the drawn 14 px box, 92 of the 104
+covered), every 1 px panel divider (the dock's separator, 12 states), a
+link typed in the link box ("272 > 97"), then at 1100×680 a dock slider
+with 1.3 px showing at the foot of its list and a transcript row's time
+button showing a sliver. And one hole in it, closed: a page left by a
+`keep: true` run on a link's words stood the clip-transcript states up on
+the link's rows, read clean; those states now carry `words` and are
+skipped with the reason. The final runs, each on a freshly loaded page:
+the clean line at 1440×900, at 1100×680 (the column at its 240 px floor),
+at 1920×1080, and at 1100×680 with the panel dragged to its 280 px floor
+first; the two `wide-left-*` states read, not skipped, at all three sizes.
+Not read: the development app, the Surface, Windows' fonts.
+
+**The fold-out's tabs have no arrow keys** and no roving tabindex: each tab
+is a plain Tab stop, as the Curve tray's tabs are. That is the house manner
+for the two, kept rather than changed for one of them (the whole-lane
+review's item, declined).
 
 ---
 

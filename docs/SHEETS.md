@@ -1,10 +1,13 @@
-# The notebooks — 18 sheets, then 11 more
+# The notebooks — 18 sheets, then 11 more, then 2
 
 A transcription of the hand-drawn planning sheets, kept here so the plan
 survives independently of any one conversation. The first notebook (sheets 1 to
 18, September 2026) planned the editor that exists; the second (sheets 19 to 29,
 drawn 2026-10-02 while looking at the running harness) plans the new layout and
-the next tools. The second part begins at "The second notebook" below.
+the next tools. The second part begins at "The second notebook" below. The
+third (sheets 30 and 31, drawn 2026-11-27 after try-out 3) is the URL section
+as a clip maker and the panel beside the picture: "The clip maker's sketches"
+at the end.
 
 **This is a transcription, not the images.** For the first notebook the
 drawings live only in the notebook and in the photographs; what follows is what
@@ -12,7 +15,8 @@ is written and drawn on each, close enough to work from. Where a phrase is the
 author's own it is quoted. If one of those sheets needs to be looked at again —
 a layout judgement, something ambiguous in a sketch — the photograph has to be
 re-sent. The second notebook's photographs ARE kept, under
-`docs/sheets/2026-10-02/`, one JPEG per sheet, so those can be opened.
+`docs/sheets/2026-10-02/`, one JPEG per sheet, so those can be opened; so are
+the two of 2026-11-27, under `docs/sheets/2026-11-27/`.
 
 Sheets are listed in the order they were photographed. Several carry their own
 circled number in the notebook, which is given where it exists; some are
@@ -658,6 +662,10 @@ is also the cancel, and without Python the button is greyed with "The AI helper
 small Play preview per video and a bar rather than a chip. The sidecar runs
 faster-whisper.
 
+(2026-11-27: the selected clip's words are drawn in the panel beside the
+picture, its Transcript tab; the Transcript tile is one line and a toggle.
+Sheets 30 and 31.)
+
 ---
 
 ## 23 — 05 · Images in the pool: effects
@@ -715,7 +723,10 @@ transcript from the link and Best clips are not built. Chapters are in the
 downloader's own metadata, and YouTube's timed captions can be fetched without
 transcribing, so neither needs a model. (2026-11-25: Best clips is built on the
 build side, step 4, `e354cd8` … `d6000ed`; its exit open, `docs/CLIPS.md` §7.8;
-see sheet 27.)
+see sheet 27.) (2026-11-27: the URL tile's rows are re-ordered to sheet 30,
+the link's button reads **Download**, the kinds' quality and format fold
+down under them, and the link's rows are drawn in the panel beside the
+picture; sheets 30 and 31, `docs/CLIPS.md` §10a.)
 
 ---
 
@@ -734,6 +745,12 @@ blindly cutting from the duration bar." Order (3), but first among the three.
 **Status — not started.** The Transcript tile jumps to a word and corrects
 words (`TranscriptPanel.tsx`); it never cuts. The word timings exist, so this
 is a selection and one cut.
+
+(2026-11-27: both transcripts, the link's rows with Clip download and the
+selected clip's with Cut to these words, are drawn in the panel beside the
+picture, its Transcript tab, opened by a Transcript toggle in the URL tile
+or the Transcript tile; sheets 30 and 31, `docs/CLIPS.md` §10a. Built
+before that: `docs/CLIPS.md` §3b.)
 
 ---
 
@@ -763,6 +780,10 @@ are not built. Built on the build side only: its exit is open
 (Later on 2026-11-25: a real model and two real links went through the
 eval and the ten-links recorder, outside the panel; the exit stays open:
 `docs/CLIPS.md` §7.7's note "Read on a real model, 2026-11-25".)
+(2026-11-27: the cards are drawn in the panel beside the picture, its Clips
+tab, one to a row in a narrow panel and more in a wide one; the lengths are
+one "Duration" list, and Analyse sits beside Get transcript; sheets 30 and
+31, `docs/CLIPS.md` §10a.)
 
 ---
 
@@ -833,3 +854,145 @@ cutting first, then Narration (script, Pexels, settings panel), then Best clips
 need the sidecar, so the installed app sets Python up itself (R4's full route)
 rather than the TypeScript beat tracker alone; the beta plan's R4 changes
 accordingly when it is reached.
+
+---
+
+# The clip maker's sketches — 2026-11-27 — 2 sheets
+
+Drawn after try-out 3, when the URL section's Best clips was to become a
+clip maker with the options the plan had for it, and after the report that
+"right now the UI looks collided" (Find graphics' settings overlapping when
+a clip is selected). Two pencil sketches on one notebook's pages,
+photographed and kept as `docs/sheets/2026-11-27/01-url-section.jpg` and
+`02-clips-panel.jpg`; the numbers below go on from sheet 29. What follows is
+transcribed from the photographs; the spelling inside quotes is the
+author's.
+
+**The author's words with them** (2026-11-27): "tell me how you understand
+and ill correct if needed, so the clips section i thought of shoing in the
+half part of the time line or at least 40 or 35 percent of it, in that way
+i wont be able to colide when the clips is being selected and also please
+makeit adjustable in all ways, now there is a boundry just extend it a
+little bit".
+
+**The author's correction** of the session's first reading (which had put
+the Clips tab at the border of the picture and the timeline, and asked
+about Play on a card): the Clips toggle is in the left panel, and it
+unfolds the cards on the right, beside the picture; "we not touching the
+canvas or playhead time line left side"; the transcript the same way, a
+toggle that unfolds a card on the right with "the transcript and its time
+and the options … so that when the trim creat wont ever collide"; and the
+Play mark "i just put that for better understading of clips": nothing
+plays before a download, so there is no Play button.
+
+**Decided** (the same day): the session's three suggestions, "i agree with
+the 3 suggestion one panel two works perfect, 2) done 3)yes you can start
+the layout layout": one panel beside the picture with two tabs, Clips and
+Transcript; the picture shrinks beside it and is never covered, the border
+between them dragging; the Transcript tile's rows move there too, with Find
+graphics. The section is five lanes (`docs/CLIPS.md` §10a): the layout;
+source and count; captions; music and transitions; save as my recipe. Only
+the first is built.
+
+---
+
+## 30 — 01 · The URL section
+
+The left column, top to bottom:
+
+- The tool tiles, two rows of small boxes.
+- One long box, **"url / upload"**, and over two buttons beside it
+  **"choose"** and **"Download"**.
+- One row of tabs: **"Mp4"** (a ▽ at its left), **"Mp 3"** (a ▽),
+  **"Instrument"** (the word runs into its border), **"vocal"**, **"Get
+  transcript"**, **"Analaye transcript"**. Under Mp4 a list: **4K, 1080P,
+  720P**, and a fourth figure that reads 420P or 480P (written over). Under
+  Mp 3: **320**, and a second figure written over, not clearly readable.
+  An arrow from the word **"Collbpasable ▽"** points at the two lists.
+- An arrow from the Mp4 list down to **"Just at part"**.
+- At the right, a box **"transcript"** with a ‹ and an arrow pointing right.
+- Three dropdowns side by side, each ▽ with its list under it: **"Best
+  clips"** (1, 2, 3, 4, and "Custo", the word running off its box), **"Duration"** (1m, 2m, 3m, 4m),
+  **"Size"** (a first ratio written 19:6, 9:16, 1:1).
+- Under them: **"Cpations Select ▽"** with "smart - 2", "smat - 3" and
+  "custom", custom pointing to a box "Font, Size, placement"; **"Graphics
+  ▽"** with "on" and "off"; at the right edge, a box drawn half off the
+  page with an arrow curving down to **"BGM ▽"**, whose list is "Upload"
+  (the box carries no word).
+- **"transcition music sync"** and **"B-roll - comming soon"**.
+- At the foot, **"out put ▽"** and **"Export ▽"**.
+
+**Status, by what is drawn** (lane 1, the layout, built 2026-11-27,
+`f8bd957` … `3d19ea0`; `docs/CLIPS.md` §10a; read on the harness page
+only, not yet by you):
+- The tiles, OUTPUT and EXPORT: as they were.
+- "url / upload": the link box, as it was ("Paste a video link"). Upload
+  and **"choose"**: not built, lane 2.
+- **"Download"**: built. The link's button reads **Download** (it read
+  "Get"), and **Full download** while the link's words are shown.
+- Mp4 and its list: built as the **Video** chip, which reads "Video ·
+  1080p" when chosen and unfolds 4K, 1080p, 720p, 480p under the row. The
+  kinds keep their names, Video and Audio (set by the session).
+- Mp 3 and its list: built as **Audio**, whose list is m4a and mp3, as
+  before. The 320 / 128 choice is not built: a new function, for a later
+  lane or your word (set by the session).
+- Instrumental and Vocal: as they were, as chips in the same row, with
+  "split after downloading" under them.
+- "Collbpasable": built. Each list folds open in the flow and pushes what
+  is below down; none floats (set by the session).
+- "Get transcript" and "Analaye transcript": built as one row, **Get
+  transcript** and **Analyse**. Analyse on the app's own transcription of
+  your own video: lane 2.
+- "Just at part": as it was, **Just a part of it**, on the row with the
+  toggles.
+- "transcript" with its arrow: built as the **Transcript** toggle, with a
+  **Clips** toggle beside it, at the right end of that row; each unfolds
+  the panel beside the picture (sheet 31).
+- Best clips 1, 2, 3, 4, Custom: not built, lane 2 (three clips are fixed
+  in code today). The heading "Best clips" is there.
+- Duration: built, a fold-down list **Duration**, 1 min to 4 min, under
+  Best clips. It sits below Analyse, the sketch's order; flagged to you as
+  something you may want moved (set by the session).
+- Size 16:9, 9:16, 1:1: not built, lane 2. **Make it vertical** stays,
+  under Duration.
+- Captions Smart 2, Smart 3, Custom: not built, lane 3.
+- Graphics on / off: not drawn in lane 1 (an option that does not work
+  yet is not drawn: set by the session); none of the five lanes names it.
+  Clip it from a card already runs graphics as one of its steps.
+- BGM, Upload: not built, lane 4, with ducking.
+- "transcition music sync": not built, lane 4, for your own several-clip
+  videos.
+- "B-roll - comming soon": not drawn; B-roll is after the beta.
+- The box at the right edge with its arrow: no status; what it stands for
+  is not written.
+
+---
+
+## 31 — 02 · The Clips panel
+
+The window's top left: the tool tiles, then the canvas bar, **16:9 | 9:16 |
+1:1**. Under it the tool strip of icons, and beside the tool strip a tall
+panel of stacked cards, **"Clip1"** and **"Clip 2"**, each a tall frame with
+a circled Play mark and the word "Play", a scrollbar drawn down the panel's
+right edge and an arrow ↓ at its foot. Out of the left column's edge, a
+vertical tab **"CLIPS"**, joined to the panel by two lines. The picture is
+not drawn. Under it the timeline, its track names **V, V, A**.
+
+**Status** (lane 1, built 2026-11-27; `docs/CLIPS.md` §10a; read on the
+harness page only, not yet by you):
+- The canvas bar, the tool strip and the timeline: as they were.
+- The panel of cards beside the picture, with its own scroll: built, the
+  fold-out panel's **Clips** tab between the tool strip and the picture.
+  The cards sit one to a row in a narrow panel and more in a wide one; the
+  tab's body scrolls. The picture shrinks beside the panel and is never
+  covered; the border drags from 280 px to 60 % of the row, the picture
+  never under 35 %; it opens at 40 %, and dragged shut it closes.
+- The vertical "CLIPS" tab: built otherwise, by your correction. The
+  **Clips** toggle is in the URL tile (left), and the panel has a
+  horizontal bar at its top with two tabs, **Clips** and **Transcript**,
+  and a close button.
+- The transcript the same way (said, not drawn): built, the **Transcript**
+  tab, opened by the Transcript toggle in the URL tile (the link's words)
+  or in the Transcript tile (the selected clip's, with Find graphics and
+  Listen for), and by itself when Get transcript's words arrive.
+- The Play marks: no Play button, as you said.

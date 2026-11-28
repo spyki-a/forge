@@ -5239,7 +5239,8 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 > download, so that way it will be clear"): Get, while words are shown, reads
 > **Full download** ("Download the whole video and put it on the timeline"),
 > and Clip it's button reads **Clip download** ("Download only the words you
-> picked and put them on the timeline"); with no words shown Get stays **Get**;
+> picked and put them on the timeline"); with no words shown Get stays **Get**
+> (since 2026-11-27 it reads **Download**, your sketch's word, §10a);
 > measured in the 240 px column, 113.5 px and 116.9 px, one line each, the link
 > box beside Full download 94.3 px. After review: a row
 > shift-click extends from the row last CLICKED only while nothing else has
@@ -5280,6 +5281,11 @@ itemised; this is the split, and step 4 keeps Best clips proper (§7).
 > Clip it inherits ingest's collect-once rule (2026-10-06, `INGEST.md`, "The
 > renderer half"): main marks a job collected when `ingest:collect` hands it
 > back, so a reload no longer lands its clip, words and credit a second time.
+> (2026-11-27, the clip maker's layout, §10a: the chapter chips, the rows,
+> the run's line with its read-only From and To, Clip download and Add
+> another clip are drawn in the fold-out panel's Transcript tab beside the
+> picture, `LinkWords`; the URL tile keeps Get transcript, its status lines,
+> the language choice and the no-captions block.)
 
 `src/renderer/src/components/tools/TranscriptRows.tsx`, **one component for
 both tiles** (the URL tile's transcript, and a timeline clip's in the
@@ -5409,7 +5415,10 @@ captions a chip sets the start and end fields instead
 
 ### 3b.6 (h) The timeline half — §7.6, moved here
 
-> **Built 2026-10-06** — the Transcript tile's half (M0 slice 3).
+> **Built 2026-10-06** — the Transcript tile's half (M0 slice 3). (Since
+> 2026-11-27 its rows, Edit and Cut to these words are drawn in the fold-out
+> panel's Transcript tab beside the picture; the tile is one line and a
+> toggle, §10a.)
 > `src/shared/timeline.ts` `timelineFrameAt(clip, sourceMs, fps)`: the first
 > timeline frame showing the source frame that holds `sourceMs`, or a later
 > one — a binary search over `sourceFrameFor`, so constant speed and ramps
@@ -12797,7 +12806,9 @@ type the app defined.
   (`src/renderer/src/components/TranscriptGraphics.tsx`, mounted in
   `TranscriptPanel.tsx` between `TranscriptBody` at `:105` and `Vocabulary`
   at `:107`; the Shelf's `transcript` tile, `components/shelf/tools.ts:150`,
-  §16.6).
+  §16.6). (Since 2026-11-27 `TranscriptPanel`, Graphics and Find graphics
+  with it, is drawn in the fold-out panel's Transcript tab beside the
+  picture, §10a.)
   Its graphics carry `CLIPS_GRAPHIC_RULE`. The section holds:
   - **"Find graphics in this clip"**;
   - the list of every graphic over the clip, whichever rule made it: its
@@ -13502,7 +13513,8 @@ channel name", read on screen at `d33d5b4`; the Built note below, part
 >   (`clearDirectorOutput`) is `resoundAfterClear(p, clearDirector(p),
 >   pack)` in one update. The drawn graphics are rebaked by `rebakeGraphic`
 >   as Find's are; `rebakeGenerated` no longer re-places (§6.9's note).
-> - **(i) By hand: the Transcript tile's Graphics section**
+> - **(i) By hand: the Transcript tile's Graphics section** (in the
+>   fold-out panel's Transcript tab since 2026-11-27, §10a)
 >   (`TranscriptGraphics.tsx`, new, `ffc5391`, `64adaed`), mounted in
 >   `TranscriptPanel.tsx` (`:108`) between `TranscriptBody` (`:106`) and
 >   `Vocabulary` (`:110`); every text an exported constant. The heading
@@ -24674,6 +24686,11 @@ another, with the helper or without it: piece 3's note below.)
 >   line, Listen to it being greyed, so a captionless video reads
 >   `BEST_CLIPS_CANNOT_LISTEN` with the helper or without it, and the panel
 >   no longer reads `transcribeGate`, `helperStatus` or `speechModel`.
+> - **Moved 2026-11-27** (the clip maker's layout, §10a): the cards, the
+>   running line and the notes are drawn in the fold-out panel's Clips tab
+>   beside the picture, a grid one card to a row in a narrow panel; the URL
+>   tile keeps Analyse (beside Get transcript), the pointer, the Clips
+>   toggle and the options, the lengths now one "Duration" list.
 
 > **Built 2026-11-23/24 (piece 4: Clip it from a card, step 0's question,
 > steps 3 to 5 after it).** `4d898b0`, then `08875ea` after two critics.
@@ -26812,7 +26829,8 @@ its decisions are §16.106-111.)
   stripped on save, like slot media (`MARKET.md:181-190`). No third-party
   marks; no likenesses. 2.5 days. (2026-11-14, §16.75: before the beta
   there are no B-roll shapes to save; they join it when step 5 lands
-  after the beta.)
+  after the beta.) (2026-11-27: it is lane 5 of the clip maker section,
+  §10a, "Save as my recipe"; not built.)
 - Stage 2 onward (sharing, the store) is `MARKET.md`'s, not this plan's.
 
 > **Built 2026-11-25 (the creator style, piece 1: the look, its file and
@@ -27263,6 +27281,619 @@ its decisions are §16.106-111.)
 >   writes none and keeps the maker's line as typed; asked on 2026-11-25
 >   whether a default is wanted, not answered.
 > - The second bullet, the saved template with slots: not built.
+
+---
+
+## 10a. The clip maker section — five lanes · about 10 days (lane 1, the layout, built 2026-11-27)
+
+**What you asked for and drew (2026-11-27).** Back from try-out 3 you
+asked for the URL section's Best clips to be one place with all the
+options the plan had for it — count, captions, graphics, transitions, a
+music bed with ducking, an upload beside the download — and reported
+that "right now the UI looks collided": "when i click on the current clip
+or any element its own custom setting is overlapping in the menu bar
+option like find graphics … as we are bulding we should see the tiny
+spots too". Then you sent two photographs of paper sketches, the URL
+section and the window with a Clips panel beside the picture, transcribed
+with each drawn thing's status in `SHEETS.md`'s third part (sheets 30
+and 31, `docs/sheets/2026-11-27/`), and corrected the session's first
+reading of them: the Clips toggle is in the left panel and the cards
+unfold on the right, "same for the transcript too", and the Play mark
+on a card was only to explain ("nothing gets played untli donwloaded").
+Your go, the same day: "i agree with the 3 suggestion one panel two works
+perfect, 2) done 3)yes you can start the layout layout".
+
+**The three suggestions you accepted.** (1) ONE panel on the right with
+two tabs, Clips and Transcript, not two panels. (2) The picture SHRINKS
+beside the panel and is never covered; the border between them drags.
+(3) The Transcript tile's rows (the transcript of a clip already on the
+timeline) move there too, with Find graphics: the spot you named.
+
+**The five lanes**, in order, about 10 plan-days; each figure is the
+session's estimate:
+
+1. **Layout** (about 3 days). The panel beside the picture, the URL
+   tile's rows in the sketch's order, the transcript and the cards moved
+   out of the 240 px column. **Built 2026-11-27**, below.
+2. **Source and count** (about 1.5 days). Choose, for your own video;
+   Analyse on the app's own transcription; Best clips 1 to 4 or custom
+   (`PICKS = 3` is fixed in `src/shared/bestclips/schema.ts` today); Size
+   16:9 / 9:16 / 1:1.
+3. **Captions** (about 2 days). Sheet 9's sets as the sketch names them:
+   Smart 2, Smart 3, and Custom (font, size, placement).
+4. **Music and transitions** (about 1.5 days). A BGM upload with ducking
+   (`src/shared/render/duck.ts` exists), and transition / music sync for
+   your own several-clip footage (a link's clip is one continuous shot).
+5. **Save as my recipe** (about 2 days). This is §10's second bullet, the
+   saved template, as you defined it on 2026-11-25: a recipe for Clip it
+   only (§16.111).
+
+Lanes 2 to 5 are not built; each starts on your word.
+
+### Lane 1 — the layout, as built
+
+Ten commits on main, 2026-11-27: nine of a workflow run
+(`wf_6bec4ec7-f68`, nineteen Opus agents, four pieces each a builder, two
+critics and a fixer, then two whole-lane critics and a fixer; about four
+hours) and one of the session's. From `9c40848` (docs only; the code under
+it `8730ff7` + `1c1dba0`): `f8bd957`, `d14ecdf` (piece 1), `88f63ae`,
+`d1971fd` (piece 2), `0d6b7f9`, `2e8f937` (piece 3), `470039c`, `9a667f7`
+(piece 4), `7e7bfa5` (the whole-lane review), `3d19ea0` (the session's).
+Pushed once, `9c40848..3d19ea0`. Nothing under `docs/` was changed by any
+of the ten. Described from the code at `3d19ea0`. **In code the panel is
+the FOLDOUT** (`Foldout.tsx`, store `foldout`, `data-foldout`); on screen
+it has no name, only its two tabs, "Clips" and "Transcript". It is not
+"sidecar": that is your word for the left panel (the Shelf in code), and
+the code's for the Python process (on screen "the AI helper").
+
+> **Built 2026-11-27 (piece 1: the fold-out panel, its store and the
+> fold-down list).** `f8bd957`, then `d14ecdf` after two critics.
+> - **`src/shared/foldout.ts`** (new, pure). `FoldoutTab` `'clips' |
+>   'transcript'`; `FoldoutWords` `'link' | 'clip'` (the words of the link
+>   in the URL tile's box, or of the clip selected on the timeline);
+>   `FoldoutState` `{ open, tab, words }`; `FOLDOUT_START` (frozen) `{ open:
+>   false, tab: 'clips', words: 'link' }`. `foldoutOpened(state, tab,
+>   words?)` (words change only when given; the same object back when
+>   nothing changes); `foldoutClosed` (keeps tab and words for the next
+>   open); `foldoutShowing(state, tab, words?)` (open on that tab, and on
+>   those words when a Transcript toggle names them); `foldoutToggled`
+>   (closes on what shows, else opens there); `foldoutTranscript(asked,
+>   { link, clip })` (the asked transcript if it exists, else the other if
+>   that exists, else the asked one's empty state, `{ words, ready }`);
+>   since piece 3 `foldoutShowsWords(state, words, has)` and
+>   `foldoutToggledWords` (decided on the words SHOWN, not asked).
+>   Sizes: `FOLDOUT_SHUT` 0, `FOLDOUT_MIN` 280 (px), `FOLDOUT_OPEN` `'40%'`
+>   (the first open, as a share of the row), `FOLDOUT_MAX` `'60%'`,
+>   `PICTURE_MIN` `'35%'`; `foldoutOpenAt(px)` (open at 140 px or more,
+>   the midpoint the library snaps at); `followFoldout(panel, open,
+>   width)` → `'same' | 'moved' | 'refused'` (from the store's side, by
+>   `resize` to where it was left, never `expand`; `'refused'` when the
+>   Group will not open it); `foldoutResized({ inPixels, asPercentage })`
+>   → `{ open, width }` (from the Panel's side; the width as a share, so a
+>   resized window keeps the proportion).
+> - **The store**: `foldout` with `openFoldout(tab, words?)`,
+>   `closeFoldout`, `toggleFoldout(tab, words?)`; since piece 2
+>   `foldDownOpen` (`string | null`, the one fold-down list open in the
+>   window) with `setFoldDownOpen`; since piece 3 `toggleTranscript(words)`
+>   and the exported `clipSelected(s)` (a selection still on the timeline:
+>   a selection can outlive its clip). All of it session state: not in the
+>   project or its file, no undo step, never marks the project dirty, not
+>   kept across launches; newProject and loadProject leave it alone.
+> - **`components/Foldout.tsx`** (new). Shut, `Foldout` draws an empty
+>   `<div data-foldout="shut">`. Open, a `h-7` bar: a `role="tablist"`
+>   labelled "Clips and transcript" with two `role="tab"` buttons, "Clips"
+>   (title "The best clips found in the link") and "Transcript" (title
+>   "The words of the link, or of the selected clip"), ids
+>   `foldout-tab-<tab>`, `aria-selected`, `aria-controls="foldout-<tab>"`
+>   on the open tab only (`d14ecdf`); a tab press opens, never toggles. At
+>   its right an X, `data-foldout-close`, titled and labelled "Close and
+>   give the picture its room back". Under it the open tab's body,
+>   `role="tabpanel"`, `id="foldout-<tab>"`, `aria-labelledby` the open
+>   tab, `data-foldout-body`, `overflow-y-auto overflow-x-hidden p-2`, in an
+>   `ErrorBoundary` keyed by the tab. **`useFoldoutPanel`** keeps the Panel
+>   and the store in step both ways, the Curve tray's way: a store change
+>   (a toggle, a tab, the close button) resizes the Panel open to where it
+>   was left or collapses it; the Panel's `onResize` (a drag, its keyboard,
+>   the window) writes the store open or shut, so dragging it shut closes
+>   it, and a reopen in the same drag keeps the tab. Followed by a
+>   subscription, not a selector, so an open does not re-render App. When
+>   the Group refuses (no room for 280 px beside 35 % of picture), the
+>   store is written shut. Since `3d19ea0`, a panel shut by a drag opens
+>   next at 40 % (`width.current = FOLDOUT_OPEN` before `closeFoldout()`):
+>   a drag shut passes through the floor, the last width recorded; one shut
+>   with the X or a toggle keeps where it was left.
+> - **`App.tsx`**. In the picture's row, after the `Toolbox`, an
+>   always-rendered `<Group orientation="horizontal" className="min-w-0
+>   flex-1">` holding `<Panel id="foldout" collapsible collapsedSize={0}
+>   defaultSize={0} minSize={280} maxSize="60%">`, `FoldoutDivider`, and
+>   `<Panel id="picture" minSize="35%">` around the `Preview`: tool strip,
+>   panel, picture, the sketch's order. **The Preview never moves or
+>   remounts**: no condition stands between the picture's Panel and the
+>   Preview (`tests/foldoutWindow.test.ts`), and `__forgeFoldoutCheck`'s
+>   "the Preview never remounted" reads the canvas before and after. The
+>   height is the picture's. `FoldoutDivider` is its own component reading
+>   `foldout.open`: shut it is `disabled` and drawn `w-0` (no grab, no
+>   keyboard stop, nothing of the panel on screen); open, the house
+>   divider's class, `DIVIDER_ACROSS`, now one constant shared with
+>   `Divider` (`d14ecdf`); `disableDoubleClick`, because the panel's
+>   default size is shut and a double-click "back to the default" would
+>   close it under the pointer. **The left column**: `<Panel id="left"
+>   defaultSize="17%" minSize={240} maxSize="45%" panelRef={leftColumn}>`;
+>   its limit was 30 % until this lane (you, 2026-11-27: "now there is a
+>   boundry just extend it a little bit"). The `panelRef` is
+>   `src/renderer/src/leftColumn.ts`'s (`7e7bfa5`, below).
+> - **`components/ui/FoldDown.tsx`** (new): your sketch's "collapsable".
+>   A button saying what it chooses and what is chosen, with a chevron
+>   (`ChevronDown`/`ChevronUp` swapped, never rotated), and under it, IN
+>   THE FLOW, the choices as a wrapping row of `aria-pressed` buttons:
+>   never a floating menu. Controlled (`open`, `onOpenChange` passed in; no
+>   hook). A choice folds it; Escape on its root folds it while open, with
+>   `stopPropagation` (folded, Escape is the window's); a choice or Escape
+>   puts focus back on its own button (`refocus`, read from the event,
+>   `d14ecdf`). `aria-controls` only while the list is in the page
+>   (`7e7bfa5`). Since piece 2 `choiceData` (a `data-` attribute on every
+>   choice with its value); since piece 4 the exported parts
+>   `foldDownChoices` (the choices, called as a function) and
+>   `foldDownKeyDown`, for the URL tile's kinds row.
+> - **The harness**: `window.__forgeFoldoutCheck()`
+>   (`harness/foldoutCheck.ts`), eight cases in order: "shut: no width,
+>   nothing drawn, divider disabled"; "open on Clips: within its bounds, the
+>   picture keeps its share"; "open: divider live, body scrolls inside,
+>   nothing runs out"; "no transform, filter or backdrop-filter around it";
+>   "switch to Transcript"; "shut again"; "the Preview never remounted";
+>   "put back as found". The census gains two homes, `foldclips` and
+>   `foldtranscript` (the panel's two faces; the tab, title and close rows
+>   counted in `foldclips` only), and the recipe `foldout-clip-words`.
+>   `tests/orientation.test.ts` had to change: its slice ended at the first
+>   `</Panel>`, now the fold-out's; it now finds the centre panel's own
+>   close by depth.
+> - **The agents' readings**: suite 6470 → 6525 tests (builder) → 6527
+>   (fixer); the builder's 20 mutations and two by hand, the fixer's 9,
+>   each caught, each anchor counted once.
+
+> **Built 2026-11-27 (piece 2: the Clips tab).** `88f63ae`, then
+> `d1971fd` after two critics; split further in piece 4.
+> - **`tools/BestClips.tsx`**: what you choose stays in the URL tile, what
+>   Analyse finds is the panel's. In the tile, since piece 4 four parts
+>   `IngestPanel` places (below): `AnalyseButton`, `BestClipsPointer`,
+>   `ClipsToggle`, and `BestClips`, now the options only: the heading
+>   "Best clips", the length as a `FoldDown` (`id` `best-length`,
+>   `BEST_CLIPS_LENGTH_LIST`) labelled "Duration", titled "How long each
+>   clip should be", the choices "1 min" to "4 min" with
+>   `data-best-length`, greyed and folded while Analyse runs; then **Make
+>   it vertical**. The old group's aria-label "Clip length" is gone with its
+>   four buttons.
+> - **Analyse** (its title unchanged) folds the Duration list if it is
+>   open (`d1971fd`: left open it unfolded again by itself when the cards
+>   came), then `openFoldout('clips')`, then `analyse()`: the opening is in
+>   the button's handler; `analyseBestClips` is unchanged.
+> - **The pointer** (`data-best-pointer`, `aria-live`) under Analyse's row,
+>   in this order: no captions, "This video has no captions, and Best clips
+>   cannot listen to a video yet."; no words and not fetching, "Best clips
+>   reads the video’s captions: press Get transcript first."; Analyse greyed
+>   by another link's run, "Best clips is still looking at another video."
+>   (`d1971fd`, so a greyed Analyse always says why in the tile); else
+>   nothing.
+> - **The Clips toggle** (`data-best-toggle`), "Clips", titled "Show or
+>   hide the clips Analyse found, beside the picture", on screen whenever
+>   the box holds a link; `aria-pressed` = `foldoutShowing(foldout,
+>   'clips')`, accent-coloured while pressed, `PanelLeftOpen` /
+>   `PanelLeftClose` swapped; a press is `toggleFoldout('clips')`; the
+>   number of clips found in its own span, `data-best-count`, when more than
+>   none.
+> - **`BestClipsCards`**, the Clips tab's body (`data-best-clips-tab`):
+>   the running line ("Looking for the best stretches…", or "Best clips is
+>   still looking at another video.", `data-best-running`, `aria-live`), the
+>   cards, the notes under them; or, with nothing running and no result,
+>   one line (`data-best-empty`): no link, "No clips yet. Paste a video
+>   link in the URL tile to find its best clips."; a link with no captions,
+>   "This video has no captions, and Best clips cannot listen to a video
+>   yet."; a link with no words, "No clips yet. Press Get transcript in the
+>   URL tile, then Analyse."; words not analysed, "No clips yet. Press
+>   Analyse in the URL tile, beside Get transcript." (piece 4's wording;
+>   piece 1's line, then in `Foldout.tsx`, said "under Best clips"). The
+>   cards are a grid, `[grid-template-columns:repeat(auto-fill,minmax(min(15rem,100%),1fr))]`:
+>   one to a row in a narrow panel, two or more in a wide one, a card never
+>   under 15rem or the tab's width if less; the card's text column keeps
+>   `min-w-0`, the title and the why wrap anywhere (`d1971fd` pinned both).
+>   Every `data-best-*` and `data-card-*` attribute is kept.
+> - **The harness**: `__forgeBestClipsCheck` chooses the length in the
+>   tile's Duration list, presses Analyse there, and reads and presses the
+>   cards in the tab, each pressed case failing if Analyse did not open the
+>   panel on Clips; it stops once, saying "the page is too narrow to open
+>   the panel beside the picture …", on a page without room (`d1971fd`).
+>   New `window.__forgeClipsLayout()` (`harness/clipsLayoutCheck.ts`): it
+>   changes nothing; it reads the whole URL tile (`[data-url-tile]`, since
+>   piece 4) and the Clips tab and returns `{ ok, left, tab, problems }`:
+>   nothing past the tile's or the tab's right edge, no sideways scroll,
+>   no card title cut, every card at least 240 px or the tab's width,
+>   `perRow`. Census recipes `link-best-lengths` and
+>   `link-best-clips-elsewhere`; the cards' rows moved to `foldclips`.
+> - **The agents' readings**: suite 6527 → 6537 (builder) → 6539 (fixer);
+>   22 + 7 mutations, each caught. One full run of the fixer's failed the
+>   helper's own Python timing test (3497 ms against 3100) and passed
+>   alone and in a second full run.
+
+> **Built 2026-11-27 (piece 3: the Transcript tab).** `0d6b7f9`, then
+> `2e8f937` after two critics.
+> - **`FoldoutTranscript`** draws the words `foldoutTranscript` picks, and
+>   with both there a two-way switch at its top (`data-foldout-switch`, a
+>   `role="group"` labelled "Whose words"): "The link" (title "The words of
+>   the video whose link is in the URL tile") and "The selected clip"
+>   (title "The words of the clip selected on the timeline"), the shown side
+>   `aria-pressed`; a side is `openFoldout('transcript', side)`. No switch
+>   with one. The face sits in its own `ErrorBoundary` keyed
+>   `transcript:<shown words>`, the switch outside it, so you can always
+>   switch away from a crashed face. **`FoldoutTranscriptFace`**: the
+>   link's words are `LinkWords` (`tools/LinkTranscript.tsx`: the chapter
+>   chips, the rows, the run's line with its read-only From and To, Clip
+>   download, Add another clip; nothing while the link has none); the
+>   clip's are the whole `TranscriptPanel` (Edit, the rows and Cut to these
+>   words, Graphics with Find graphics, Listen for and Transcribe),
+>   unchanged but for `SELECT_CLIP_TEXT`; with neither, the asked one's line,
+>   "No words from a link yet. Paste a link in the URL tile and press Get
+>   transcript." or "Select a clip on the timeline to see its words here."
+>   (marked `data-foldout-empty` since `3d19ea0`, below).
+> - **The two toggles**, both "Transcript", both `aria-pressed` by
+>   `foldoutShowsWords` and pressed through the store's
+>   `toggleTranscript(words)`, which decides on the words SHOWN (piece 1's
+>   critic: with no clip selected and the link's words ready the tab can be
+>   asked for the clip's and show the link's). In the URL tile
+>   `LinkTranscriptToggle` (`data-link-transcript-toggle`, title "Show or
+>   hide the link’s words, beside the picture"), drawn only while the link's
+>   words are ready (`wordsShown`, `2e8f937`). In the Shelf's Transcript
+>   tile, now **`TranscriptTile`**, a short face: one line (the selected
+>   clip's `<language> · <n> words`; "This clip has no transcript yet.
+>   Transcribe it beside the picture."; or "Select a clip to see its
+>   transcript") and the toggle (`data-clip-transcript-toggle`, title "Show
+>   or hide this clip’s words, beside the picture"), greyed only with no
+>   clip selected AND the tab not showing the clip's face (`2e8f937`: before,
+>   it could read pressed and greyed at once, and could not close the
+>   panel it had opened).
+> - **When the panel opens by itself**: when Get transcript's words arrive
+>   (`fetchWords`, the handler of Get transcript and of both language
+>   lists, awaits the unchanged `getTranscript`, then
+>   `openFoldout('transcript', 'link')` if the link has words); and when
+>   the Transcript tile is pressed (`Shelf.tsx` `goTo`:
+>   `setShelfTool(next)`, then `openFoldout('transcript', 'clip')`).
+>   Never from `setShelfTool` itself, so drawing the Shelf never reopens a
+>   panel you closed, and the census's and harness's `setShelfTool` open
+>   nothing.
+> - **The strings that point**: a card's graphics line,
+>   `STEP_TEXT.graphicsListed`, ": listed in the Transcript tile." became
+>   ": listed under the clip’s words, beside the picture."; the tile's new
+>   lines and both toggles' titles say "beside the picture".
+> - **The harness**: `__forgeClipItCheck` finds the link box, Get and Get
+>   transcript in the URL tile and the words in the panel, checks the tile
+>   holds no row, presses the real Transcript tile in the strip, and
+>   measures Find graphics and its section inside the panel and clear of
+>   the Trimmer dock, with `ran` and `listed` (`2e8f937`: it first waits to
+>   see the run start). `__forgeBestClipsCheck`'s seventh Clip it case opens
+>   the Transcript tab to press Clip download there (`2e8f937`: without it
+>   the check would have stopped at 35 of 36). Census: recipe
+>   `foldout-both-words`; 61 rows moved to `foldtranscript`.
+> - **The agents' readings**: suite 6539 → 6564 (builder) → 6567 (fixer);
+>   19 + 3 mutations, each caught (a guard no press could reach was removed
+>   as dead code).
+
+> **Built 2026-11-27 (piece 4: the URL tile's rows in the sketch's order,
+> and the overlap check).** `470039c`, then `9a667f7` after two critics.
+> - **`IngestPanel.tsx`**, the tile (`data-url-tile`), top to bottom:
+>   `LinkBox`, the box (placeholder "Paste a video link") and its button,
+>   **"Download"** (title "Download and put it on the timeline"; it read
+>   "Get") or, while the link's words are shown, **"Full download"** (title
+>   "Download the whole video and put it on the timeline"), the row
+>   wrapping only when the box would fall under 5.5rem; the link's problem
+>   line; **`KindsRow`**: "Video", "Audio", "Instrumental", "Vocal" as one
+>   row, the chosen one reading "Video · 1080p" (2160p shown "4K") or
+>   "Audio · m4a" (the format shown upper case) with a chevron and being the list's button; pressing it
+>   unfolds, under the whole row, the quality ("4K", "1080p", "720p",
+>   "480p", group "Quality", `link-quality`) or the format ("m4a", "mp3",
+>   shown upper case, group "Format", `link-format`); another kind chooses
+>   it and folds the list; a choice or Escape folds it; "split after
+>   downloading" on a line of its own for Instrumental and Vocal; then one
+>   row, **Get transcript** and **Analyse**; the transcript's status lines
+>   (`LinkTranscriptStatus`) and Best clips' pointer; **Just a part of it**
+>   (hidden while the words are shown) with, at the row's right end
+>   (`data-url-toggles`), the **Transcript** and **Clips** toggles; From,
+>   To, Fast cut and Exact cut under it when chosen; Best clips' options;
+>   the download lines. `LinkTranscript` is split into
+>   `GetTranscriptButton`, `LinkTranscriptStatus`, `LinkTranscriptToggle`
+>   and `LinkWords`; `BestClips` into the four parts above.
+> - **The overlap check**, the standing answer to "we should see the tiny
+>   spots too": `src/renderer/src/harness/overlapGeometry.ts` (pure) and
+>   `overlapCheck.ts`, `docs/WINDOW.md` §6's last part. **The geometry**:
+>   `OVERLAP_SLACK_PX` 1: two boxes overlap only when they share MORE than
+>   one pixel each way (touch is 1 px or less); one wholly inside another is
+>   `inside`, reported apart; a box of no size or wholly off the window is
+>   skipped; an edge counts as passed beyond 1 px; sideways is a scroll
+>   width more than 1 px past the width. **The page**: per state it reads
+>   the header's row, the left column, the panel, the canvas bar, the tool
+>   strip and the transport (census.ts `windowRegions`) and reports
+>   OVERLAPS (two visible controls, neither holding the other), COVERED (a
+>   control whose centre `elementFromPoint` answers with something else;
+>   since `3d19ea0` two pixels or less of a control showing is not asked),
+>   CUT OFF (a control past its nearest clipping ancestor that does not
+>   scroll; since `9a667f7` also a scroll box grown past its own clipper,
+>   and a control wholly past a clipper) and SIDEWAYS (in the left column
+>   and the panel; text cut with an ellipsis and, since `3d19ea0`, typing
+>   boxes are not read). Left out: the Preview, the timeline and the Curve
+>   tray, and anything in a `position: fixed` picker. **States**: 46 since
+>   `7e7bfa5` (`OVERLAP_STATES`), each a census recipe and homes run
+>   through the census's own `fresh`/`restore` (`censusPage`,
+>   `standCensusState`), with preconditions checked before reading
+>   (`unmet`): `dock` (the Trimmer dock on screen), `foldout` (the panel's
+>   face), `words` (whose words the Transcript tab draws, and not its line
+>   for nothing yet; `3d19ea0`), `left: 'widest'` (`7e7bfa5`); a state that
+>   cannot be stood up or fails one goes under `skipped` with its reason.
+>   `BY_DESIGN` is empty: the two the design expected are not overlaps (a
+>   tile's busy badge is a span inside the tile's button; the rows' Start
+>   and End handles sit in their own gutter), and an entry would excuse
+>   only the overlap pairing. `OVERHANG_BY_DESIGN` has one entry
+>   (`3d19ea0`), `[data-wave-box]`: the Trimmer's end handle hangs 6 px past
+>   the waveform box into the gutter kept for it, and the box's holders are
+>   still read. **`{ plant: true }`** (`9a667f7`) puts seven made-up
+>   layouts at the top of the left column, four faults (overlap, covered,
+>   cut, grown) and three clean (touch, scrolled, icon), reads once, takes
+>   them out, and `judgePlant` says whether each fault was found and nothing
+>   clean named. **One run at a time** (`9a667f7`): a call while one runs
+>   is refused, "an overlap check is already running (state N of M, …);
+>   read window.__forgeOverlapLast". **How to call it**: `void
+>   window.__forgeOverlapCheck()`, then read `window.__forgeOverlapLast`
+>   (`{ running, done, of, state, result?, error? }`) until `running` is
+>   false; one state at once with `await window.__forgeOverlapCheck({
+>   states: ['url-link'] })`; `keep: true` leaves the last state on screen
+>   (and the next run takes that page as its "before": run from a fresh
+>   page). Clean is `ok: true`, `skipped: []`, "46 states read at W×H, 0
+>   skipped: 0 overlaps, 0 covered, 0 cut off, 0 sideways". Installed by
+>   `harness/main.tsx` only, as the census is.
+> - **The census**: `censusPage`, `standCensusState`, `windowRegions` and
+>   `CENSUS_STATES` lifted out of `runCensus` unchanged in what they do;
+>   recipes `link-qualities` and `link-formats`; "Get" renamed "Download";
+>   "720p" and "480p" counted unfolded with "4K" (`9a667f7`: folded, only
+>   the chip's "1080p" is on screen, and the census would have read them
+>   missing).
+> - **The agents' readings**: suite 6567 → 6593 (builder) → 6611 (fixer);
+>   27 + 10 mutations, each caught; `tests/renderer/overlapReadPage.test.ts`
+>   (`9a667f7`) reads the page part over a made-up page in node.
+
+> **Built 2026-11-27 (the whole-lane review).** `7e7bfa5`, after two
+> critics over the whole lane.
+> - **The transport row wraps**: `Transport.tsx`'s root `flex min-w-0
+>   flex-wrap`. With the left column at its 45 % limit the timeline at the
+>   1100 px least window is about 575 px wide, and the row's fixed content
+>   is about 710 px by its classes; the Panel hides overflow, so the
+>   timecode and the zoom pair would have been cut and unpressable. Wide,
+>   it is one line as before.
+> - **`src/renderer/src/leftColumn.ts`**: `leftColumn` (a plain ref object
+>   App hands the left Panel as `panelRef`) and `LEFT_MAX` `'45%'`, for the
+>   harness only; the app never resizes the column. The overlap check's
+>   `wide-left-url` and `wide-left-dock` states resize it to `LEFT_MAX`,
+>   check it got there, read, and put it back.
+> - **Ten more overlap states** (36 → 46): `panel-card-question`,
+>   `panel-card-steps`, `panel-link-clipped`, `url-no-captions`,
+>   `url-no-language`, `panel-clip-editing`, `panel-clip-drops`,
+>   `dock-graphic` (a graphic selected, its settings in the dock, the
+>   Transcript tile open: your complaint), and the two wide-left states;
+>   `dock: true` on `panel-clip-words` and `panel-both-words`.
+> - **The URL tile guarded whole**: the test that no card, note or running
+>   line is drawn in the tile now renders the whole `IngestPanel` (before,
+>   only Best clips' parts; a critic's mutation put the cards back in the
+>   tile and every test passed). `aria-controls` only while a list is in
+>   the page (`FoldDown`, the chosen kind chip). A census row for "Download
+>   and put it on the timeline" (missing before the lane too); the stale
+>   row for "Wait for the build that is running to finish" now names
+>   `store.ts:758`.
+> - **The agents' readings**: suite 6611 → 6613; 13 mutations, each caught.
+
+> **Built 2026-11-27 (the session's: what the first runs on the page
+> found).** `3d19ea0`.
+> - **`Waveform.tsx`**: the box the waveform and its two handles are drawn
+>   in takes `mx-1.5` in both places it is drawn, and `data-wave-box`. A
+>   handle is `w-3` centred on its point, so at the very start and end 6 px
+>   of it hung outside the box: cut on the left, and on the right making the
+>   Trimmer dock scroll sideways by 6 px in every state with a clip selected
+>   (scroll width 242 in a 236 px dock at the default column; 645 in 639
+>   with the column at 45 %). Older than this lane.
+> - **`ExportSettings.tsx`**: `segment(on, four)`; the four-to-a-row
+>   buttons (Quality with Bitrate, and Speed) take `px-0 text-[10.5px]`,
+>   the other rows keep `px-2 text-[11px]`. At the default column a cell of
+>   those rows is 49.9 px, and at 11 px "Standard" measured 47.1 px,
+>   "Balanced" 47.8 px, "Smallest" 44.2 px (a Range on the page): with 8 px
+>   of padding each side "Standard" and "Balanced" ran past their buttons
+>   (scroll widths 55 and 56 in 50). The first fix, `px-1` for every such
+>   button, left "Balanced" at 52 in 50 and was replaced. Older than this
+>   lane.
+> - **`Foldout.tsx`**: `data-foldout-empty` on the Transcript tab's line
+>   for nothing yet; a panel shut by a drag forgets its width and opens
+>   next at 40 % (piece 1's note).
+> - **`overlapCheck.ts`**: the two-pixel rule for covered; typing boxes not
+>   read for sideways; `OVERHANG_BY_DESIGN`; `words` on six states and in
+>   `unmet`.
+> - **`census.ts`**: `FOLDOUT_NOTHING_YET` (`'[data-foldout-empty],
+>   [data-best-empty]'`), subtracted from a fold-out home's empty-project
+>   count: any state with words or cards REPLACES those lines, so what they
+>   say is not there for a state to add to.
+> - Tests: new `tests/waveformGutter.test.ts` (3) and
+>   `tests/exportSegments.test.ts` (3), cases added in five more files; 23
+>   mutations by the session, each caught, each anchor counted.
+
+**The session's verification, the development Mac, 2026-11-27.** Each run
+written to a file and its exit code read first. At `3d19ea0`'s tree:
+typecheck 0; `npm test` 0, Test Files 404 passed | 6 skipped (410), Tests
+6635 passed | 67 skipped (6702); build 0. (At `7e7bfa5`: 402 files, 6613
+tests, typecheck and build 0, but source was edited during that run, so the
+later run stands. Before the lane, at `8730ff7`'s code: 391 files, 6470
+tests.)
+
+**The harness page, the Mac, 2026-11-27** (http://localhost:5199, the
+Browser pane; no agent can run a browser, so nothing below had run before
+the session ran it):
+- `__forgeOverlapCheck({ plant: true })`: ok true at 1100×680, 1440×900
+  and 1920×1080, the four planted faults found and none of the three clean
+  layouts named.
+- The full run, first read at 1440×900 (the left column left at 45 % by an
+  earlier resize): "46 states read at 1440x900, 0 skipped: 0 overlaps, 104
+  covered, 0 cut off, 44 sideways". Two were real and older than the lane,
+  the waveform's 6 px and the Export strip's words (`3d19ea0`, above); the
+  rest were the check's own false alarms, fixed in the check: the
+  transport's Loop and Scrub checkboxes (a 1 px input beside the drawn 14 px
+  box, 92 of the 104 covered), every 1 px divider (the dock's separator, 12
+  states), and a link typed in the link box ("272 > 97"). Run again at
+  1100×680 it found 12 covered: a dock slider with 1.3 px showing at the
+  foot of the dock's list, and earlier a transcript row's time button with
+  a sliver showing; hence the two-pixel rule.
+- The final readings, each from a freshly loaded page: "46 states read at
+  1440×900, 0 skipped: 0 overlaps, 0 covered, 0 cut off, 0 sideways"; the
+  same at 1100×680 (the left column at its 240 px floor) and at 1920×1080;
+  and at 1100×680 again with the panel dragged to its 280 px floor first,
+  the same clean line, so the two narrowest widths together were read. The
+  `wide-left-*` states were read, not skipped, at all three sizes, 0 cut
+  off: the transport's wrap holds where the arithmetic said the timecode and
+  the zoom pair would be cut.
+- A hole the session closed (`3d19ea0`): after a `keep: true` run on a
+  link's words, the states named for the selected clip's transcript stood
+  up with the tab on the link's rows and were read clean. Each now carries
+  `words` and is skipped with the reason, read on the page as
+  `panel-clip-drops: the Transcript tab shows the link's words, not the
+  clip's`. The full runs above were each from a fresh page, and showed the
+  clip's face (`data-foldout-words="clip"`, the transcript's header, Find
+  graphics and its list in the panel).
+- `__forgeCensus()`: first `{ checked: 1092, skipped: 12, missing: 1 }`,
+  the row "Get" (a part) in `foldtranscript` under
+  `transcript-speech-press` read absent, with "Get the speech model · 464
+  MB" on screen: the Transcript tab's empty line ends "press Get
+  transcript.", so the home's empty-project count already held one "Get".
+  After `FOLDOUT_NOTHING_YET`: `{ checked: 1092, skipped: 12, missing: []
+  }` (1058 checked before the lane). The fixture has 1104 rows, 33 in
+  `foldclips` and 68 in `foldtranscript`.
+- At 1440×900: `__forgeFoldoutCheck()` ok true, 8 cases, open on Clips
+  "row 1158 px: panel 463 px (40 %), picture 694 px", the Preview "1 canvas
+  before, 1 after, same element: true"; `__forgeBestClipsCheck()` ok true,
+  36 cases; `__forgeClipItCheck()` rows 12, tile.rows 12, failures [],
+  layout idle and picked dock, clear and visible true (column 463.1), find
+  ran, listed, inside and clearOfDock true; `__forgeGraphicCheck({ find:
+  ['timeline', 'before-after', 'versus'] })` three PASS; `__forgeLookCheck()`
+  "14 of 14 cases pass"; `__forgeClipsLayout()` with `panel-clips` stood
+  up `{ ok: true, left: { width: 244.6, sideways: false, past: [] }, tab:
+  { width: 447, cards: [447, 447, 447], perRow: 1, titlesCut: 0 } }`, and
+  at 1100×680 with the panel at its floor `ok: true`, `left.width` 240,
+  `tab.width` 255, three cards of 255, `perRow` 1, `titlesCut` 0.
+- By hand, with the pointer, at 1440×900: the real divider dragged left,
+  the panel went to 280 px and stayed open; further, shut (`open: false`,
+  0 px, its divider `aria-disabled`). Reopened it came back at 280 px;
+  after `3d19ea0`, dragged shut from 463 px, it reopened at 463 px. A cold
+  start of the harness and a first load: the panel shut, the Curve tray
+  shut. The very first load of the session showed both open while the
+  Browser pane was still opening; not seen again in six reloads and one
+  cold start; the older Curve tray opened with it, so the session puts it
+  on the pane's zero-width moment, cause not proven.
+- By eye (screenshots kept, gitignored): the Clips tab with three cards
+  beside the picture and the tile's short rows at 1440×900; a clip
+  selected, the dock open, the Transcript tab on the clip's transcript with
+  Find graphics' results and dropped list, and a graphic on the timeline,
+  the spot you reported, with nothing overlapping; the least window with
+  the column at 240 px and the panel at 280 px.
+
+**CI at `3d19ea0`** (run 46086275446, the lane's one push):
+`windows-latest` (job 140796466199) and `macos-15` (job 140796466398)
+green; the installer job skipped, as on every push. Read through
+api.github.com; no runner's totals known (the log needs a sign-in).
+
+**Read, and where; not read.** Every on-screen figure above was read on the
+Mac's harness page, with the harness's recipes. Nothing was read in the
+development app or a packaged app, and nothing on the Surface; no real
+link, download or model went through this lane. Not measured: Windows'
+fonts (the Export strip's fix leaves 45.6 px of word in 50 px on the Mac's
+font; Segoe UI is unmeasured), two cards to a row (the panel was never wide
+enough in these readings: the grid asks 15rem a card), the left column at
+45 % by eye in the real app, the panel while a real video plays, the
+first-load moment in the real app. **You have not seen the built layout**:
+every choice beyond your words above is the session's or an agent's.
+Nothing here is marked met.
+
+**Departures from the sketches** (each told to you in the session's report
+of 2026-11-27):
+1. The link's button reads "Download", your sketch's word, where it read
+   "Get"; "Full download" is unchanged.
+2. The kinds stay "Video" and "Audio", not MP4 and MP3; Audio's formats
+   stay m4a and mp3. No 320 / 128 choice: a new function, for a later lane
+   or your word.
+3. No Choose button yet: it arrives with lane 2, so no button does nothing.
+4. The options that do not work yet (count, size, captions, graphics, BGM,
+   transitions, B-roll) are not drawn.
+5. Lists fold open IN the flow and push what is below down; none floats.
+   The quality or format list sits on a line under the whole kinds row,
+   not under its chip: at 240 px the row wraps, so it opens under the
+   row's last line.
+6. Duration and Make it vertical sit below Analyse, the sketch's order;
+   flagged to you as something you may want moved.
+7. The sketch's vertical "CLIPS" tab is a horizontal bar at the top of the
+   panel with two tabs, "Clips" and "Transcript" (suggestion 1), opened by
+   the toggles in the URL tile and the Transcript tile, as you corrected.
+8. No Play mark on a card, as you said.
+9. The panel's share: it opens at 40 % of the picture's row, from 280 px to
+   60 %, the picture never under 35 % (your "at least 40 or 35 percent");
+   its height is the picture's, over the timeline, which it does not touch.
+
+**Left open** (every builder's and fixer's open item and every critic's
+item a fixer declined, unless the code at `3d19ea0` or the session's
+readings closed it, then the session's own list):
+- Yours: Duration and Make it vertical below Analyse, keep or move above
+  (one line in `IngestPanel.tsx` and two order assertions).
+- Yours: the 320 / 128 choice for MP3, wanted, and in which lane.
+- Yours: a graphic selected on the timeline makes the Transcript tab show
+  that graphic's own empty face, "No transcript yet…", and Find graphics'
+  list goes until the footage clip is selected again (older behaviour, now
+  easier to see); show the footage clip's words instead (`footageOf`)?
+- Yours: Get transcript's words arriving reopen the panel on the link's
+  words even when you have moved it to the clip's transcript or to Clips
+  (the design asked for the opening; a gentler rule is possible).
+- Yours: pressing the Transcript tile with no clip selected opens the
+  panel on the link's words or its line for nothing yet, and latches the
+  asked words to the clip's.
+- The close button leaves keyboard focus on the page body (no target
+  chosen: which toggle opened the panel is not recorded).
+- The fold-out's tabs have no arrow keys and no roving tabindex: the Curve
+  tray's have none, the house manner (`WINDOW.md`).
+- The chosen kind chip carries both `aria-pressed` and `aria-expanded`
+  (declined twice; an accessibility judgement).
+- Best clips' running line (`aria-live`) is in the Clips tab only: with the
+  panel shut a screen reader hears nothing while it looks.
+- The Transcript tab shows `TranscriptPanel`'s own "Transcript" header
+  under the tab of the same name, and the link's rows (`max-h-72`) scroll
+  inside a list inside the scrolling tab.
+- The URL tile shows no "Transcribing…" line while the panel is shut
+  (the tile reads "Transcribe it beside the picture." during a run; only
+  the strip tile's busy dot shows it).
+- The divider's 10 px hit region lies over the panel body's scrollbar.
+- The Clips and Transcript toggles' `PanelLeftOpen`/`PanelLeftClose` icon:
+  left for a look by eye.
+- `TranscriptPanel`'s Edit / Done resets when the selection is cleared and
+  set again (the face unmounts); nothing stored is lost.
+- The tile's line counts the whole transcript's words, not the words the
+  clip plays (as the old header did).
+- No test covers the shown clip deleted or undone while both transcripts
+  are there (the switch going, the toggles un-pressing).
+- No check drags the real separator shut; the session did it by hand once.
+- Not read: whether the open panel shuts by itself while the LEFT divider
+  is dragged wider; a short picture (the clip's rows at their 4.5rem, Cut
+  to these words never under Graphics, the tab scrolling).
+- The overlap check's "covered" tests only a control's centre and only
+  against what is hit-tested: a control drawn over a status line or a
+  heading, or an overlay with `pointer-events: none`, is not seen
+  (declined as new scope). The plant pushes the left column down 160 px
+  for its one read; findings in it beyond the plant are not judged.
+- A weak anchor in `ingestPanel.test.tsx`'s order test (an `mt-` slice);
+  the second order test guards the same layout (declined).
+- Timing-sensitive tests: `sidecarClient`'s idle case and the helper's
+  Python selftest timing case fail under load now and then (an agent's
+  reading).
+- Closed since they were raised: the reopen width after a drag shut
+  (`3d19ea0`), the transport with the column at 45 % (`7e7bfa5`, read
+  clean), the stale `store.ts` census line (`7e7bfa5`), `GET_TITLE`'s
+  missing row (`7e7bfa5`), the census base of `foldtranscript`
+  (`3d19ea0`), every check's first run on a page (the readings above).
 
 ---
 

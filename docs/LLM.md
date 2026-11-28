@@ -374,7 +374,7 @@ app's: the validator, the beats, placement, the budget, the sounds.
 | `src/shared/director/schemaGraphics.ts` | `graphicsSchema(menu, { constrained })`, flat, `reasoning` first, at most four graphics; constrained for the decoder (the menu's ids as enums, decoded lengths), unconstrained for the validator's shape check; 1817–1943 chars constrained, 1559 not; `maxTokensForGraphics` 850 |
 | `src/shared/director/ask.ts` | the retry's fix: on the OpenAI shape, where `think` is never sent, the retry adds "Answer with the JSON object only." |
 | `src/shared/director/validateGraphics.ts`, `claims.ts` | the validator it settles through (§6.7, lane T2a): rejects only a cut-off answer or the wrong shape, then keeps, repairs or drops one graphic at a time |
-| `src/renderer/src/store.ts` | `findGraphics` (the Transcript tile) and Direct's graphics pass, after the spine, the look and the bakes, through the same `window.forge.directorComplete` route as the spine |
+| `src/renderer/src/store.ts` | `findGraphics` (the Transcript tile; its button is in the fold-out panel's Transcript tab beside the picture since 2026-11-27, `docs/CLIPS.md` §10a) and Direct's graphics pass, after the spine, the look and the bakes, through the same `window.forge.directorComplete` route as the spine |
 
 **A rejected window costs only that window**, never the clip. **A number
 heard from a YouTube track or an unsure Whisper word is a proposal**, placed
