@@ -1015,8 +1015,9 @@ harness page only, not yet by you):
   Listen for), and by itself when Get transcript's words arrive.
 - The Play marks: no Play button, as you said.
 
-**Where this leaves things** (2026-11-27). Lane 1 is built and read on the
-harness page only; you have not seen it, and the choices it left are
+**Where this leaves things** (2026-11-27). Lane 1 is built, read in the
+session's suite on the Mac, in CI (green on both runners at `3d19ea0`) and
+on the harness page only; you have not seen it, and the choices it left are
 `docs/CLIPS.md` §16.112-119. Lanes 2 to 5 (source and count, captions,
 music and transitions, save as my recipe), about 7 days by the session's
 estimate, each start on your word, in that order, then `docs/BETA.md`'s R

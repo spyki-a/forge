@@ -1669,7 +1669,8 @@ Not one of the fourteen steps: lane 1 of the clip maker section
 `3d19ea0`, pushed once, CI green on both runners at `3d19ea0`, run
 46086275446). The user's two sketches are `docs/SHEETS.md` sheets 30 and
 31. In this file: §1's Foldout row, §2's note, and the notes under §3.4,
-§3.7, §3.17, §3.18, §3.21, §3.22 and §5. The user has not seen it.
+§3.7, §3.17, §3.18, §3.21, §3.22 and §5. The user has not seen it; the
+choices it left are `docs/CLIPS.md` §16.112-119.
 
 **The overlap check** (`src/renderer/src/harness/overlapCheck.ts`, the pure
 box rules in `overlapGeometry.ts`) is the standing answer to the user's
@@ -1725,7 +1726,7 @@ Not read: the development app, the Surface, Windows' fonts.
 **The fold-out's tabs have no arrow keys** and no roving tabindex: each tab
 is a plain Tab stop, as the Curve tray's tabs are. That is the house manner
 for the two, kept rather than changed for one of them (the whole-lane
-review's item, declined).
+review's item, declined; yours to change: `docs/CLIPS.md` §16.117).
 
 ---
 

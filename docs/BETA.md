@@ -144,7 +144,7 @@
 > saved template as the user defined it on 2026-11-25 (`CLIPS.md`
 > §16.111). About 10 days by the session's estimate (3, 1.5, 2, 1.5, 2).
 > **Lane 1, the layout, is built on the build side** (2026-11-27, ten
-> commits `f8bd957..3d19ea0`, pushed once; CI green on both runners at
+> commits `9c40848..3d19ea0`, pushed once; CI green on both runners at
 > `3d19ea0`, run 46086275446; the session's suite, overlap check, census
 > and other checks green on the Mac, the checks on the harness page): the
 > user has not seen it, nothing of it was read in the development app or
@@ -156,7 +156,9 @@
 > lists above that keep 1g or the saved template before the R list as
 > their own items: what is left of `CLIPS.md` before the beta is the clip
 > maker section's lanes 2 to 5 (about 7 days by the session's estimate:
-> 1.5 + 2 + 1.5 + 2), then R1–R12, R13 and R14 here. Beside them, the
+> 1.5 + 2 + 1.5 + 2), then R1–R12, R13 and R14 here; the parts after the
+> beta are now 21.5 days, 27.5 with phase 4 (`CLIPS.md` §2, was 18.5 and
+> 24.5 above). Beside them, the
 > user's exit readings for phase 2, phase 3, step 4 and step 6's 3D half,
 > their try of "My look"'s export and import, and their look at lane 1.
 > **The sum, as it stands**: the lanes' 7 days and R1–R12's 11.5 to 13.5

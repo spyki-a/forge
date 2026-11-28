@@ -700,8 +700,10 @@
 > **2026-11-27: try-out 3, your two sketches, the clip maker section, and
 > Florence-2 after the beta.** Back from try-out 3, on the Mac only: the
 > three new graphics landed ("1) yes they did"); you saved a look in "My
-> look" and did not import it back; nothing was tried on Windows ("i did
-> not tried it on windows yet period"). §16.99-110 stay open. Then you
+> look" and did not export it or import it back; nothing was tried on
+> Windows ("i did not tried it on windows yet period"). §16.99-103 and
+> §16.105-110 stay open (§16.104 kept as built and §16.111 answered, both
+> 2026-11-25). Then you
 > asked for the URL section's Best clips to become one place with the
 > options the plan had for it: a count you set (it gave three clips from
 > an hour-long video), captions, graphics, transitions, a music bed with
@@ -969,7 +971,7 @@ code composes and checks.** In this piece that means:
 | **0** | the ground: R5's rotation-aware probe, held keys landing on their frame, `adelay` in samples, zoom keys on video, **the graph in a file**, the floor list, the helper's shared media code | 4.5 | — | the measured bugs under every later step are gone, the three shipping ones (§3.2–3.4) first |
 | **M0** (§3b) | **the URL transcript → Clip it**: the link's own captions (no media, no model), rows of time and text, a run picked by click and shift-click or by two cut handles, chapter chips, the exact ranged download of exactly that run with its words and the link's credit, Add another clip; the start/end fields kept for a video with no captions; the timeline half (`clipToRange`, `timelineFrameAt`) | 7.5, **moved** from step 4 | §3.3 only (pulled ahead of it); the rest of step 0 follows | sheets 25–26: a link becomes the clip the user picked by its words, with no Python |
 | **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 9.5–13 (planned 2026-10-14, §3a; `BETA.md` R4 had 5 to 10; 9–12 if the speech model's press waits, §16.49) | — | every Python half below reaches an installed user |
-| **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built); 14.5 before the beta since 2026-11-27, 1g's 3 after it (your decision, §10a) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
+| **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built); 14.5 before the beta since 2026-11-27, 1g's 3 after it (your decision of 2026-11-27, §16.96, §10a) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
 | **2** | caption free space | 2.5 | 1 | captions stay off faces, stable within a shot |
 | **3** | the graphics engine, re-planned 2026-10-21 after the graphics research (§16.54-65): one draw list read by two painters (canvas 2D, and a three.js compositor for 2.5D), one motion module, one stroke primitive; eight templates in nine shapes (counter, bars, steps alone or with a connector or a tree, quote, callout, ring, keyword, lower third), and a screen recording as a 2.5D card; a dim; sound on the beats; the graphic style; the Director's third pass with its validator; the hand spike | 30.5, was 14.5 (phases 0-3 and the spike, §6; +6 for phase 4's hand build only if the spike passes its gate); 29 before the beta since 2026-11-14, the spike and phase 4 after it (§16.74) | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, a clip that says no number still gets graphics, and nothing unsaid is ever drawn |
 | **4** | Best clips in the URL tile: windows, signals, the model's pick, three cards, Clip it from a card | 3.5 (M0 took 7.5 of its 11) | M0; 1–3 (each optional at run time) | a link becomes three clip cards and a 9:16 clip with captions |
@@ -1254,15 +1256,15 @@ this and will get back to the beta". **This plan comes first**, then
   in before `BETA.md`'s R list: the layout, source and count, captions,
   music and transitions, save as my recipe, about 10 days by the session's
   estimate (3, 1.5, 2, 1.5, 2). Lane 1, the layout, was built and pushed
-  that day (`f8bd957..3d19ea0`, green on both runners at `3d19ea0`); lanes
+  that day (`9c40848..3d19ea0`, green on both runners at `3d19ea0`); lanes
   2 to 5 are not started, each on your word. Lane 5 IS step 7's saved
   template, as you defined it on 2026-11-25 (§16.111): the session puts it
   at about 2 days where §10 has 2.5, and the tables keep §10's figure, so
   the section adds lanes 1 to 4, about 8 days. **Florence-2's caption
   placement (1g, 3 days) moves to after the beta: your decision of
-  2026-11-27** (§16.96 answered); §5.3's OCR half, built only once 1g has
-  passed its gate, waits with it (its half day is left inside step 2's
-  figure). No other day figure changes. Before the beta, in order: lanes 2
+  2026-11-27** (§16.96 answered). By §5.3's own gate (built only once 1g
+  has passed its), its OCR half waits with it (its half day is left inside
+  step 2's figure). No other day figure changes. Before the beta, in order: lanes 2
   to 5 (about 7 days, the session's), then `BETA.md` R1–R12 → R13 → R14.
   After the beta, from this plan: 1g (3), the hand spike (1.5) and, only if
   its gate passes, phase 4 (6), step 5 (14) and step 6's retrieved-fact
@@ -1286,7 +1288,7 @@ collected.
 | face marks: ~100 hand-marked frames (10 per clip) as a sanity check of MediaPipe's boxes, counting false boxes as well as misses (the ~300 for a YuNet comparison are not needed: §16.1 is answered) | ~1 h | 1a's sanity check |
 | the detector run on the Surface (the Mac MediaPipe run is done, 2026-10-05, §4.1; neither MediaPipe nor Electron runs in the dev sandbox) | 30 min | 1a, then 1c |
 | the face fixture (§16.5): **recorded 2026-10-05**, `references/recordings/face-fixture-2026-10-05.mov`, 26.6 s (`REFERENCES.md`) | done | 1c's integration tests |
-| the Florence-2 int8 download (275 MB) and its timing on the Mac and the Surface | 1 h | 1g's gate |
+| the Florence-2 int8 download (275 MB) and its timing on the Mac and the Surface (after the beta with 1g, 2026-11-27) | 1 h | 1g's gate |
 | pyautoflip run on the ten clips on your Mac (a scratch venv on Python 3.13 or older, since it refuses 3.14, with an ffmpeg on `PATH`; its MediaPipe would likely abort in the dev sandbox as the face detector did, §4.1 — unmeasured), and its output rated beside ours (§4.1) | ~1 h | step 1's exit |
 | the helper's peak memory per capability on the Surface (§12.1) | 1 h | the floor-machine bar |
 | ten graphics fixtures with truth labels (six English, two Telugu, two Hindi), your own speech or text you wrote; since 2026-10-21 also the five nested-enumeration talks (three English, one Hindi, one Telugu) and the Hindi and Telugu strings of the 27 drawing fixtures (§6.10) | 6.5–8.5 h (was 4–6) | step 3's eval and exit |
@@ -5954,7 +5956,7 @@ commit, beside `trimToRequestedRange`, `section.ts:116-131`).
 
 ---
 
-## 4. Step 1 — The reframe engine · 17.5 days (1a 1 · 1b 1.5 · 1c 2 · 1d 0.5 · 1e 2.5 · 1f 4.5 · 1g 3 · releasing the helper's sessions 0.5 · §4.9's checks 2; the stacked two-up is +2 of it, in 1e, 1f and the checks; 18 if the Surface run fails and YuNet's decoder is built)
+## 4. Step 1 — The reframe engine · 17.5 days (1a 1 · 1b 1.5 · 1c 2 · 1d 0.5 · 1e 2.5 · 1f 4.5 · 1g 3 · releasing the helper's sessions 0.5 · §4.9's checks 2; the stacked two-up is +2 of it, in 1e, 1f and the checks; 18 if the Surface run fails and YuNet's decoder is built; 14.5 before the beta: 1g's 3 after it, your decision of 2026-11-27, §10a)
 
 **What is missing.** Sheet 14's deciding half. Nothing works out *where* the
 interesting part of the frame is, so a landscape video on a 9:16 canvas is
@@ -27481,7 +27483,7 @@ session's estimate:
    your own several-clip footage (a link's clip is one continuous shot).
 5. **Save as my recipe** (about 2 days). This is §10's second bullet, the
    saved template, as you defined it on 2026-11-25: a recipe for Clip it
-   only (§16.111).
+   only (§16.111). (§10 counts it at 2.5; §2's tables keep that figure.)
 
 Lanes 2 to 5 are not built; each starts on your word.
 
@@ -28000,7 +28002,8 @@ read from the code at `3d19ea0`):
 
 **Left open** (every builder's and fixer's open item and every critic's
 item a fixer declined, unless the code at `3d19ea0` or the session's
-readings closed it, then the session's own list):
+readings closed it, then the session's own list; the choices among them
+are §16.112-119, 2026-11-27):
 - Yours: Duration and Make it vertical below Analyse, keep or move above
   (one line in `IngestPanel.tsx` and two order assertions).
 - Yours: the 320 / 128 choice for MP3, wanted, and in which lane.
@@ -30084,8 +30087,8 @@ the development app or on the Surface.
     placement waits for Florence-2). You keep Florence-2's caption
     placement (1g, 3 days, gated) and step 7's saved template (2.5 days)
     before the beta (1g moved to after the beta, your decision of
-    2026-11-27: §10a, where the saved template is lane 5). The three items are not steps of this plan (§2's
-    2026-11-18 note). **All three were built and pushed on 2026-11-20**:
+    2026-11-27: §10a, where the saved template is lane 5). The three items
+    are not steps of this plan (§2's 2026-11-18 note). **All three were built and pushed on 2026-11-20**:
     the status block at the top.
 87. **The folders as built: what you meant?** Your words (2026-11-18):
     "when we upload we need to make the user folder like option that user
@@ -30385,7 +30388,7 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
     after the beta, and you decided it: "i agree with you and will move the
     folerance 2 after beta". 1g's 3 days leave the days before the beta
     (§2's 2026-11-27 note); what 1g is and how it is planned (§4.5) are
-    unchanged, and §5.3's OCR half waits with it.
+    unchanged (by §5.3's own gate, its OCR half waits with it).
 97. **What a model's title and why are held to.** The validator
     (`validate.ts` `ungroundedIn`, piece 2 and its fixer) holds every
     capitalised word of a title, its first word included, to the window,
@@ -30871,7 +30874,7 @@ proposal, unrated.
      your word after lanes 2 to 4: §10a, §16.119.)
 
 **Added 2026-11-27, from the clip maker section's lane 1, the layout
-(§10a, `f8bd957..3d19ea0`); OPEN.** Each is a choice the session's design,
+(§10a, `9c40848..3d19ea0`); OPEN.** Each is a choice the session's design,
 the lane's builders, critics and fixers, or the session's own fixes left
 to you (the nineteen agents' reports and the session's record); beyond
 your sketches, your correction and the three suggestions you decided none
@@ -30957,15 +30960,18 @@ or on the Surface. Every size and line below is a proposal, unrated.
      then saying "Select a clip to see its transcript" with its toggle
      greyed (piece 3's second critic). What each costs: one condition in
      `fetchWords` or in `goTo`, with their tests (`foldoutTranscript.test.tsx`;
-     `shelfRender.test.ts`'s no-clip cases), and the overlap check's states
-     read again. Both were declined by the fixers as behaviour changes for
-     the session to decide. No recommendation.
+     `shelfRender.test.ts`'s `goTo` cases, which pin the opening with or
+     without a clip, plus a new no-clip case), and the overlap check's
+     states read again. Both were declined by the fixers as behaviour
+     changes for the session to decide. No recommendation by the session;
+     the two critics suggested the narrower rules above.
 
      **Answer (2026-11-27): OPEN.** Yours.
 116. **The panel's sizes.** As built, each the session's or an agent's: it
      opens at 40 % of the picture's row the first time (`FOLDOUT_OPEN`;
      your "at least 40 or 35 percent of it"), then at the share it was
-     left at, for the session only; a panel dragged shut opens next at 40 %
+     left at, until the window is reloaded or the app closed (a ref in
+     `useFoldoutPanel`, not saved); a panel dragged shut opens next at 40 %
      (`3d19ea0`); 280 px least (`FOLDOUT_MIN`) and 60 % most
      (`FOLDOUT_MAX`); the picture never under 35 % (`PICTURE_MIN`), so
      with no room for both the panel stays shut; the left column's limit
@@ -30978,7 +30984,13 @@ or on the Surface. Every size and line below is a proposal, unrated.
      `minSize="35%"`, `maxSize="45%"`), the tests that pin them
      (`foldout.test.ts`, `foldoutWindow.test.ts`, `trimmerDock.test.ts`),
      and the overlap check read again at its three sizes; the cards' floor
-     is one class in `BestClips.tsx`. No recommendation.
+     is one class in `BestClips.tsx`. Two sizing points were left unread by
+     the agents: at the least window with the left column at 45 % the
+     Transport row wraps and takes about 30 px from the timeline lanes (the
+     whole-lane fixer's arithmetic, from the classes); and whether the open
+     panel shuts by itself while the LEFT divider is dragged wider, which
+     piece 1's fixer called consistent but said "may surprise the user".
+     No recommendation by the session.
 
      **Answer (2026-11-27): OPEN.** Yours.
 117. **Keyboard and screen reader.** As built: (1) the panel's close
@@ -31001,7 +31013,10 @@ or on the Surface. Every size and line below is a proposal, unrated.
      `aria-pressed` dropped from the chosen chip, or "chosen" said another
      way, with the tests and census rows that read it; (4) a running line
      in the tile as well, a named constant and a census row (the design put
-     it in the tab). No recommendation.
+     it in the tab). No recommendation by the session; for (1) the
+     whole-lane critic suggested the target named above, and for (3) piece
+     4's first critic suggested dropping `aria-pressed` on the chosen chip
+     only, declined by its fixer for the reasons in (3).
 
      **Answer (2026-11-27): OPEN.** Yours.
 118. **Small things on screen, for your eye.** As built, each left by an
@@ -31018,14 +31033,22 @@ or on the Surface. Every size and line below is a proposal, unrated.
      icon; (6) at 240 px the kinds row wraps, and an unfolded quality or
      format list opens under the row's last line, not under its chip; (7)
      the Shelf's Transcript tile hint does not say "beside the picture" as
-     the other pointing lines do. What each costs: (1) the header restyled
+     the other pointing lines do; (8) the clip's `TranscriptPanel` loses
+     Edit / Done when the clip is deselected and selected again (the face
+     unmounts; nothing stored is lost; piece 3's fixer declined holding it
+     in the store as minor); (9) the tile's line counts the whole
+     transcript's words, as the old header did, not the words the clip
+     plays. What each costs: (1) the header restyled
      or left out in the tab (Edit lives in it); (2) the link's rows given a
      fill of the tab instead of their cap, in `TranscriptRows.tsx`; (3) a
      third line, "Transcribing…", a named constant, a census row and a
      recipe; (4) right padding or `scrollbar-gutter: stable` on the body
      (piece 1's critic); (5) one icon swapped in three components; (6) the
      list placed under its chip, a layout of its own once the row wraps;
-     (7) the hint's words and its census row. No recommendation.
+     (7) the hint's words and its census row; (8) Edit / Done held in the
+     store; (9) the count taken over the clip's own span. No recommendation
+     by the session; for (4) piece 1's critic suggested `pr-2` or
+     `scrollbar-gutter: stable`, left by its fixer for a look on screen.
 
      **Answer (2026-11-27): OPEN.** Yours.
 119. **The lanes after this one, and what is in none.** As agreed on
