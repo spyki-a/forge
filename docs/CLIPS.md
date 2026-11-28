@@ -809,14 +809,18 @@
 > lane 1 reported, the session asked you four things: to look at the spot
 > you reported; whether Duration and Make it vertical should move above
 > Analyse; whether a selected graphic should keep showing the video clip's
-> words; whether you want the MP3 320 / 128 choice. Your answer (whole in
-> §16.112's second answer and §10a's rule): you will look "when the record
-> it done"; "yes please and also make each glow when its selected", Best
-> clips "like a  row of selection and in the end anallyse", the later
-> toggles added in the same row, "so put the analyse button after all the
-> toggeles like a check listing"; the transcript button "should work with
-> the wispher" and say so; "yes please" to the graphic; and "not required
-> will do it later after beta" to the bitrate. **Built and pushed by the
+> words; whether you want the MP3 320 / 128 choice. Your answer (quoted
+> in parts in §16.112's, §16.113's and §16.114's answers, §16.120 and
+> §10a's rule): you will look "when the record it done"; "yes please and
+> also make each glow when its selected", Best clips "like a  row of
+> selection and in the end anallyse", the later toggles added in the same
+> row, "so put the analyse button after all the toggeles like a check
+> listing"; "the analyse buttoon for beside the transcript should work
+> with the wispher  so here we will make it clear as wispher transcribe
+> some thing like that", which the session reads as Get transcript
+> working with the speech model and saying so (the session's reading,
+> §16.120); "yes please" to the graphic; and "not required will do it
+> later after beta" to the bitrate. **Built and pushed by the
 > session that evening as `8c7aff5`** (§10a's Built note of it; origin =
 > main = `8c7aff5`): Best clips as one wrapping row, the Duration chip,
 > Make it vertical and Analyse last, Get transcript on a row of its own
@@ -828,7 +832,8 @@
 > the suite 405 files passed and 6 skipped (411), 6659 tests passed and
 > 67 skipped (6726), build 0; 33 mutations, 32 caught, the one alive
 > equivalent; on the harness page the overlap check clean at 1440×900,
-> 1100×680 and 1920×1080 (46 states, 0 skipped), the census 1093 checked,
+> 1100×680 and 1920×1080 (46 states, 0 skipped; the 1920×1080 reading
+> taken before the review's fixes, the other two again after them), the census 1093 checked,
 > 12 skipped, missing [], and the fold-out, Best clips, Clip it, look and
 > graphic checks passing. **CI at `8c7aff5`** (run 46092300031): job
 > 140815764182 `windows-latest` and job 140815763538 `macos-15` success;
@@ -24893,7 +24898,11 @@ another, with the helper or without it: piece 3's note below.)
 >   running line and the notes are drawn in the fold-out panel's Clips tab
 >   beside the picture, a grid one card to a row in a narrow panel; the URL
 >   tile keeps Analyse (beside Get transcript), the pointer, the Clips
->   toggle and the options, the lengths now one "Duration" list.
+>   toggle and the options, the lengths now one "Duration" list. (Later on
+>   2026-11-27, `8c7aff5`: Analyse is the last thing in Best clips' one
+>   row, after Duration and Make it vertical, and the Clips toggle ends
+>   Best clips' heading; `BestClips` draws both and the pointer; §10a,
+>   §16.112.)
 
 > **Built 2026-11-23/24 (piece 4: Clip it from a card, step 0's question,
 > steps 3 to 5 after it).** `4d898b0`, then `08875ea` after two critics.
@@ -27542,16 +27551,18 @@ sync, broll coming soon... )  so put the analyse button after all the
 toggeles like a check listing kind of so every toggele selected get
 highlight toggles..", and "make each glow when its selected for easy
 identification of what has been selected and which is not". So Best clips
-is ONE row of choices read like a check list; every later lane's choice
-(the count and size of lane 2, the caption sets of lane 3, the music bed
-and transitions with sync of lane 4, graphics on / off, B-roll's "coming
-soon") goes INTO that row, before Analyse; every chosen choice is lit; and
-Analyse is last. Built for lane 1's two choices the same evening
-(`8c7aff5`, below). And lane 2 includes the transcript button working with
-the speech model, with a label that says so ("the analyse buttoon for
-beside the transcript should work with the wispher  so here we will make
-it clear as wispher transcribe some thing like that"): §16.120, not built,
-on your go.
+is ONE row of choices read like a check list; the later choices you named
+(captions "smart1,2", graphics on / off, BGM, transitions with sync,
+B-roll's "coming soon") go INTO that row, before Analyse; every chosen
+choice is lit; and Analyse is last. The session reads the rule as standing
+for every later lane's choice, lane 2's count and Size included, which you
+did not name (the session's reading). Built for lane 1's two choices the
+same evening (`8c7aff5`, below). And lane 2 includes your words "the
+analyse buttoon for beside the transcript should work with the wispher  so
+here we will make it clear as wispher transcribe some thing like that",
+which the session reads as Get transcript working with the speech model,
+with a label that says so (the session's reading): §16.120, not built, on
+your go.
 
 ### Lane 1 — the layout, as built
 
@@ -27564,7 +27575,10 @@ it `8730ff7` + `1c1dba0`): `f8bd957`, `d14ecdf` (piece 1), `88f63ae`,
 (piece 4), `7e7bfa5` (the whole-lane review), `3d19ea0` (the session's).
 Pushed once, `9c40848..3d19ea0`. `git diff --stat 9c40848..7e7bfa5`: 42
 files, 6387 insertions, 828 deletions (the session's reading). Nothing under
-`docs/` was changed by any of the ten. Described from the code at `3d19ea0`. **In code the panel is
+`docs/` was changed by any of the ten. Described from the code at `3d19ea0`.
+(Later on 2026-11-27: `8c7aff5`'s Built note below supersedes the tile
+order, the Clips toggle's look and the Clips tab's empty line described in
+pieces 2 and 4.) **In code the panel is
 the FOLDOUT** (`Foldout.tsx`, store `foldout`, `data-foldout`); on screen
 it has no name, only its two tabs, "Clips" and "Transcript". It is not
 "sidecar": that is your word for the left panel (the Shelf in code), and
@@ -28198,7 +28212,7 @@ read from the code at `3d19ea0`):
    row's last line.
 6. Duration and Make it vertical sit below Analyse, the sketch's order;
    flagged to you as something you may want moved. (Closed later on
-   2026-11-27 by your answer and `8c7aff5`: neither order; Best clips is
+   2026-11-27 by your answer and `8c7aff5`: yes, as one row; Best clips is
    one row of choices ending in Analyse, Get transcript on a row of its
    own with the Transcript toggle, §16.112.)
 7. The sketch's vertical "CLIPS" tab is a horizontal bar at the top of the
@@ -28213,7 +28227,8 @@ read from the code at `3d19ea0`):
 **Left open** (every builder's and fixer's open item and every critic's
 item a fixer declined, unless the code at `3d19ea0` or the session's
 readings closed it, then the session's own list; the choices among them
-are §16.112-119, 2026-11-27):
+are §16.112-119, 2026-11-27; later that evening 112, 114 and 113's bitrate
+half were answered, and 118's (10) to (12) and 120 were added):
 - Yours: Duration and Make it vertical below Analyse, keep or move above
   (one line in `IngestPanel.tsx` and two order assertions). (Closed later
   on 2026-11-27: one row ending in Analyse, your answer, built in
@@ -31129,8 +31144,8 @@ or on the Surface. Every size and line below is a proposal, unrated.
 
      **Answer (2026-11-27): OPEN.** Yours.
 
-     **Answer (2026-11-27, that evening): NEITHER: ONE ROW OF CHOICES,
-     ANALYSE LAST.** Asked by the session whether to move Duration and
+     **Answer (2026-11-27, that evening): YES, AS ONE ROW: ANALYSE
+     LAST.** Asked by the session whether to move Duration and
      Make it vertical above Analyse, "since Analyse uses the duration", you
      answered with more than a yes: "yes please and also make each glow
      when its selected for easy identification of what has been selected
@@ -31348,11 +31363,10 @@ or on the Surface. Every size and line below is a proposal, unrated.
      add their on / off toggles to the row, a value chip (Duration, and the
      count and size of lane 2) drawn apart from an on / off one (the
      critic's suggestion: a second look beside `LIT` and `UNLIT` in
-     `ui/lit.ts`). What it costs: as built, nothing now and a row that may
-     read "all on" once toggles join it; the second look, a class in
-     `lit.ts`, its use on each value chip, and `ingestPanel.test.tsx`'s lit
-     cases turned for it; the session's reading is that it is cheapest
-     decided with lane 2's first chips. (12) The fold-out's two tabs,
+     `ui/lit.ts`, when the later toggles arrive). What it costs: as built,
+     nothing now and a row that may read "all on" once toggles join it;
+     the second look, a class in `lit.ts`, its use on each value chip, and
+     `ingestPanel.test.tsx`'s lit cases turned for it. (12) The fold-out's two tabs,
      Clips and Transcript, keep their older selected look (the Curve
      tray's), not the lit one. The choices: as built; or lit like the rest. What lighting them
      costs: one class in `Foldout.tsx`'s tab bar and its tests, and the
@@ -31382,12 +31396,16 @@ or on the Surface. Every size and line below is a proposal, unrated.
      (Later on 2026-11-27, `8c7aff5`: your rule of that evening, §16.112's
      second answer, sets WHERE each lane's choices go: into Best clips' one
      row, before Analyse, each lit when chosen. It changes no lane's
-     content or days. Two items of this entry moved: the 320 / 128 choice
+     days. Three items of this entry moved: the 320 / 128 choice
      is after the beta, your word (§16.113); and you named "graphics toggle
      on/ off" among the row's later toggles, so it is wanted, but no lane
-     holds it yet: which lane takes it, and its days, are still yours.
-     Lane 2 also takes the transcript button's wording with the speech
-     model, §16.120. Still OPEN.)
+     holds it yet: which lane takes it, and its days, are still yours;
+     and you named "broll coming soon" among the row's later toggles, a
+     "coming soon" place in the row that no lane holds. You also wrote
+     the caption sets as "smart1,2", where the sketch and lane 3 have
+     Smart 2 / Smart 3: noted, not resolved. Lane 2 gains new content, the
+     transcript button with the speech model and its wording (§16.120), for
+     which the session gives no day figure of its own. Still OPEN.)
 
 **Added later on 2026-11-27 (after `8c7aff5`); OPEN.**
 
@@ -31414,16 +31432,33 @@ or on the Surface. Every size and line below is a proposal, unrated.
      pointer without the helper, or "the AI helper is starting"), and Best
      clips' pointer reads `BEST_CLIPS_CANNOT_LISTEN`, "This video has no
      captions, and Best clips cannot listen to a video yet."
-     (`src/shared/bestclips/session.ts`). The choices: the wording (the
-     session's proposal; "Whisper" or "the speech model", the name used
-     everywhere else on screen; one button that does both, or Get
-     transcript for captions and a second press for the speech model, as
-     Listen to it is today); and when it runs (only for a link with no
-     captions, or by your choice for any link). What it costs: it is
-     lane 2's first piece ("Analyse on the app's own transcription", about
-     1.5 days with the rest of lane 2 by the session's estimate), with the
-     download of a link's sound, the AI helper's transcription, the
-     pointer's and the tile's lines reworded, their census rows and tests.
+     (`src/shared/bestclips/session.ts`). The work under every answer
+     below is lane 2's first piece ("Analyse on the app's own
+     transcription", in lane 2's about 1.5 days by the session's
+     estimate): the download of a link's sound, the AI helper's
+     transcription, and `BEST_CLIPS_CANNOT_LISTEN` and the tile's lines
+     reworded, with their census rows and tests. The choices, each with
+     what it adds to that (the session gives no day figure for any):
+     (a) **Which button.** The session reads "the analyse buttoon for
+     beside the transcript" as Get transcript; it could instead mean
+     Analyse itself (Analyse working on the speech model's words when there
+     are no captions). Either way the transcription is the same work; what
+     differs is which label and title change.
+     (b) **The wording.** "Whisper" (your word; the session's proposal,
+     something like "Transcribe with Whisper", is the session's) or "the
+     speech model", the name used everywhere else on screen. Either costs
+     one string, its census row and its test.
+     (c) **One button or two presses.** One button that reads the captions
+     and falls back to the speech model: `GetTranscriptButton` takes the
+     fallback and `NoCaptions`' greyed Listen to it goes. Or Get transcript
+     for captions and a second press for the speech model, as Listen to it
+     is today: `NoCaptions`' Listen to it is made to work, and
+     `GetTranscriptButton` is as it is.
+     (d) **When it runs.** Only for a link with no captions: Get transcript
+     stays download-free when captions exist, and `GET_TRANSCRIPT_TITLE`'s
+     "nothing else is downloaded" stays true for those. For any link, by
+     your choice: the sound is downloaded and the model runs even when
+     captions exist, and that title has to be reworded.
      **Not built and not started: it waits for your go.**
 
      **Answer (2026-11-27): OPEN.** Yours.

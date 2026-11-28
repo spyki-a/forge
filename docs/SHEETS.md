@@ -961,9 +961,11 @@ only, not yet by you):
   your own video: lane 2. (Later on 2026-11-27, `8c7aff5`, by your word
   that evening: Analyse is no longer beside Get transcript; it is the last
   thing in Best clips' row, below. Get transcript has a row of its own,
-  with the Transcript toggle at its end. By your word too, Get transcript
-  is to work with the speech model and say so, "wispher transcribe some
-  thing like that": lane 2's first piece, not built, `docs/CLIPS.md`
+  with the Transcript toggle at its end. By your words too, "the analyse
+  buttoon for beside the transcript should work with the wispher …
+  wispher transcribe some thing like that", which the session reads as
+  Get transcript working with the speech model and saying so (the
+  session's reading): lane 2's first piece, not built, `docs/CLIPS.md`
   §16.120.)
 - "Just at part": as it was, **Just a part of it**, on the row with the
   toggles. (Later on 2026-11-27, `8c7aff5`: on a row of its own, above
@@ -979,23 +981,33 @@ only, not yet by you):
 - Duration: built, a fold-down list **Duration**, 1 min to 4 min, under
   Best clips. It sits below Analyse, the sketch's order; flagged to you as
   something you may want moved (set by the session). (Later on 2026-11-27,
-  `8c7aff5`, by your word that evening: the dropdowns drawn one under
-  another, Best clips, Duration, Size, Captions, Graphics, BGM,
-  "transcition music sync" and "B-roll", are to be choices of ONE row read
-  like a check list, ending in Analyse, each lit when chosen. Built so far:
-  the row with the Duration chip, Make it vertical and Analyse last; the
-  rest join it, before Analyse, with lanes 2 to 5.)
+  `8c7aff5`, by your word that evening: Best clips is ONE row of choices
+  read like a check list, ending in Analyse, each lit when chosen, and the
+  later choices you named, captions "smart1,2", graphics on / off, BGM,
+  transitions with sync and "broll coming soon", join that row before
+  Analyse. That the drawn Best clips count and Size join it too is the
+  session's reading; you did not name them. Built so far: the row with the
+  Duration chip, Make it vertical and Analyse last; the rest join it,
+  before Analyse, with lanes 2 to 5.)
 - Size 16:9, 9:16, 1:1: not built, lane 2. **Make it vertical** stays,
   under Duration. (Later on 2026-11-27, `8c7aff5`: beside Duration in
   Best clips' row, lit while on.)
-- Captions Smart 2, Smart 3, Custom: not built, lane 3.
+- Captions Smart 2, Smart 3, Custom: not built, lane 3. (Later on
+  2026-11-27: your answer that evening names them "smart1,2", the sketch
+  "smart - 2" and "smat - 3"; the difference is noted, not resolved.)
 - Graphics on / off: not drawn in lane 1 (an option that does not work
   yet is not drawn: set by the session); none of the five lanes names it.
-  Clip it from a card already runs graphics as one of its steps.
+  Clip it from a card already runs graphics as one of its steps. (Later on
+  2026-11-27: you named "graphics toggle on/ off" among the row's later
+  toggles, so it is wanted; which lane holds it is open, `docs/CLIPS.md`
+  §16.119.)
 - BGM, Upload: not built, lane 4, with ducking.
 - "transcition music sync": not built, lane 4, for your own several-clip
   videos.
-- "B-roll - comming soon": not drawn; B-roll is after the beta.
+- "B-roll - comming soon": not drawn; B-roll is after the beta. (Later on
+  2026-11-27: you named "broll coming soon" among the row's later toggles,
+  a "coming soon" place in the row; no lane holds it, `docs/CLIPS.md`
+  §16.119.)
 - The box at the right edge with its arrow: no status; what it stands for
   is not written.
 
@@ -1039,7 +1051,12 @@ that evening re-ordered sheet 30's left column as above (one row of
 choices ending in Analyse, every chosen one lit), kept a selected
 graphic's footage clip's words in the Transcript tab, and put the 320 /
 128 choice after the beta; built, pushed and green on both runners, read
-on the harness page only, and not yet seen by you.
+on the harness page only, and not yet seen by you. Of the choices below,
+`docs/CLIPS.md` §16.112, §16.114 and §16.113's bitrate half are answered;
+§16.113's names half, §16.115-119 (with §16.118's new (10) to (12)) and
+the new §16.120 are open. Next: your look at the layout, then lane 2 on
+your go, beginning with the speech-model transcription (§16.120). The
+paragraph below is as written before your answers.
 
 **Where this leaves things** (2026-11-27). Lane 1 is built, read in the
 session's suite on the Mac, in CI (green on both runners at `3d19ea0`) and

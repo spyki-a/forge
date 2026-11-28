@@ -176,11 +176,14 @@
 > follow-up to lane 1 was built and pushed, `8c7aff5` (Best clips as one
 > row of choices ending in Analyse, every chosen choice lit, a selected
 > graphic keeping its footage clip's words; CI green on both runners, run
-> 46092300031; `CLIPS.md` §10a, §16.112-114). The MP3 320 / 128 bitrate
+> 46092300031; `CLIPS.md` §10a; §16.112 and §16.114 answered, §16.113's
+> bitrate half answered and its names half open, §16.115-119 open with
+> §16.118's new (10) to (12), and §16.120 new and open). The MP3 320 / 128 bitrate
 > choice goes after the beta, the user's word ("not required will do it
 > later after beta"; §3 below). The user has not seen the layout or the
-> follow-up. Next is unchanged: the user's look, then lane 2 on their word,
-> beginning with the speech-model transcription (`CLIPS.md` §16.120).
+> follow-up. Next, as before: the user's look, then lane 2 on their word,
+> lane 2 now beginning with the speech-model transcription (`CLIPS.md`
+> §16.120).
 
 ## 0. What "beta" means
 

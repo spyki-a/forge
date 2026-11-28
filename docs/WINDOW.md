@@ -960,8 +960,8 @@ still over it, stays selected). `findGraphics`, `dropGraphic`,
 `clearGraphics` and `cutToWords` read the first before they change the
 project and call the second after, because each, pressed with a graphic's
 footage face on screen, can take the selected graphic away or leave it
-over nothing (the session's review's must-fix). What they change is the
-selection only; nothing of it is saved in a project.)
+over nothing (the session's review's must-fix). What the two helpers
+change is the selection only; nothing of it is saved in a project.)
 
 ---
 

@@ -622,8 +622,8 @@ is in the panel's Transcript tab, not the tile.
 
 **A selected graphic** (since 2026-11-27, `8c7aff5`; `src/shared/wordsClip.ts`
 `wordsClipOf`): a graphic has no words of its own, so with one selected the
-tile and the Transcript tab show the words of the footage clip it sits over,
-and the tab says so in one line over the rows: **These are the words of the
+tile and the Transcript tab read the footage clip it sits over (the tile its
+language and word count, the tab its words), and the tab says so in one line over the rows: **These are the words of the
 clip under the selected graphic.** The rows, Graphics and Find graphics'
 list stay; the selection stays on the graphic, so the Trimmer dock still
 shows the graphic's settings. The tile's line reads the footage clip's
