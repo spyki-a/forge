@@ -474,6 +474,10 @@ chapters, several ranges in one job, a transcript from the link (sheet 25) and
 Best clips (sheet 27). Still the largest hole, and upstream of everything that
 already works. (2026-11-25: Best clips is built on the build side, step 4 of
 `docs/CLIPS.md`, sheet 27 below; its exit open, `docs/CLIPS.md` §7.8.)
+(2026-11-27: the URL tile is becoming a clip maker, sheets 30 and 31,
+`docs/CLIPS.md` §10a: five lanes, the first, the layout, built; the other
+four each start on the author's word, an upload beside the link ("choose")
+in lane 2.)
 
 **Models not yet added.** Scene detection, matting, object tracking, and the
 deciding half of auto-flip. The sidecar already hosts three models (speech,
@@ -483,7 +487,9 @@ paid service.
 **Caption behaviour, as opposed to caption looks.** Style rotation,
 random-every-N, opacity. The looks are finished; how captions decide things for
 themselves is not. *(Smart placement was here and is built, thirds only —
-sheet 13, 2026-10-16.)*
+sheet 13, 2026-10-16.)* (2026-11-27: sheet 30's caption sets, Smart 2,
+Smart 3 and Custom, are lane 3 of the clip maker section, `docs/CLIPS.md`
+§10a; not built.)
 
 **Small finishing.** The inert font tiles. Transcript-to-text-card conversion.
 *(Copy, paste, duplicate and multi-select on the timeline were here and are
@@ -849,6 +855,12 @@ and several ranges, the pool by kind, the caption grid, the three image presets.
 **Order (3)** is three features that each need their own sheets: transcript
 cutting first, then Narration (script, Pexels, settings panel), then Best clips
 (with the B-roll, 3D and transition settings still to be drawn).
+(2026-11-27: Best clips is built, `docs/CLIPS.md` step 4, sheet 27; its
+settings are drawn since, sheets 30 and 31, and are the clip maker
+section's five lanes, `docs/CLIPS.md` §10a: the layout built; source and
+count, captions, music and transitions, and save as my recipe each on the
+author's word, in that order, then `docs/BETA.md`'s R list. B-roll is
+after the beta; so is Florence-2, by the author's decision the same day.)
 
 **Python.** Transcribe-from-the-pool, Narration's voice, depth and beats all
 need the sidecar, so the installed app sets Python up itself (R4's full route)
@@ -1002,3 +1014,11 @@ harness page only, not yet by you):
   or in the Transcript tile (the selected clip's, with Find graphics and
   Listen for), and by itself when Get transcript's words arrive.
 - The Play marks: no Play button, as you said.
+
+**Where this leaves things** (2026-11-27). Lane 1 is built and read on the
+harness page only; you have not seen it, and the choices it left are
+`docs/CLIPS.md` §16.112-119. Lanes 2 to 5 (source and count, captions,
+music and transitions, save as my recipe), about 7 days by the session's
+estimate, each start on your word, in that order, then `docs/BETA.md`'s R
+list. Florence-2 (`docs/CLIPS.md` 1g) comes after the beta, by your
+decision the same day. The beta's deadline is 25 December 2026.

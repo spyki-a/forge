@@ -697,6 +697,112 @@
 > unchanged: 25 December 2026.** A feature freeze about 10 December is
 > the session's suggestion, not confirmed by you.
 >
+> **2026-11-27: try-out 3, your two sketches, the clip maker section, and
+> Florence-2 after the beta.** Back from try-out 3, on the Mac only: the
+> three new graphics landed ("1) yes they did"); you saved a look in "My
+> look" and did not import it back; nothing was tried on Windows ("i did
+> not tried it on windows yet period"). §16.99-110 stay open. Then you
+> asked for the URL section's Best clips to become one place with the
+> options the plan had for it: a count you set (it gave three clips from
+> an hour-long video), captions, graphics, transitions, a music bed with
+> auto ducking, an upload button beside the download, and Analyse on the
+> transcription of your own video; then captions in different fonts, sizes
+> and colours ("we need to add that before fixing it after the beta"). And
+> you reported a fault:
+> "right now the UI looks collided", a clip's own settings overlapping Find
+> graphics when it is selected, "as we are bulding we should see the tiny
+> spots too". The session's answers that day, none of them built: Find
+> graphics with no model on is the keyword rules, with one on the model
+> picks (phase 2, built); Best clips never sends the hour to the model (the
+> windows are scored by six signals and the best 24 go to it as
+> 240-character digests in one call; `PICKS = 3` is fixed in code);
+> caption variety is not Florence-2, which is caption placement only (45
+> text styles and 9 animations are built, one style for a whole video;
+> sheet 9's Smart sets are not); ducking exists (`src/shared/render/duck.ts`);
+> transitions are for your own several-clip footage, a link's clip being
+> one continuous shot. Then two photographs of paper sketches, the URL
+> section and the window with a Clips panel beside the picture
+> (`SHEETS.md` sheets 30 and 31, `docs/sheets/2026-11-27/`), and your
+> correction of the session's first reading: the Clips toggle is in the
+> left panel and the cards unfold on the right, the transcript the same
+> way, and a card's Play mark was only to explain (§10a). You accepted the
+> session's three suggestions: one panel with two tabs, Clips and
+> Transcript; the picture shrinks beside it and is never covered, the
+> border dragging; the Transcript tile's rows move there too, with Find
+> graphics. **The clip maker section is five lanes, about 10 days by the
+> session's estimate** (§10a): 1, the layout (about 3); 2, source and count
+> (about 1.5); 3, captions, Smart 2 / Smart 3 / Custom (about 2); 4, a
+> music bed with ducking, and transitions and music sync for your own
+> videos (about 1.5); 5, save as my recipe (about 2), which IS §10's saved
+> template as you defined it on 2026-11-25 (§16.111). **Florence-2's
+> caption placement (1g) moves to after the beta: your decision of
+> 2026-11-27**, on the session's recommendation ("i agree with you and will
+> move the folerance 2 after beta"; §16.96 answered). Your go: "3)yes you
+> can start the layout layout".
+>
+> **Lane 1, the layout, is built and pushed, 2026-11-27** (§10a's six
+> Built notes; the map is `WHERE-THINGS-ARE.md`, and `WINDOW.md`'s notes of
+> that date): ten commits, nine of a workflow run (`wf_6bec4ec7-f68`,
+> nineteen Opus agents, four pieces each a builder, two critics and a
+> fixer, then two whole-lane critics and a fixer; about four hours),
+> `f8bd957`, `d14ecdf`, `88f63ae`, `d1971fd`, `0d6b7f9`, `2e8f937`,
+> `470039c`, `9a667f7` and `7e7bfa5`, and the session's `3d19ea0`; pushed
+> once, `9c40848..3d19ea0`; origin = main = `3d19ea0`. **The session's
+> readings, on the Mac**: at `3d19ea0`'s tree typecheck 0, the suite 404
+> files passed and 6 skipped (410), 6635 tests passed and 67 skipped
+> (6702), build 0 (391 files and 6470 tests before the lane). On the
+> harness page (the development Mac, not the app): the new overlap check
+> with its planted faults, ok at 1100×680, 1440×900 and 1920×1080; its full
+> run, each from a freshly loaded page, "46 states read at 1440×900, 0
+> skipped: 0 overlaps, 0 covered, 0 cut off, 0 sideways", the same at
+> 1100×680 and 1920×1080, and at 1100×680 again with the panel dragged to
+> its 280 px floor first; the census missing [], 1092 checked, 12 skipped
+> (1058 before the lane); `__forgeFoldoutCheck()` ok, 8 cases;
+> `__forgeBestClipsCheck()` ok, 36 cases; `__forgeClipItCheck()` failures
+> []; the graphic check's `find` on the three 3D templates, three PASS;
+> `__forgeLookCheck()` "14 of 14 cases pass"; `__forgeClipsLayout()` ok at
+> 1440×900, and at 1100×680 with the panel at its floor. By hand, with the
+> pointer: the panel's real divider dragged to 280 px, the panel staying
+> open, then further, shut. **What the first page runs found**, both older
+> than the lane and fixed in `3d19ea0`: the Trimmer's end-point handle hung
+> 6 px past the waveform's box, so the dock scrolled sideways by 6 px
+> whenever a clip was selected; "Standard" and "Balanced" ran past their
+> buttons in the Export strip's four-to-a-row rows. (The same commit makes
+> a panel dragged shut reopen at 40 %, not at the floor the drag passed,
+> and fixes the check's own false alarms.) **CI at `3d19ea0`** (run
+> 46086275446): job 140796466199 `windows-latest` and job 140796466398
+> `macos-15` success; the installer job skipped: **green on both
+> runners** (read through api.github.com; no runner's own totals known).
+> **Not read, by anyone**: nothing in the development app or a packaged
+> app and nothing on the Surface; no real link, download or model went
+> through the lane, only the harness's recipes; Windows' fonts (the Export
+> strip's fix leaves 45.6 px of word in 50 px on the Mac's font, Segoe UI
+> unmeasured); two cards to a row; the left column at 45 % by eye in the
+> app; the panel while a real video plays; the first-load moment in the
+> app. **Yours to look at first, in the development app**: the spot you
+> reported (a clip selected, the Transcript tile open, Find graphics
+> pressed); the URL tile at the column's narrowest, 240 px; every border
+> dragged (the panel's, the left column's to its 45 %, the timeline's).
+> **You have not seen the built layout**: every choice beyond your
+> sketches and your words is the session's or an agent's, and nothing is
+> marked met. Set by the session and told to you that day: the link's
+> button reads "Download", your sketch's word (it read "Get"); the kinds
+> stay Video and Audio, not MP4 and MP3, with no 320 / 128 choice; no
+> Choose button until lane 2; the options that do not work yet are not
+> drawn; every list folds open in the flow; Duration and Make it vertical
+> below Analyse, the sketch's order. The decisions the lane left to you are
+> §16.112-119, all open.
+> **Next** (2026-11-27): §10a's lanes 2, 3, 4 and 5, in that order, each on
+> your word (none started; about 7 days left by the session's estimate),
+> then `BETA.md`'s R1–R12, R13 and R14; Florence-2 (1g) after the beta, by
+> your decision. This supersedes the "Next" lines above that put the saved
+> template or Florence-2 next, and the 2026-11-18 note's "You keep
+> Florence-2's caption placement (1g) … before the beta". Still open beside
+> them, yours: phase 2's and phase 3's exit readings (§6.12), §7.8's and
+> §9's, the export and import of "My look", and your look at lane 1.
+> **The deadline is unchanged: 25 December 2026.** A feature freeze about
+> 10 December is the session's suggestion, not confirmed by you.
+>
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
@@ -863,7 +969,7 @@ code composes and checks.** In this piece that means:
 | **0** | the ground: R5's rotation-aware probe, held keys landing on their frame, `adelay` in samples, zoom keys on video, **the graph in a file**, the floor list, the helper's shared media code | 4.5 | — | the measured bugs under every later step are gone, the three shipping ones (§3.2–3.4) first |
 | **M0** (§3b) | **the URL transcript → Clip it**: the link's own captions (no media, no model), rows of time and text, a run picked by click and shift-click or by two cut handles, chapter chips, the exact ranged download of exactly that run with its words and the link's credit, Add another clip; the start/end fields kept for a video with no captions; the timeline half (`clipToRange`, `timelineFrameAt`) | 7.5, **moved** from step 4 | §3.3 only (pulled ahead of it); the rest of step 0 follows | sheets 25–26: a link becomes the clip the user picked by its words, with no Python |
 | **P** (§3a) | **BETA R4's full route**: the app installs its own Python pack under `userData` | 9.5–13 (planned 2026-10-14, §3a; `BETA.md` R4 had 5 to 10; 9–12 if the speech model's press waits, §16.49) | — | every Python half below reaches an installed user |
-| **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
+| **1** | the reframe engine: scene cuts in main, faces (MediaPipe), a salient box, Florence-2 grounding, the crop path with the stacked two-up, the followed crop, "Reframe to 9:16" | 17.5 (1g Florence is 3 of them, gated by its own measurement; 18 if the Surface run fails and YuNet's decoder is built); 14.5 before the beta since 2026-11-27, 1g's 3 after it (your decision, §10a) | 0; P for faces on an installed machine | a landscape talk becomes a 9:16 that follows its subject, frame-exact at every cut, and two people too far apart share the frame |
 | **2** | caption free space | 2.5 | 1 | captions stay off faces, stable within a shot |
 | **3** | the graphics engine, re-planned 2026-10-21 after the graphics research (§16.54-65): one draw list read by two painters (canvas 2D, and a three.js compositor for 2.5D), one motion module, one stroke primitive; eight templates in nine shapes (counter, bars, steps alone or with a connector or a tree, quote, callout, ring, keyword, lower third), and a screen recording as a 2.5D card; a dim; sound on the beats; the graphic style; the Director's third pass with its validator; the hand spike | 30.5, was 14.5 (phases 0-3 and the spike, §6; +6 for phase 4's hand build only if the spike passes its gate); 29 before the beta since 2026-11-14, the spike and phase 4 after it (§16.74) | 2 for placement (degrades to the style's third without it) | a spoken number becomes a counter that lands on the word, a clip that says no number still gets graphics, and nothing unsaid is ever drawn |
 | **4** | Best clips in the URL tile: windows, signals, the model's pick, three cards, Clip it from a card | 3.5 (M0 took 7.5 of its 11) | M0; 1–3 (each optional at run time) | a link becomes three clip cards and a 9:16 clip with captions |
@@ -885,6 +991,10 @@ days in the steps, 72.25 with the 1.25 outside them, plus Step P's
 9.5–13: about 81.75–85.25 days, sixteen to seventeen weeks.** The total
 above was the whole plan before the beta; it is now the whole plan, of
 which 18.5 days come after the beta (24.5 if phase 4 is built), below.
+(Since 2026-11-27, §10a: 68 days in the steps before the beta, 1g after
+it by your decision; 76 with the clip maker section's lanes 1 to 4, the
+session's estimates; 77.25 with the 1.25; 86.75–90.25 with Step P. After
+the beta, 21.5, 27.5 with phase 4. The arithmetic below.)
 
 The arithmetic, so it can be checked. **The first draft's total was 76.5**,
 with what the review added: step 0 +0.5 (the graph in a file, §3.7); step 1
@@ -936,6 +1046,15 @@ each figure is its section's):
 | step 5 −14 | 14 → 0 | §16.75: B-roll (§8) after the beta |
 | step 6 −3 | 5 → 2 | §16.75, the session's reading: the retrieved-fact cards (§9's 3) after the beta with step 5; the three 3D templates (2) stay |
 
+**Your decision of 2026-11-27 (§10a, §16.96) then moved, and the clip
+maker section was added** (nothing in the steps re-estimated; the
+section's figures are the session's estimates of that day):
+
+| delta | from → to, before the beta | why |
+|---|---|---|
+| step 1 −3 | 17.5 → 14.5 | §16.96 answered: 1g, Florence-2 (§4.5's 3), after the beta |
+| the clip maker section +8 | — → 8 | §10a's lanes 1 to 4 (3 + 1.5 + 2 + 1.5), outside the steps' columns; lane 5 is step 7's saved template, already counted there at §10's 2.5 (the session's estimate for the lane is 2) |
+
 | step | 0 | M0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | **total** |
 |---|---|---|---|---|---|---|---|---|---|---|
 | before the answers | 4.5 | (2, inside 4) | 16 | 2.5 | 14.5 | 11 | 15.5 | 8 | 4.5 | **76.5** |
@@ -943,6 +1062,8 @@ each figure is its section's):
 | after 2026-10-21 | 4.5 | 7.5 | 17.5 | 2.5 | 30.5 | 3.5 | 14 | 5 | 4.5 | **89.5** |
 | before the beta, after 2026-11-14 | 4.5 | 7.5 | 17.5 | 2.5 | 29 | 3.5 | 0 | 2 | 4.5 | **71** |
 | after the beta, from 2026-11-14 | — | — | — | — | 1.5 (+6 gated) | — | 14 | 3 | — | **18.5** (24.5) |
+| before the beta, after 2026-11-27 | 4.5 | 7.5 | 14.5 | 2.5 | 29 | 3.5 | 0 | 2 | 4.5 | **68** (76 with §10a's lanes 1 to 4) |
+| after the beta, from 2026-11-27 | — | — | 3 | — | 1.5 (+6 gated) | — | 14 | 3 | — | **21.5** (27.5) |
 
 76.5 + (7.5 − 7.5) + 2 − 0.5 − 2 + 0.5 − 1 = 75.5. With Step P's 9.5–13
 (§3a's table, 2026-10-14), 85–88.5 days.
@@ -954,7 +1075,11 @@ passes, 106–109.5. Then, 2026-10-27: §6.20's 1 + 0.25 = 1.25, so 89.5 +
 106.25–109.75. Then, 2026-11-14, before the beta: 89.5 − 1.5 − 14 − 3 =
 71; plus §6.20's 1.25 = 72.25; with Step P's 9.5–13, 81.75–85.25 (it was
 100.25–103.75). After the beta: 1.5 + 14 + 3 = 18.5, and 24.5 if phase 4
-is built; 71 + 18.5 = 89.5, the whole plan unchanged.
+is built; 71 + 18.5 = 89.5, the whole plan unchanged. Then, 2026-11-27,
+before the beta: 71 − 3 = 68 in the steps; with §10a's lanes 1 to 4, 68 +
+8 = 76; plus §6.20's 1.25, 77.25; with Step P's 9.5–13, 86.75–90.25.
+After the beta: 18.5 + 3 = 21.5, and 27.5 if phase 4 is built; 68 + 21.5
+= 89.5, the steps unchanged, and 97.5 with the section's 8.
 
 **These dates are conditional on "your part" below**: step 1a cannot run
 until its clips and marks exist. With MediaPipe decided, 1a needs the ten
@@ -1005,12 +1130,16 @@ built:
 - **M5, steps 1g, 6 and 7 (~12.5: 3 + 5 + 4.5).** (2026-11-14, §16.75:
   ~9.5 before the beta, 3 + 2 + 4.5, step 6's three 3D templates; its
   retrieved-fact cards after the beta with M4, the session's reading.)
+  (2026-11-27, your decision, §10a: 1g after the beta too; before it M5
+  is ~6.5, 2 + 4.5.)
 
 4.5 + 7.5 + 17 + 30.5 + 3.5 + 14 + 12.5 = 89.5 (2026-10-21; it was 75.5
 with step 3 at 14.5 and step 6 at 7). Before the beta since 2026-11-14:
 4.5 + 7.5 + 17 + 29 + 3.5 + 9.5 = 71. Florence-2 (1g) can slip behind M3
 without blocking anything, because the salient box (1d) covers the no-face
-shot until then.
+shot until then (moved to after the beta, your decision of 2026-11-27:
+§10a). Before the beta since 2026-11-27: 4.5 + 7.5 + 17 + 29 + 3.5 + 6.5
+= 68.
 
 **Step 3's re-plan moves step 4.** Best clips starts 16 days later than the
 old order had it, 5 of them the three.js compositor that §16.55 put directly
@@ -1042,7 +1171,8 @@ this and will get back to the beta". **This plan comes first**, then
 - **The order, since 2026-11-14** (§16.74, §16.75; §16.76 on 2026-11-15):
   before the beta, phase 2's exit (yours, §6.12) → phase 3 (5) → M3, step
   4 (3.5) → M5 without the fact cards: 1g (3, gated, and free to slip
-  behind M3 as above), step 6's three 3D templates (2), step 7 (4.5: the
+  behind M3 as above; moved to after the beta, your decision of
+  2026-11-27: §10a), step 6's three 3D templates (2), step 7 (4.5: the
   creator style 2, the saved template 2.5 waiting on `MARKET.md` Stage 0,
   §16.28) → `BETA.md` R1–R12 → R13 → R14. After the beta, from this plan:
   the hand spike (1.5) and, only if its gate passes, phase 4 (6); M4, step
@@ -1118,6 +1248,27 @@ this and will get back to the beta". **This plan comes first**, then
   yours: phase 2's and phase 3's exit readings (§6.12), §7.8's and §9's,
   and your try of the creator style. **The deadline is unchanged: 25
   December 2026.**
+- **2026-11-27: the clip maker section before the beta, and Florence-2
+  after it** (§10a; the status block at the top). After try-out 3 and your
+  two sketches (`SHEETS.md` sheets 30 and 31), a section of five lanes goes
+  in before `BETA.md`'s R list: the layout, source and count, captions,
+  music and transitions, save as my recipe, about 10 days by the session's
+  estimate (3, 1.5, 2, 1.5, 2). Lane 1, the layout, was built and pushed
+  that day (`f8bd957..3d19ea0`, green on both runners at `3d19ea0`); lanes
+  2 to 5 are not started, each on your word. Lane 5 IS step 7's saved
+  template, as you defined it on 2026-11-25 (§16.111): the session puts it
+  at about 2 days where §10 has 2.5, and the tables keep §10's figure, so
+  the section adds lanes 1 to 4, about 8 days. **Florence-2's caption
+  placement (1g, 3 days) moves to after the beta: your decision of
+  2026-11-27** (§16.96 answered); §5.3's OCR half, built only once 1g has
+  passed its gate, waits with it (its half day is left inside step 2's
+  figure). No other day figure changes. Before the beta, in order: lanes 2
+  to 5 (about 7 days, the session's), then `BETA.md` R1–R12 → R13 → R14.
+  After the beta, from this plan: 1g (3), the hand spike (1.5) and, only if
+  its gate passes, phase 4 (6), step 5 (14) and step 6's retrieved-fact
+  cards (3). Still open beside the lanes, all yours: phase 2's and phase
+  3's exit readings (§6.12), §7.8's and §9's, and your look at lane 1.
+  **The deadline is unchanged: 25 December 2026.**
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
   redistribution rights or the `filler-supplies` policy alone for paid
@@ -6556,7 +6707,8 @@ face.
 
 ### 4.5 1g — Florence-2 grounding — `capabilities/ground.py` · 3 days, gated
 
-Built after 1f, and it may slip behind M3. It **grounds a named subject**
+Built after 1f, and it may slip behind M3 (moved to after the beta, your
+decision of 2026-11-27: §10a). It **grounds a named subject**
 ("the product", "the cake") on one frame per shot, which the salient box
 cannot: BiRefNet finds what is salient, not what is named. The same model
 serves caption placement's OCR (§5.3) and later the B-roll pass's frame
@@ -8542,7 +8694,9 @@ Sheet 13's "set 3 / set 5 / set 10" grids are thirds only in v1 (decision
 Florence-2's `ocr` task (`<OCR_WITH_REGION>`) on each shot's middle frame
 adds existing on-screen text (a lower third, a logo, a slide) as boxes, so a
 caption does not land on a title already in the footage. This is half a day,
-counted in this step's 2.5, and built only once 1g passed its gate. **The
+counted in this step's 2.5, and built only once 1g passed its gate (1g
+moved to after the beta, your decision of 2026-11-27: §10a; this half
+waits with it). **The
 toggle never downloads Florence**: the OCR half runs only when the model is
 already on disk, and otherwise the toggle's row shows **Get the subject
 model · 275 MB** with "also keeps captions off text in the picture" (§0).
@@ -29929,7 +30083,8 @@ the development app or on the Surface.
     other item needs nothing (changing one caption word works; smart
     placement waits for Florence-2). You keep Florence-2's caption
     placement (1g, 3 days, gated) and step 7's saved template (2.5 days)
-    before the beta. The three items are not steps of this plan (§2's
+    before the beta (1g moved to after the beta, your decision of
+    2026-11-27: §10a, where the saved template is lane 5). The three items are not steps of this plan (§2's
     2026-11-18 note). **All three were built and pushed on 2026-11-20**:
     the status block at the top.
 87. **The folders as built: what you meant?** Your words (2026-11-18):
@@ -30224,6 +30379,13 @@ outside Analyse and a card; no reframe: §7.7's note "Read on a real model,
     last is still yours.)
 
     **Answer (2026-11-25): OPEN.** Yours.
+
+    **Answer (2026-11-27): NEITHER: AFTER THE BETA.** With the clip maker
+    section agreed (§10a), the session recommended moving Florence-2 to
+    after the beta, and you decided it: "i agree with you and will move the
+    folerance 2 after beta". 1g's 3 days leave the days before the beta
+    (§2's 2026-11-27 note); what 1g is and how it is planned (§4.5) are
+    unchanged, and §5.3's OCR half waits with it.
 97. **What a model's title and why are held to.** The validator
     (`validate.ts` `ungroundedIn`, piece 2 and its fixer) holds every
     capitalised word of a title, its first word included, to the window,
@@ -30704,6 +30866,188 @@ proposal, unrated.
      rule for the beta; §16.102, keep the depth as built unless the later
      rows look dead to your eye.
 
+     (2026-11-27: the recipe is lane 5 of the clip maker section, "Save as
+     my recipe", about 2 days by the session's estimate; not started, on
+     your word after lanes 2 to 4: §10a, §16.119.)
+
+**Added 2026-11-27, from the clip maker section's lane 1, the layout
+(§10a, `f8bd957..3d19ea0`); OPEN.** Each is a choice the session's design,
+the lane's builders, critics and fixers, or the session's own fixes left
+to you (the nineteen agents' reports and the session's record); beyond
+your sketches, your correction and the three suggestions you decided none
+of them, and you have not seen the built layout. A recommendation is given
+only where a source gives one, and is written as its. What was read was
+read in the session's suite and on the harness page on the Mac, with the
+harness's recipes, and in CI at `3d19ea0`; nothing in the development app
+or on the Surface. Every size and line below is a proposal, unrated.
+
+112. **The URL tile's order: Duration and Make it vertical below
+     Analyse.** As built (`IngestPanel.tsx`, piece 4's builder, after your
+     sketch): the link box and Download; the kinds row; Get transcript and
+     Analyse on one row; the status lines and the pointer; Just a part of
+     it with the Transcript and Clips toggles; then Best clips' heading,
+     Duration and Make it vertical (`<BestClips />`, after the range
+     fields). So the length is chosen below the button that uses it; a
+     length chosen after a result clears the cards (`withLength`), and the
+     Clips tab then says to press Analyse. The session flagged it to you on
+     2026-11-27. The choices: as built, the sketch's order; or Best clips'
+     options above the Get transcript row. What moving costs: one line,
+     `<BestClips />` moved in `IngestPanel.tsx`, and the order assertions
+     turned back (`bestClipsPanel.test.tsx`'s "offers Make it vertical
+     before any result…", which piece 2 had pinned the other way, and
+     `ingestPanel.test.tsx`'s order test; piece 4's mutations M8 and M8b
+     are their guards). No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+113. **The mp3 bitrate, 320 / 128, and the kinds' names.** Your sketch
+     draws "Mp 3" with a list, 320 and a second figure written over (sheet
+     30). As built, Audio's list is m4a and mp3, as before, and no bitrate
+     is chosen: `src/shared/ingest/args.ts` gives yt-dlp `-x
+     --audio-format mp3 --audio-quality 0` for mp3 ("the best VBR
+     setting", its comment) and `-x --audio-format m4a` for m4a, which
+     copies the stored stream out with no re-encode; `IngestRequest` holds
+     `audioFormat` only, checked in `src/main/ingest/start.ts`. A 320 / 128
+     choice is a new function: a field in `IngestRequest` and its check in
+     main; the quality argument in `args.ts`, measured against the bundled
+     yt-dlp and ffmpeg first, as every argument there was; the field in
+     `outputStem`, so a 320 and a 128 download are not one cached file; a
+     store value and a choice in the kinds row, with census rows and
+     tests. By the code it applies to mp3 only, since m4a is copied, not
+     encoded. No source gives it a day figure or a lane: lane 2 (the
+     source) and lane 4 (music) are the nearest, or after the beta. The
+     names: the kinds read "Video" and "Audio" where your sketch says Mp4
+     and Mp 3 (set by the session; the chosen chip reads "Video · 1080p");
+     renaming is the `WANTS` labels in `IngestPanel.tsx`, their census
+     rows and the tests that read them, and "Audio" also downloads m4a.
+     No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+114. **A graphic selected on the timeline, in the Transcript tab.** As
+     built, older than this lane and easier to see now: the tab's clip face
+     is the selected clip's (`clipSelected`), so selecting a graphic, one
+     Find graphics added say, to edit it in the dock shows that graphic's
+     own face, "No transcript yet — transcribe it below, or with the
+     caption button in Upload" with Vocabulary's Transcribe press, and Find
+     graphics' list goes (`TranscriptGraphics` draws nothing for a graphic)
+     until the footage clip is selected again; the Transcript tile reads
+     "This clip has no transcript yet. Transcribe it beside the picture."
+     The choices: as built; the footage clip's words for a selected graphic
+     (`footageOf` already finds the footage, as `TranscriptGraphics` uses
+     it); or a plain line for a graphic. What a change costs: the face's
+     rule in `Foldout.tsx` and `TranscriptTile`'s line read through
+     `footageOf`, their tests, and the overlap check's `dock-graphic` state
+     read again; it changes behaviour that predates the lane (the
+     whole-lane critic's "journey 3", declined by its fixer as the
+     session's call). No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+115. **When the panel opens by itself.** As built: (1) Get transcript's
+     words arriving, or a language chosen, open the panel on the link's
+     words (`fetchWords`, `LinkTranscript.tsx`), even when you have moved it
+     to the selected clip's transcript (in the middle of Find graphics or
+     Edit, say) or to Clips: the design asked for the opening. (2) A press
+     on the Transcript tile in the Shelf opens the panel on the clip's words
+     (`goTo`, `Shelf.tsx`) whether a clip is selected or not: with none it
+     shows the link's words if the link has them, else "Select a clip on
+     the timeline to see its words here.", and the asked words stay the
+     clip's, so a later click on a clip turns the open panel to that clip's
+     transcript. The choices for (1): as built; open only when the panel is
+     shut or already on the link's words (the whole-lane critic's gentler
+     rule). For (2): as built; open only with a clip selected, the tile
+     then saying "Select a clip to see its transcript" with its toggle
+     greyed (piece 3's second critic). What each costs: one condition in
+     `fetchWords` or in `goTo`, with their tests (`foldoutTranscript.test.tsx`;
+     `shelfRender.test.ts`'s no-clip cases), and the overlap check's states
+     read again. Both were declined by the fixers as behaviour changes for
+     the session to decide. No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+116. **The panel's sizes.** As built, each the session's or an agent's: it
+     opens at 40 % of the picture's row the first time (`FOLDOUT_OPEN`;
+     your "at least 40 or 35 percent of it"), then at the share it was
+     left at, for the session only; a panel dragged shut opens next at 40 %
+     (`3d19ea0`); 280 px least (`FOLDOUT_MIN`) and 60 % most
+     (`FOLDOUT_MAX`); the picture never under 35 % (`PICTURE_MIN`), so
+     with no room for both the panel stays shut; the left column's limit
+     45 % (`LEFT_MAX`, 30 % before; your "just extend it a little bit");
+     the cards one to a row until the panel is about 500 px wide (a card is
+     never under 15rem; two to a row was never read). What a change costs:
+     one constant each in `src/shared/foldout.ts` or
+     `src/renderer/src/leftColumn.ts`, the Panels' props in `App.tsx`
+     (written there as literals: `minSize={280}`, `maxSize="60%"`,
+     `minSize="35%"`, `maxSize="45%"`), the tests that pin them
+     (`foldout.test.ts`, `foldoutWindow.test.ts`, `trimmerDock.test.ts`),
+     and the overlap check read again at its three sizes; the cards' floor
+     is one class in `BestClips.tsx`. No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+117. **Keyboard and screen reader.** As built: (1) the panel's close
+     button leaves the keyboard on the page body (the button unmounts with
+     the panel; which toggle opened it is not recorded, so no target was
+     chosen); (2) the two tabs have no arrow keys and no roving tabindex,
+     each a plain Tab stop, as the Curve tray's tabs: the house manner
+     (`WINDOW.md`); (3) the chosen kind chip carries both `aria-pressed`
+     and `aria-expanded`, and a press never un-presses it, so a screen
+     reader can hear a toggle that does not toggle (declined by two fixers:
+     the row's other chips carry `aria-pressed`, and the tests and census
+     read it); (4) Best clips' running line, "Looking for the best
+     stretches…" (`aria-live`), is in the Clips tab only, so with the panel
+     shut a screen reader hears nothing while it looks; the tile's pointer,
+     also `aria-live`, speaks only when Analyse waits for another video.
+     What each costs: (1) a focus target (a toggle if one is drawn, else
+     the first tool-strip button, the whole-lane critic's suggestion), with
+     the opener recorded or a rule for it; (2) arrow keys on both tab bars,
+     the fold-out's and the Curve tray's, to keep one manner; (3)
+     `aria-pressed` dropped from the chosen chip, or "chosen" said another
+     way, with the tests and census rows that read it; (4) a running line
+     in the tile as well, a named constant and a census row (the design put
+     it in the tab). No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+118. **Small things on screen, for your eye.** As built, each left by an
+     agent or the session for a look: (1) the Transcript tab shows
+     `TranscriptPanel`'s own uppercase "Transcript" header (with the
+     language, the word count and Edit) under the tab of the same name; (2)
+     the link's rows scroll in their own list (`max-h-72`) inside the
+     scrolling tab, a scroll in a scroll; (3) while the selected clip's
+     media is being transcribed with the panel shut, the Transcript tile
+     still reads "This clip has no transcript yet. Transcribe it beside the
+     picture."; only the strip tile's busy dot shows the run; (4) the open
+     divider's 10 px grab lies over the panel body's scrollbar; (5) the
+     Clips and Transcript toggles' `PanelLeftOpen` / `PanelLeftClose`
+     icon; (6) at 240 px the kinds row wraps, and an unfolded quality or
+     format list opens under the row's last line, not under its chip; (7)
+     the Shelf's Transcript tile hint does not say "beside the picture" as
+     the other pointing lines do. What each costs: (1) the header restyled
+     or left out in the tab (Edit lives in it); (2) the link's rows given a
+     fill of the tab instead of their cap, in `TranscriptRows.tsx`; (3) a
+     third line, "Transcribing…", a named constant, a census row and a
+     recipe; (4) right padding or `scrollbar-gutter: stable` on the body
+     (piece 1's critic); (5) one icon swapped in three components; (6) the
+     list placed under its chip, a layout of its own once the row wraps;
+     (7) the hint's words and its census row. No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+119. **The lanes after this one, and what is in none.** As agreed on
+     2026-11-27 (§10a): lane 2, source and count (Choose for your own
+     video, Analyse on the app's own transcription, Best clips 1 to 4 or
+     custom, Size 16:9 / 9:16 / 1:1); lane 3, captions Smart 2 / Smart 3 /
+     Custom; lane 4, a music bed with ducking, and transitions and music
+     sync for your own videos; lane 5, save as my recipe (§16.111). They
+     stand in that order and with those contents, each starting on your
+     word, unless you change them. In no lane: B-roll ("comming soon" in
+     your sketch; after the beta, §16.75); Play on a card (nothing plays
+     before a download, your word); your sketch's "Graphics" on / off (not
+     drawn in lane 1, and none of the five names it; Clip it from a card
+     already runs graphics as one of its steps); the 320 / 128 choice
+     (§16.113). What it costs: lanes 2 to 5 are about 7 days by the
+     session's estimates (1.5, 2, 1.5, 2), before `BETA.md`'s R list; a
+     lane moved after the beta frees its days and leaves its part of your
+     sketch undrawn at the beta; a thing added to a lane adds to its days.
+     No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+
 ---
 
 ## 17. Out of this plan, on purpose
@@ -30782,7 +31126,10 @@ proposal, unrated.
   and pushed, `8786882..03937b4`; its part of §9's exit is read on the
   Mac's harness page and in CI only, not met, its readings in the
   development app and on the Surface and its look yours, §9's exit note.
-  The cards' half of the exit stays after the beta.)
+  The cards' half of the exit stays after the beta.) (2026-11-27: 1g,
+  Florence-2's caption placement, after the beta by your decision, with
+  §5.3's OCR half; before the beta, the clip maker section's lanes 2 to 5
+  come before the R list: §10a, §2's 2026-11-27 note.)
 - Every row of §14 has a rendered output in `tests/output/` and a test.
 - Every "dated" row of §13 has become "in CI" on the Windows build.
 - Every regression test above has had its bug put back and failed.

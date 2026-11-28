@@ -133,6 +133,42 @@
 > try of the creator style. The deadline is unchanged, 25 December 2026; a
 > feature freeze about 10 December is the session's suggestion, not
 > confirmed by the user. The R list and its estimates are unchanged.
+>
+> **2026-11-27: the clip maker section before the R list, and Florence-2
+> after the beta.** After try-out 3 (on the Mac: the three new graphics
+> landed; a look saved in "My look", its export and import not tried, and
+> nothing tried on Windows), the user sent two sketches of the URL section
+> and the window (`SHEETS.md` sheets 30 and 31) and agreed a clip maker
+> section of five lanes (`CLIPS.md` §10a): the layout; source and count;
+> captions; music and transitions; save as my recipe, which is step 7's
+> saved template as the user defined it on 2026-11-25 (`CLIPS.md`
+> §16.111). About 10 days by the session's estimate (3, 1.5, 2, 1.5, 2).
+> **Lane 1, the layout, is built on the build side** (2026-11-27, ten
+> commits `f8bd957..3d19ea0`, pushed once; CI green on both runners at
+> `3d19ea0`, run 46086275446; the session's suite, overlap check, census
+> and other checks green on the Mac, the checks on the harness page): the
+> user has not seen it, nothing of it was read in the development app or
+> on the Surface, and its decisions are `CLIPS.md` §16.112-119. Lanes 2 to
+> 5 are not started; each starts on the user's word. **Florence-2's
+> caption placement (1g) moves to after the beta: the user's decision of
+> 2026-11-27**, on the session's recommendation ("i agree with you and will
+> move the folerance 2 after beta"; `CLIPS.md` §16.96). This supersedes the
+> lists above that keep 1g or the saved template before the R list as
+> their own items: what is left of `CLIPS.md` before the beta is the clip
+> maker section's lanes 2 to 5 (about 7 days by the session's estimate:
+> 1.5 + 2 + 1.5 + 2), then R1–R12, R13 and R14 here. Beside them, the
+> user's exit readings for phase 2, phase 3, step 4 and step 6's 3D half,
+> their try of "My look"'s export and import, and their look at lane 1.
+> **The sum, as it stands**: the lanes' 7 days and R1–R12's 11.5 to 13.5
+> (§1 below) are 18.5 to 20.5 working days to the installer, before R13
+> and R14 and before whatever the exit readings and R12's smoke test find;
+> from Monday 30 November to Friday 25 December there are 20 weekdays. At
+> the low end that leaves 1.5 of them; at the high end it is half a day
+> over; R13 and R14 (4.5 to 7.5 days) do not fit before 25 December
+> either way. The deadline
+> is unchanged, 25 December 2026; a feature freeze about 10 December is
+> the session's suggestion, not confirmed by the user. The R list and its
+> estimates are unchanged.
 
 ## 0. What "beta" means
 
