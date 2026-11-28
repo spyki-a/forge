@@ -171,6 +171,16 @@
 > is unchanged, 25 December 2026; a feature freeze about 10 December is
 > the session's suggestion, not confirmed by the user. The R list and its
 > estimates are unchanged.
+>
+> **Later the same evening (2026-11-27):** on the user's answers, a
+> follow-up to lane 1 was built and pushed, `8c7aff5` (Best clips as one
+> row of choices ending in Analyse, every chosen choice lit, a selected
+> graphic keeping its footage clip's words; CI green on both runners, run
+> 46092300031; `CLIPS.md` §10a, §16.112-114). The MP3 320 / 128 bitrate
+> choice goes after the beta, the user's word ("not required will do it
+> later after beta"; §3 below). The user has not seen the layout or the
+> follow-up. Next is unchanged: the user's look, then lane 2 on their word,
+> beginning with the speech-model transcription (`CLIPS.md` §16.120).
 
 ## 0. What "beta" means
 
@@ -698,6 +708,11 @@ block.
 picture, a bezier graph, a multi-point speed graph), by the session's
 recommendation; the user did not object and has not confirmed it
 (`CLIPS.md` §16.86). Not designed, not estimated.
+
+**Added 2026-11-27:** the MP3 320 / 128 bitrate choice for a link's
+sound, the user's word that evening: "not required will do it later after
+beta" (`CLIPS.md` §16.113). Not designed, not estimated; what it would
+take is in that entry.
 
 ## 4. Done means
 

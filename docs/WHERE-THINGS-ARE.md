@@ -342,10 +342,14 @@ grouped by kind (sheet 21), image presets (sheet 23) and per-item audio trim
 ### URL
 
 Paste a link and press **Download** (`IngestPanel.tsx`; `docs/INGEST.md`).
-Since 2026-11-27 (the clip maker's layout, `docs/CLIPS.md` §10a) the tile
-is in the order of the sketch (`docs/SHEETS.md` sheet 30), and its long
-things — the link's rows and Best clips' cards — are in the panel beside
-the picture (below). Top to bottom:
+Since 2026-11-27 (the clip maker's layout, `docs/CLIPS.md` §10a, and its
+follow-up `8c7aff5` on your answer that evening) the tile's long things —
+the link's rows and Best clips' cards — are in the panel beside the
+picture (below), and Best clips ends the tile as one row of choices with
+Analyse last. **A choice that is on is lit** (`ui/lit.ts`): a pale blue
+tint, deep blue words, a thin blue ring and a soft glow around it, so what
+is chosen is told from what is not at a glance; the solid blue is kept for
+buttons that act (Download, Analyse, a card's Clip it). Top to bottom:
 
 - **The link box** ("Paste a video link") and **Download** (its tooltip
   "Download and put it on the timeline"; it read **Get** until 2026-11-27).
@@ -358,7 +362,7 @@ the picture (below). Top to bottom:
   the header's note above). What is wrong with a link is said under it as
   it is typed.
 - **The kinds**, one row: **Video**, **Audio**, **Instrumental**,
-  **Vocal**. The chosen one is blue and says its choice — **Video · 1080p**
+  **Vocal**. The chosen one is lit (below) and says its choice — **Video · 1080p**
   (2160p reads 4K), or **Audio · m4a** (shown upper case) — with a small chevron: press it and
   its list unfolds on a line under the row (under the row's last line when
   the row wraps), pushing what is below down: the quality for video (**4K**,
@@ -367,19 +371,17 @@ the picture (below). Top to bottom:
   Escape and pressing another kind; only one such list is open in the window
   at a time. With Instrumental or Vocal chosen, **split after downloading**
   on a line of its own.
-- **Get transcript** and **Analyse**, one row (Analyse only with a link in
-  the box; Best clips, below).
-- Under that row, what Get transcript is doing and Best clips' pointer
-  (below).
-- **Just a part of it** (not shown while the link's words are), and at the
-  same row's right end the **Transcript** toggle (once the link's words are
-  ready) and the **Clips** toggle (with a link in the box); at the 240 px
-  column the toggles may wrap to a line of their own, right-aligned. Just a
-  part of it opens **From** and **To** — typed, not dragged, because the
+- **Just a part of it** (not shown while the link's words are), lit while
+  on. It opens **From** and **To** — typed, not dragged, because the
   video's length is unknown until it is fetched — with **Fast cut** or
-  **Exact cut — slower**.
-- Best clips' options: the heading **Best clips**, **Duration** and **Make
-  it vertical** (below).
+  **Exact cut — slower**, the chosen one lit.
+- **Get transcript** on a row of its own, with the **Transcript** toggle
+  at the row's right end once the link's words are ready; under it, what
+  Get transcript is doing.
+- **Best clips** (below): its heading with the **Clips** toggle at that
+  row's right end, then one row of choices read like a check list —
+  **Duration**, **Make it vertical**, and **Analyse** last at the row's
+  end — then its pointer line.
 - While downloads run, a line says how many and that the progress is under
   EXPORT, at the bottom left. The first download fetches yt-dlp (about 30
   MB) and says so beforehand.
@@ -390,8 +392,8 @@ details and then its own captions — YouTube's track, no media, no model, no
 AI helper — saying **Reading the link…** and **Fetching the captions…**
 under its row meanwhile. When the words arrive, the panel beside the
 picture opens on them by itself, on its Transcript tab; the **Transcript**
-toggle ("Show or hide the link’s words, beside the picture") opens and
-closes it there. In the Transcript tab, top to bottom:
+toggle ("Show or hide the link’s words, beside the picture"), lit while
+the panel shows them, opens and closes it there. In the Transcript tab, top to bottom:
 
 - **Chapter chips**, one per chapter the video has, each named by its title;
   pressing one picks the words that start inside that chapter.
@@ -439,26 +441,40 @@ offline, say — **Could not get the transcript.** with the reason, and From
 and To stay typed fields.
 
 **Best clips** (sheet 27; `tools/BestClips.tsx`, `docs/CLIPS.md` §7.5,
-built 2026-11-23 to 25, split in two 2026-11-27) is there whenever the box
-holds a link. **In the tile**: **Analyse** beside Get transcript ("Find the
-stretches of this video most worth posting, from its captions — nothing is
-downloaded"); under that row the pointer, one line saying why Analyse is
-greyed: **Best clips reads the video’s captions: press Get transcript
-first.**, or for a video with no captions **This video has no captions, and
-Best clips cannot listen to a video yet.** (with the AI helper or without
-it), or **Best clips is still looking at another video.** while another
-link's run goes on (one Analyse at a time: Analyse stays greyed until it
-ends, at most three minutes, after which the talk's own signals pick); the
-**Clips** toggle ("Show or hide the clips Analyse found, beside the
-picture"), blue while the Clips tab shows, with the number of clips found
-on it; and, under the toggles, the heading **Best clips**, **Duration**,
-one button showing the word and the chosen length (its tooltip "How long
-each clip should be"), which unfolds **1 min · 2 min · 3 min · 4 min**
-under it (greyed and
-folded while Analyse looks), and **Make it vertical** (on by default; its
-tooltip says what it does). Analyse reads the transcript Get transcript
-fetched and downloads nothing; pressed, it folds the Duration list and
-opens the panel beside the picture on its Clips tab.
+built 2026-11-23 to 25, split in two 2026-11-27, one row since `8c7aff5`)
+is there whenever the box holds a link, the last thing in the tile before
+the download lines. **In the tile**, top to bottom:
+
+- The heading **Best clips**, and at that row's right end the **Clips**
+  toggle ("Show or hide the clips Analyse found, beside the picture"),
+  lit while the Clips tab shows, with the number of clips found on it.
+- One row of choices, read left to right like a check list and wrapping
+  when the column is narrow: **Duration**, a chip reading the word and the
+  chosen length ("Duration · 1 min") with a chevron (its tooltip "How long
+  each clip should be"), always lit since a length is always chosen; it
+  unfolds **1 min · 2 min · 3 min · 4 min** on a line of its own under the
+  row, the chosen one lit (greyed and folded while Analyse looks). Then
+  **Make it vertical** (on by default, lit while on; its tooltip says what
+  it does). Then **Analyse**, last, at the row's right end ("Find the
+  stretches of this video most worth posting, from its captions — nothing
+  is downloaded"), the one solid blue button. The clip maker's later
+  choices (lanes 2 to 5, `docs/CLIPS.md` §10a) will go into this row,
+  before Analyse. At the 240 px column the row takes two lines: Duration
+  on the first, Make it vertical and Analyse on the second (read on the
+  harness page on the Mac at 1440×900, the tile 245 px wide: the row 221 ×
+  55 px, Duration 113 × 25, Make it vertical 113 × 25, Analyse 62 × 25 at
+  the second line's end).
+- Under the row the pointer, one line saying why Analyse is greyed:
+  **Best clips reads the video’s captions: press Get transcript first.**,
+  or for a video with no captions **This video has no captions, and Best
+  clips cannot listen to a video yet.** (with the AI helper or without it),
+  or **Best clips is still looking at another video.** while another
+  link's run goes on (one Analyse at a time: Analyse stays greyed until it
+  ends, at most three minutes, after which the talk's own signals pick).
+
+Analyse reads the transcript Get transcript fetched and downloads nothing;
+pressed, it folds the Duration list and opens the panel beside the picture
+on its Clips tab.
 
 **In the Clips tab**: **Looking for the best stretches…** while it looks
 (or **Best clips is still looking at another video.**), then up to three
@@ -475,7 +491,7 @@ A model is the one set up in Settings; with none, the talk's own signals
 pick. With nothing found yet the tab says what to press, one line: **No
 clips yet. Paste a video link in the URL tile to find its best clips.**,
 **No clips yet. Press Get transcript in the URL tile, then Analyse.**,
-**No clips yet. Press Analyse in the URL tile, beside Get transcript.**,
+**No clips yet. Press Analyse in the URL tile, at the end of Best clips’ row.**,
 or, for a video with no captions, the cannot-listen line.
 
 **Clip it on a card** downloads exactly the card's stretch (an exact cut)
@@ -595,7 +611,7 @@ remove.
 clip's transcript, its language and word count ("<language> · <N> words"), or
 **This clip has no transcript yet. Transcribe it beside the picture.**, or
 **Select a clip to see its transcript**. The toggle, **Transcript** ("Show
-or hide this clip’s words, beside the picture"), is blue while the panel
+or hide this clip’s words, beside the picture"), is lit while the panel
 beside the picture shows the clip's words, and greyed with no clip selected
 unless the panel already shows the clip's empty face (then it closes it).
 Pressing the Transcript tile opens that panel on the selected clip's words
@@ -603,6 +619,22 @@ Pressing the Transcript tile opens that panel on the selected clip's words
 a clip on the timeline to see its words here.**). Everything below — the
 rows, Edit, Cut to these words, Graphics with Find graphics, Listen for —
 is in the panel's Transcript tab, not the tile.
+
+**A selected graphic** (since 2026-11-27, `8c7aff5`; `src/shared/wordsClip.ts`
+`wordsClipOf`): a graphic has no words of its own, so with one selected the
+tile and the Transcript tab show the words of the footage clip it sits over,
+and the tab says so in one line over the rows: **These are the words of the
+clip under the selected graphic.** The rows, Graphics and Find graphics'
+list stay; the selection stays on the graphic, so the Trimmer dock still
+shows the graphic's settings. The tile's line reads the footage clip's
+language and word count and does not say it is the clip under the graphic.
+A graphic over no footage, a title or a card shows its own face, as before.
+From that face, **Find graphics in this clip** pressed again (which replaces
+the clip's graphics, the selected one among them), **Drop** on the selected
+graphic's row, **Clear graphics**, or **Cut to these words** leaving the
+graphic over nothing select the footage clip instead, so its words and the
+run's list stay on screen; a graphic that survives, still over the clip,
+stays selected.
 
 The **selected timeline clip's** words — the ones it PLAYS: a clip trimmed to
 part of a long talk lists that part — as rows of `time | text`, the same
@@ -658,7 +690,8 @@ to redo" — uses the model chosen in Settings at the time.
 
 Between the rows and Listen for, the **Graphics** section
 (`TranscriptGraphics.tsx`; `docs/CLIPS.md` §6.6, built 2026-11-11), for
-any selected clip that is not itself a graphic. **Find graphics in this
+any selected clip that is not itself a graphic (with a graphic selected,
+the footage clip's under it, above). **Find graphics in this
 clip** asks the model set up for Direct (Ollama, LM Studio or the hosted
 route) which moments of the clip's words a graphic would help, and lands
 what survives the checks over the clip; it reads **Finding graphics…**
@@ -1374,7 +1407,7 @@ border cannot be grabbed. It opens:
   link's words) or in the Transcript tile (the selected clip's words), when
   Get transcript's words arrive, and when the Transcript tile is pressed.
 
-A toggle is blue while the panel shows what it opens, and pressed then it
+A toggle is lit while the panel shows what it opens, and pressed then it
 closes the panel. Across the top, a bar with the two tabs, **Clips** ("The
 best clips found in the link") and **Transcript** ("The words of the link,
 or of the selected clip"), the open one blue, and at its right an **X**
@@ -1386,9 +1419,10 @@ scrolls inside the panel:
 - **Transcript**: the link's words (chapter chips, rows, the pick, Clip
   download, Add another clip; the URL tile, above) or the selected clip's
   whole transcript (rows, Edit, Cut to these words, Graphics with Find
-  graphics, Listen for; the Transcript tile, above). With both there, a
-  switch at the top, **The link** / **The selected clip**, says whose words
-  show and changes them. With neither, one line: **No words from a link
+  graphics, Listen for; the Transcript tile, above; with a graphic
+  selected, the footage clip's under it, with its one line). With both
+  there, a switch at the top, **The link** / **The selected clip**, says
+  whose words show, the side showing lit, and changes them. With neither, one line: **No words from a link
   yet. Paste a link in the URL tile and press Get transcript.** or **Select
   a clip on the timeline to see its words here.**
 

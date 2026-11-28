@@ -949,26 +949,45 @@ only, not yet by you):
   kinds keep their names, Video and Audio (set by the session).
 - Mp 3 and its list: built as **Audio**, whose list is m4a and mp3, as
   before. The 320 / 128 choice is not built: a new function, for a later
-  lane or your word (set by the session).
+  lane or your word (set by the session). (Later on 2026-11-27: after the
+  beta, your word, "not required will do it later after beta"; `docs/CLIPS.md`
+  §16.113.)
 - Instrumental and Vocal: as they were, as chips in the same row, with
   "split after downloading" under them.
 - "Collbpasable": built. Each list folds open in the flow and pushes what
   is below down; none floats (set by the session).
 - "Get transcript" and "Analaye transcript": built as one row, **Get
   transcript** and **Analyse**. Analyse on the app's own transcription of
-  your own video: lane 2.
+  your own video: lane 2. (Later on 2026-11-27, `8c7aff5`, by your word
+  that evening: Analyse is no longer beside Get transcript; it is the last
+  thing in Best clips' row, below. Get transcript has a row of its own,
+  with the Transcript toggle at its end. By your word too, Get transcript
+  is to work with the speech model and say so, "wispher transcribe some
+  thing like that": lane 2's first piece, not built, `docs/CLIPS.md`
+  §16.120.)
 - "Just at part": as it was, **Just a part of it**, on the row with the
-  toggles.
+  toggles. (Later on 2026-11-27, `8c7aff5`: on a row of its own, above
+  Get transcript; lit while on.)
 - "transcript" with its arrow: built as the **Transcript** toggle, with a
   **Clips** toggle beside it, at the right end of that row; each unfolds
-  the panel beside the picture (sheet 31).
+  the panel beside the picture (sheet 31). (Later on 2026-11-27,
+  `8c7aff5`: the Transcript toggle at the end of Get transcript's row, the
+  Clips toggle at the end of Best clips' heading; each lit while its tab
+  shows.)
 - Best clips 1, 2, 3, 4, Custom: not built, lane 2 (three clips are fixed
   in code today). The heading "Best clips" is there.
 - Duration: built, a fold-down list **Duration**, 1 min to 4 min, under
   Best clips. It sits below Analyse, the sketch's order; flagged to you as
-  something you may want moved (set by the session).
+  something you may want moved (set by the session). (Later on 2026-11-27,
+  `8c7aff5`, by your word that evening: the dropdowns drawn one under
+  another, Best clips, Duration, Size, Captions, Graphics, BGM,
+  "transcition music sync" and "B-roll", are to be choices of ONE row read
+  like a check list, ending in Analyse, each lit when chosen. Built so far:
+  the row with the Duration chip, Make it vertical and Analyse last; the
+  rest join it, before Analyse, with lanes 2 to 5.)
 - Size 16:9, 9:16, 1:1: not built, lane 2. **Make it vertical** stays,
-  under Duration.
+  under Duration. (Later on 2026-11-27, `8c7aff5`: beside Duration in
+  Best clips' row, lit while on.)
 - Captions Smart 2, Smart 3, Custom: not built, lane 3.
 - Graphics on / off: not drawn in lane 1 (an option that does not work
   yet is not drawn: set by the session); none of the five lanes names it.
@@ -1014,6 +1033,13 @@ harness page only, not yet by you):
   or in the Transcript tile (the selected clip's, with Find graphics and
   Listen for), and by itself when Get transcript's words arrive.
 - The Play marks: no Play button, as you said.
+
+**Later on 2026-11-27** (`8c7aff5`, `docs/CLIPS.md` §10a): your answers
+that evening re-ordered sheet 30's left column as above (one row of
+choices ending in Analyse, every chosen one lit), kept a selected
+graphic's footage clip's words in the Transcript tab, and put the 320 /
+128 choice after the beta; built, pushed and green on both runners, read
+on the harness page only, and not yet seen by you.
 
 **Where this leaves things** (2026-11-27). Lane 1 is built, read in the
 session's suite on the Mac, in CI (green on both runners at `3d19ea0`) and

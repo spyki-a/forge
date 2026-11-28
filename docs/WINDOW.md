@@ -364,6 +364,27 @@ the harness page on the Mac, 2026-11-27: the overlap check clean at
 [] }` at 1440×900 and `{ width: 240 }` at 1100×680. Not read in the
 development app or on the Surface.)
 
+(Later on 2026-11-27 (`8c7aff5`), on the user's answer that evening ("it
+goes like a  row of selection and in the end anallyse … so put the analyse
+button after all the toggeles like a check listing"; `docs/CLIPS.md`
+§16.112). **The order above is gone.** The tile is now: `LinkBox`;
+`KindsRow`; Just a part of it (`data-just-a-part`) and its range box; Get
+transcript on a row of its own with the Transcript toggle at its end
+(`data-transcript-row`, `data-url-toggles`) and `LinkTranscriptStatus`;
+`<BestClips />`; the download lines. **Best clips** is its heading with
+`ClipsToggle` at that row's end, then ONE wrapping row, `data-best-row`
+(also the `[data-fold-down="best-length"]` root): the Duration chip
+(`data-best-duration`, the fold-down list's button; the list on a line of
+its own under the row, `basis-full`), Make it vertical, the place of the
+clip maker's later choices, and `<AnalyseButton />` last with `ml-auto`;
+then `BestClipsPointer`. BestClips draws Analyse, the Clips toggle and the
+pointer itself; IngestPanel no longer places them. Every chosen choice in
+these rows is lit (`ui/lit.ts`, §6's last part). Read on the harness page
+on the Mac, 2026-11-27, at 1440×900 with the tile 245 px wide: the row 221
+× 55, Duration 113 × 25, Make it vertical 113 × 25 on the second line,
+Analyse 62 × 25 at its end. Not read in the development app or on the
+Surface; the user has not seen it.)
+
 ### 3.5 Narration tile
 
 | control | today | new home | how | note |
@@ -444,6 +465,19 @@ harness page on the Mac, 2026-11-27: with the dock open, the Transcript tab
 on the clip's transcript with Find graphics' results and dropped list, and
 a graphic on the timeline, nothing overlaps (by eye, and
 `__forgeClipItCheck`'s find `inside` and `clearOfDock` true).)
+
+(Later on 2026-11-27 (`8c7aff5`). The tile's **Transcript** toggle is lit
+while it shows (`lit(showing)`, `ui/lit.ts`). **A selected graphic**, the
+user's "yes please" (`docs/CLIPS.md` §16.114): `TranscriptTile` and
+`TranscriptPanel` read the selection through `wordsClipOf`
+(`src/shared/wordsClip.ts`), so a graphic shows the words of the footage
+clip it sits over (`footageOf`), the panel with one line over the rows,
+`UNDER_GRAPHIC_NOTE` ("These are the words of the clip under the selected
+graphic.", `data-words-under-graphic`); the selection stays on the
+graphic, so the dock keeps the graphic's settings; a graphic over no
+footage, a title or a card stays itself. Read on the harness page on the
+Mac, 2026-11-27, in the states `dock-graphic` and `panel-clip-drops`; not
+in the development app or on the Surface.)
 
 ### 3.8 Director tile
 
@@ -916,6 +950,18 @@ leave them alone. The opening on Analyse, on Get transcript's words and on
 the Transcript tile's press is in those components' handlers, not in
 `analyseBestClips`, `getTranscript` or `setShelfTool`, which are
 unchanged.)
+
+(Later on 2026-11-27 (`8c7aff5`): no new state. Two module functions in
+`store.ts`: `footageShownThroughGraphic(s)` (the footage clip whose words
+are on screen through a selected graphic, by `wordsClipOf`, or null) and
+`keepWordsOn(get, footage)` (if the selection no longer shows that clip's
+words and the clip is still there, select it; a graphic that survives,
+still over it, stays selected). `findGraphics`, `dropGraphic`,
+`clearGraphics` and `cutToWords` read the first before they change the
+project and call the second after, because each, pressed with a graphic's
+footage face on screen, can take the selected graphic away or leave it
+over nothing (the session's review's must-fix). What they change is the
+selection only; nothing of it is saved in a project.)
 
 ---
 
@@ -1727,6 +1773,27 @@ Not read: the development app, the Surface, Windows' fonts.
 is a plain Tab stop, as the Curve tray's tabs are. That is the house manner
 for the two, kept rather than changed for one of them (the whole-lane
 review's item, declined; yours to change: `docs/CLIPS.md` §16.117).
+
+**Later on 2026-11-27 (`8c7aff5`): the lit look, a standing rule.** The
+user, that evening: "make each glow when its selected for easy
+identification of what has been selected and which is not". A choice that
+is ON in the clip maker's rows wears `LIT` from
+`src/renderer/src/components/ui/lit.ts` (`'bg-accent-900 text-accent-300
+shadow-lit'`; off, `UNLIT`, `'bg-ink-850 text-ink-400
+hover:text-ink-200'`; `lit(on)` picks), with `--shadow-lit` in the
+`@theme` block of `styles.css` (`0 0 0 1px var(--color-accent-500), 0 0
+7px 1px color-mix(in srgb, var(--color-accent-500) 55%, transparent)`): a
+box-shadow, so no box changes size and the overlap check measures the same
+boxes. The solid accent fill is only for buttons that act (Download,
+Analyse, Clip it). A choice added to these rows later takes `lit`; the
+fold-out's tabs, the Curve tray, the Trimmer, OUTPUT and EXPORT keep their
+own looks (whether the tabs should be lit is `docs/CLIPS.md` §16.118's
+(12)). The overlap check's readings after `8c7aff5` (the session, the
+harness page, the Mac, 2026-11-27): the planted run ok; "46 states read at
+1440×900, 0 skipped: 0 overlaps, 0 covered, 0 cut off, 0 sideways", the
+same at 1100×680 and at 1920×1080 (the 1920 run before the review's fixes,
+1440 and 1100 read again after them, clean); the census `{ checked: 1093,
+skipped: 12, missing: [] }`.
 
 ---
 

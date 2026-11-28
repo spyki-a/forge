@@ -805,6 +805,46 @@
 > **The deadline is unchanged: 25 December 2026.** A feature freeze about
 > 10 December is the session's suggestion, not confirmed by you.
 >
+> **Later the same evening, 2026-11-27: your answers, and `8c7aff5`.** With
+> lane 1 reported, the session asked you four things: to look at the spot
+> you reported; whether Duration and Make it vertical should move above
+> Analyse; whether a selected graphic should keep showing the video clip's
+> words; whether you want the MP3 320 / 128 choice. Your answer (whole in
+> §16.112's second answer and §10a's rule): you will look "when the record
+> it done"; "yes please and also make each glow when its selected", Best
+> clips "like a  row of selection and in the end anallyse", the later
+> toggles added in the same row, "so put the analyse button after all the
+> toggeles like a check listing"; the transcript button "should work with
+> the wispher" and say so; "yes please" to the graphic; and "not required
+> will do it later after beta" to the bitrate. **Built and pushed by the
+> session that evening as `8c7aff5`** (§10a's Built note of it; origin =
+> main = `8c7aff5`): Best clips as one wrapping row, the Duration chip,
+> Make it vertical and Analyse last, Get transcript on a row of its own
+> with the Transcript toggle; one lit look for every chosen choice
+> (`ui/lit.ts`, `--shadow-lit`), the solid accent left to buttons that
+> act; a selected graphic shows the words of the footage clip under it,
+> and Find again, Drop, Clear graphics and Cut to these words keep the
+> words on screen. **The session's readings, on the Mac**: typecheck 0,
+> the suite 405 files passed and 6 skipped (411), 6659 tests passed and
+> 67 skipped (6726), build 0; 33 mutations, 32 caught, the one alive
+> equivalent; on the harness page the overlap check clean at 1440×900,
+> 1100×680 and 1920×1080 (46 states, 0 skipped), the census 1093 checked,
+> 12 skipped, missing [], and the fold-out, Best clips, Clip it, look and
+> graphic checks passing. **CI at `8c7aff5`** (run 46092300031): job
+> 140815764182 `windows-latest` and job 140815763538 `macos-15` success;
+> the installer job skipped: **green on both runners** (read through
+> api.github.com; the logs not read). §16.112 and §16.114 are answered,
+> §16.113's bitrate half too (its names half open); new: §16.118's (10)
+> to (12) and §16.120. **Not built**: the transcript button with the
+> speech model and its wording (§16.120; the session's proposal,
+> "Transcribe with Whisper", is the session's); the row's later toggles
+> (lanes 2 to 5). **You have still not seen any of it**, lane 1 or
+> `8c7aff5`; nothing was read in the development app or on the Surface,
+> and nothing is marked met. **Next**: your look at the layout, then lane
+> 2 on your go, beginning with the speech-model transcription and its
+> wording; then lanes 3 to 5 and `BETA.md`'s R list, as above. The
+> deadline is unchanged: 25 December 2026.
+>
 > **As written, 2026-10-05, when nothing here was built.** This is the plan for the
 > piece agreed with the user on 2026-10-04/05: the reframe engine, caption
 > free space, the motion-graphics engine with the Director's third pass, Best
@@ -1270,7 +1310,13 @@ this and will get back to the beta". **This plan comes first**, then
   its gate passes, phase 4 (6), step 5 (14) and step 6's retrieved-fact
   cards (3). Still open beside the lanes, all yours: phase 2's and phase
   3's exit readings (§6.12), §7.8's and §9's, and your look at lane 1.
-  **The deadline is unchanged: 25 December 2026.**
+  **The deadline is unchanged: 25 December 2026.** (Later the same
+  evening: a follow-up to lane 1, `8c7aff5`, built and pushed on your
+  answers, green on both runners, Best clips as one row ending in Analyse
+  and every chosen choice lit, §10a; no day figure changes. Also after the
+  beta, not a step of this plan and with no day figure: the MP3 320 / 128
+  bitrate choice, your word of 2026-11-27, "not required will do it later
+  after beta", §16.113.)
 - **Step 7 is gated on `MARKET.md` Stage 0** (`MARKET.md:94-103`): Phase C
   measured and finished (it is paused), and a music library with
   redistribution rights or the `filler-supplies` policy alone for paid
@@ -27487,6 +27533,26 @@ session's estimate:
 
 Lanes 2 to 5 are not built; each starts on your word.
 
+**Your rule for the lanes' controls (later on 2026-11-27).** Asked whether
+Duration and Make it vertical should move above Analyse, you answered:
+"here how im imagining is like it goes like a  row of selection and in the
+end anallyse … and also in the same row our next toggles will add to right
+( captions ; smart1,2 , graphics toggle on/ off , bgm, transcions with
+sync, broll coming soon... )  so put the analyse button after all the
+toggeles like a check listing kind of so every toggele selected get
+highlight toggles..", and "make each glow when its selected for easy
+identification of what has been selected and which is not". So Best clips
+is ONE row of choices read like a check list; every later lane's choice
+(the count and size of lane 2, the caption sets of lane 3, the music bed
+and transitions with sync of lane 4, graphics on / off, B-roll's "coming
+soon") goes INTO that row, before Analyse; every chosen choice is lit; and
+Analyse is last. Built for lane 1's two choices the same evening
+(`8c7aff5`, below). And lane 2 includes the transcript button working with
+the speech model, with a label that says so ("the analyse buttoon for
+beside the transcript should work with the wispher  so here we will make
+it clear as wispher transcribe some thing like that"): §16.120, not built,
+on your go.
+
 ### Lane 1 — the layout, as built
 
 Ten commits on main, 2026-11-27: nine of a workflow run
@@ -27880,6 +27946,145 @@ the code's for the Python process (on screen "the AI helper").
 >   `tests/exportSegments.test.ts` (3), cases added in five more files; 23
 >   mutations by the session, each caught, each anchor counted.
 
+> **Built later on 2026-11-27 (the session's, after your answers: Best
+> clips as one row ending in Analyse, every chosen choice lit, a selected
+> graphic keeps its footage clip's words).** `8c7aff5`, 19 files, pushed
+> alone (`3d19ea0..8c7aff5`); the answers are §16.112, 113 and 114.
+> - **The row**, `BestClips()` in `tools/BestClips.tsx`: the heading row
+>   (a Sparkles icon, "Best clips", and `ClipsToggle` at that row's end,
+>   `ml-auto`); then ONE wrapping row, `data-best-row`, which is also the
+>   `[data-fold-down="best-length"]` root (`BEST_CLIPS_LENGTH_LIST`), so a
+>   choice or Escape puts the keyboard back on its direct-child button:
+>   the **Duration** chip (`data-best-duration`, title "How long each clip
+>   should be"), reading "Duration · 1 min" with a chevron, the fold-down
+>   list's button, the list unfolding on a line of its own under the row
+>   (`basis-full`, in the flow); **Make it vertical**
+>   (`data-best-vertical`); a comment marking where the clip maker's later
+>   choices go ("the count, the size, captions, graphics, music,
+>   transitions"), before Analyse; and `<AnalyseButton />` last, `ml-auto`,
+>   the one solid button. Then `<BestClipsPointer />` under the row.
+>   BestClips draws Analyse, the Clips toggle and the pointer itself.
+> - **`IngestPanel.tsx`**, the tile's order now: `LinkBox` (the box and
+>   Download); `KindsRow`; **Just a part of it** (a chip,
+>   `data-just-a-part`, hidden while the link's words are shown) and its
+>   range box; Get transcript with the **Transcript** toggle at its row's
+>   end (`data-transcript-row`, the toggle in `data-url-toggles`) and
+>   `LinkTranscriptStatus`; `<BestClips />`; the download lines. The Clips
+>   tab's line with words and nothing analysed, `FOLDOUT_CLIPS_EMPTY`, now
+>   reads "No clips yet. Press Analyse in the URL tile, at the end of Best
+>   clips’ row." At the 240 px column the row wraps to two lines (Duration;
+>   then Make it vertical and Analyse): read on the harness page, the Mac,
+>   2026-11-27, at 1440×900 with the tile 245 px wide: the row 221 × 55,
+>   Duration 113 × 25, Make it vertical 113 × 25 on the second line,
+>   Analyse 62 × 25 at that line's end.
+> - **Lit**, `src/renderer/src/components/ui/lit.ts`: `LIT` `'bg-accent-900
+>   text-accent-300 shadow-lit'`, `UNLIT` `'bg-ink-850 text-ink-400
+>   hover:text-ink-200'`, `lit(on)`; and `--shadow-lit: 0 0 0 1px
+>   var(--color-accent-500), 0 0 7px 1px color-mix(in srgb,
+>   var(--color-accent-500) 55%, transparent);` in the one `@theme` block
+>   of `src/renderer/src/styles.css`. The palest accent tint, the deepest
+>   accent ink, a one-pixel accent ring and a 7 px glow; a box-shadow only,
+>   so no box changes size. Used by: the chosen kind chip; the chosen
+>   quality, format and length in their unfolded lists (`FoldDown.tsx`
+>   `foldDownChoices`); Just a part of it; the chosen cut (Fast cut /
+>   Exact cut); the Duration chip (always, a length being always chosen);
+>   Make it vertical; the URL tile's Transcript toggle and the Clips
+>   toggle; the Transcript tile's toggle; the panel's "Whose words" switch
+>   (`WordsSwitch`, The link / The selected clip). Left as they were: the
+>   fold-out's two tabs (the Curve tray's look), the transcript's Edit,
+>   the Trimmer, the other tiles, OUTPUT and EXPORT. The solid accent fill
+>   stays for buttons that act: Download (while no words are shown),
+>   Analyse, and a card's Clip it. Read on the page: the Duration chip's
+>   computed box-shadow ends "rgb(37, 99, 235) 0px 0px 0px 1px, color(srgb
+>   0.145098 0.388235 0.921569 / 0.55) 0px 0px 7px 1px".
+> - **A selected graphic**, `src/shared/wordsClip.ts` `wordsClipOf`: a
+>   selected footage clip is its own; a selected graphic is the footage
+>   clip it shows over (`footageOf`); a graphic over no footage, and a
+>   title or a card, stay themselves. `TranscriptPanel` and
+>   `TranscriptTile` read through it; the panel shows "These are the words
+>   of the clip under the selected graphic." (`UNDER_GRAPHIC_NOTE`,
+>   `data-words-under-graphic`) over the rows. The selection stays on the
+>   graphic, so the Trimmer dock still shows the graphic's settings.
+> - **The store**, `src/renderer/src/store.ts`: `footageShownThroughGraphic`
+>   (the footage clip whose words are on screen through a selected
+>   graphic, or null) and `keepWordsOn` (if the selection no longer shows
+>   that clip's words and the clip is still there, it is selected; a
+>   graphic that survives, still over it, stays selected), called by
+>   `findGraphics`, `dropGraphic`, `clearGraphics` and `cutToWords`: each,
+>   pressed in that face, can take the selected graphic away (Find again
+>   replaces the clip's graphics; Drop and Clear remove it) or leave it
+>   over nothing (a cut that ends before it), and the tab would have
+>   dropped to its empty line with the run's list out of sight. The
+>   session's review's must-fix; Cut to these words added by the session.
+> - **Small**: the cut buttons got `type="button"`; three stale comments
+>   (`LinkTranscript.tsx`'s head, `clipsLayoutCheck.ts`, `FoldDown.tsx`'s
+>   head, which now says the `FoldDown` component is drawn by nothing and
+>   its two users are built from its parts).
+> - **Tests**: new `tests/wordsClip.test.ts` (7); in
+>   `tests/renderer/ingestPanel.test.tsx` the two order tests rewritten for
+>   the new order and a describe of seven for the lit look;
+>   `bestClipsPanel.test.tsx` (`TILE_PARTS` is `[BestClips]`; the order
+>   assertion; one fold-down button in the row); `transcriptPanel.test.tsx`
+>   (a selected graphic: 4); `graphicActions.test.ts` (the selection kept:
+>   5); `foldoutTranscript.test.tsx` (the switch lit).
+>   `graphicPanel.test.tsx`'s census-rows test now reads the dock's rows of
+>   its state only: it pinned the whole list of the state's rows and failed
+>   the full suite when a row was correctly added to that state in another
+>   home (the house rule: assert membership). The census fixture
+>   `tests/fixtures/ui-census.json`: 1105 rows (one new, the under-graphic
+>   line, home `foldtranscript`, state `graphic-lower-third`), one label
+>   reworded (the Clips tab's line), line numbers followed.
+> - **The session's verification**, the development Mac, 2026-11-27
+>   evening: typecheck 0; `npm test` 0, Test Files 405 passed | 6 skipped
+>   (411), Tests 6659 passed | 67 skipped (6726); build 0 (an earlier full
+>   run that evening had one failure, `graphicPanel`'s census-rows test
+>   above; fixed, and the run repeated whole). Mutations on the session's
+>   own tests: 33 run, 32 caught; the one that lived is equivalent
+>   (`footageShownThroughGraphic` answering for a footage clip selected as
+>   itself changes nothing, since `keepWordsOn` then finds its words
+>   already on screen); each anchor counted. Four checks the other way: a
+>   later choice added to the row correctly (a toggle; a chip in a
+>   `[data-fold-down]` box of its own) leaves the row's tests green, while
+>   Analyse moved out of the row, or a second fold-down button put straight
+>   into the row, turns them red.
+> - **The review**: two Opus critics, read-only, over the uncommitted
+>   change (`wf_b6da5b61-9b7`), both "accept-after-fixes". One must-fix on
+>   behaviour (the selection going stale after Find again, Drop and Clear:
+>   fixed as `keepWordsOn`, and Cut to these words added by the session);
+>   one on tests (two assertions that would break when a later lane's
+>   choice is added correctly: relaxed to "Analyse is still in the row").
+>   Their smaller points applied: the anchors, the token inside `@theme`,
+>   the Transcript tile's toggle and the switch lit, a test that could not
+>   fail removed, the fixture's line numbers, stale comments. Three left
+>   open, §16.118's (10) to (12).
+> - **The harness page, the Mac, 2026-11-27** (the Browser pane; nothing in
+>   the development app, nothing on the Surface): `__forgeOverlapCheck`'s
+>   planted run ok; full runs "46 states read at 1440×900, 0 skipped: 0
+>   overlaps, 0 covered, 0 cut off, 0 sideways", the same line at 1100×680
+>   and at 1920×1080 (the 1920 one read before the review's fixes; 1440
+>   and 1100 read again after them, clean); `__forgeCensus()` `{ checked:
+>   1093, skipped: 12, missing: [] }` (before and after the review's
+>   fixes); `__forgeFoldoutCheck` 8 of 8; `__forgeBestClipsCheck` ok, 36;
+>   `__forgeClipItCheck` failures [], layout and find all true;
+>   `__forgeLookCheck` "14 of 14 cases pass"; `__forgeGraphicCheck`'s find,
+>   three PASS. By the session's presses: in the state `dock-graphic` (a
+>   lower third selected over the census video) the under-graphic line,
+>   the footage clip's face and the Graphics section with the lower third
+>   listed and its Drop, the dock still on the graphic; in
+>   `panel-clip-drops` the placed graphic selected (3 rows, the line, Find
+>   graphics there, the dock on "ring — graphic"), then "Find graphics in
+>   this clip" pressed in the panel: the old graphic gone, the footage clip
+>   selected, 3 rows and the list still on screen.
+> - **CI at `8c7aff5`** (run 46092300031, the push of `3d19ea0..8c7aff5`):
+>   job 140815764182 `windows-latest` success, job 140815763538 `macos-15`
+>   success, the installer job skipped (manual run or tag only): green on
+>   both runners. Read through api.github.com (jobs and annotations; the
+>   logs need a sign-in and were not read).
+> - **Not built**: the transcript button with the speech model and its
+>   wording (§16.120); the later choices of the row (lanes 2 to 5); the
+>   320 / 128 choice (after the beta, §16.113). **You have not seen it**,
+>   nor lane 1 before it; nothing here is marked met.
+
 **The session's verification, the development Mac, 2026-11-27.** Each run
 written to a file and its exit code read first. At `3d19ea0`'s tree:
 typecheck 0; `npm test` 0, Test Files 404 passed | 6 skipped (410), Tests
@@ -27981,7 +28186,9 @@ read from the code at `3d19ea0`):
    "Get"; "Full download" is unchanged.
 2. The kinds stay "Video" and "Audio", not MP4 and MP3; Audio's formats
    stay m4a and mp3. No 320 / 128 choice: a new function, for a later lane
-   or your word.
+   or your word. (Later on 2026-11-27: the 320 / 128 choice is after the
+   beta, your word, "not required will do it later after beta", §16.113;
+   the names are still open.)
 3. No Choose button yet: it arrives with lane 2, so no button does nothing.
 4. The options that do not work yet (count, size, captions, graphics, BGM,
    transitions, B-roll) are not drawn.
@@ -27990,7 +28197,10 @@ read from the code at `3d19ea0`):
    not under its chip: at 240 px the row wraps, so it opens under the
    row's last line.
 6. Duration and Make it vertical sit below Analyse, the sketch's order;
-   flagged to you as something you may want moved.
+   flagged to you as something you may want moved. (Closed later on
+   2026-11-27 by your answer and `8c7aff5`: neither order; Best clips is
+   one row of choices ending in Analyse, Get transcript on a row of its
+   own with the Transcript toggle, §16.112.)
 7. The sketch's vertical "CLIPS" tab is a horizontal bar at the top of the
    panel with two tabs, "Clips" and "Transcript" (suggestion 1), opened by
    the toggles in the URL tile and the Transcript tile, as you corrected.
@@ -28005,12 +28215,18 @@ item a fixer declined, unless the code at `3d19ea0` or the session's
 readings closed it, then the session's own list; the choices among them
 are §16.112-119, 2026-11-27):
 - Yours: Duration and Make it vertical below Analyse, keep or move above
-  (one line in `IngestPanel.tsx` and two order assertions).
-- Yours: the 320 / 128 choice for MP3, wanted, and in which lane.
+  (one line in `IngestPanel.tsx` and two order assertions). (Closed later
+  on 2026-11-27: one row ending in Analyse, your answer, built in
+  `8c7aff5`, §16.112.)
+- Yours: the 320 / 128 choice for MP3, wanted, and in which lane. (Closed
+  later on 2026-11-27: after the beta, your word, §16.113.)
 - Yours: a graphic selected on the timeline makes the Transcript tab show
   that graphic's own empty face, "No transcript yet…", and Find graphics'
   list goes until the footage clip is selected again (older behaviour, now
   easier to see); show the footage clip's words instead (`footageOf`)?
+  (Closed later on 2026-11-27: "yes please", built in `8c7aff5`, with the
+  selection kept on the words after Find again, Drop, Clear graphics and
+  Cut to these words, §16.114.)
 - Yours: Get transcript's words arriving reopen the panel on the link's
   words even when you have moved it to the clip's transcript or to Clips
   (the design asked for the opening; a gentler rule is possible).
@@ -28063,6 +28279,16 @@ are §16.112-119, 2026-11-27):
 - Timing-sensitive tests: `sidecarClient`'s idle case and the helper's
   Python selftest timing case fail under load now and then (an agent's
   reading).
+- Newly open later on 2026-11-27 (`8c7aff5`; each a choice, §16.118 (10)
+  to (12) and §16.120): the Transcript tile's line does not say it means
+  the clip under a selected graphic; the Duration chip is always lit, so a
+  row of on / off choices opens with a chip that always looks on (the
+  critic's suggestion: value chips drawn apart from on / off ones when the
+  later toggles arrive); the fold-out's tabs keep their older selected
+  look; and the transcript button with the speech model, what it does and
+  its wording ("wispher transcribe some thing like that", your words; the
+  session's proposal "Transcribe with Whisper"), lane 2's first piece, not
+  built.
 - Closed since they were raised: the reopen width after a drag shut
   (`3d19ea0`), the transport with the column at 45 % (`7e7bfa5`, read
   clean), the stale `store.ts` census line (`7e7bfa5`), `GET_TITLE`'s
@@ -30902,6 +31128,28 @@ or on the Surface. Every size and line below is a proposal, unrated.
      are their guards). No recommendation.
 
      **Answer (2026-11-27): OPEN.** Yours.
+
+     **Answer (2026-11-27, that evening): NEITHER: ONE ROW OF CHOICES,
+     ANALYSE LAST.** Asked by the session whether to move Duration and
+     Make it vertical above Analyse, "since Analyse uses the duration", you
+     answered with more than a yes: "yes please and also make each glow
+     when its selected for easy identification of what has been selected
+     and which is not, here how im imagining is like it goes like a  row of
+     selection and in the end anallyse … and also in the same row our next
+     toggles will add to right ( captions ; smart1,2 , graphics toggle on/
+     off , bgm, transcions with sync, broll coming soon... )  so put the
+     analyse button after all the toggeles like a check listing kind of so
+     every toggele selected get highlight toggles..". Built the same
+     evening (`8c7aff5`, §10a's Built note of that commit): Best clips is
+     its heading with the Clips toggle at that row's end, then ONE wrapping
+     row (`data-best-row`): the Duration chip, Make it vertical, and
+     Analyse last at the row's end; Get transcript has a row of its own
+     with the Transcript toggle; every chosen choice is lit (`ui/lit.ts`).
+     The session reads the rule as standing for the lanes after this one:
+     the row is now the home of every later lane's choice (the count, the
+     size, the caption sets, graphics on / off, the music bed, transitions
+     with sync, B-roll's "coming soon"), each added INTO it before Analyse,
+     each lit when chosen (§16.119).
 113. **The mp3 bitrate, 320 / 128, and the kinds' names.** Your sketch
      draws "Mp 3" with a list, 320 and a second figure written over (sheet
      30). As built, Audio's list is m4a and mp3, as before, and no bitrate
@@ -30925,6 +31173,15 @@ or on the Surface. Every size and line below is a proposal, unrated.
      No recommendation.
 
      **Answer (2026-11-27): OPEN.** Yours.
+
+     **Answer (2026-11-27, that evening): THE BITRATE AFTER THE BETA; THE
+     NAMES STILL OPEN.** Asked "MP3 320 / 128: do you want this choice?",
+     you answered: "not required will do it later after beta". So no 320 /
+     128 choice before the beta; it is on the after-the-beta lists (§2's
+     2026-11-27 bullet, `BETA.md` §3). The other half of this entry, the
+     kinds' names, "Video" and "Audio" against your sketch's MP4 and MP3,
+     was not asked that evening and is not answered: still OPEN, yours, as
+     costed above.
 114. **A graphic selected on the timeline, in the Transcript tab.** As
      built, older than this lane and easier to see now: the tab's clip face
      is the selected clip's (`clipSelected`), so selecting a graphic, one
@@ -30944,6 +31201,30 @@ or on the Surface. Every size and line below is a proposal, unrated.
      session's call). No recommendation.
 
      **Answer (2026-11-27): OPEN.** Yours.
+
+     **Answer (2026-11-27, that evening): THE FOOTAGE CLIP'S WORDS.** Asked
+     "Should I make it keep showing the video clip's words?", you answered
+     "yes please". Built the same evening (`8c7aff5`): `wordsClipOf`
+     (`src/shared/wordsClip.ts`) reads a selected graphic as the footage
+     clip it shows over (`footageOf`), for the Transcript tab
+     (`TranscriptPanel`) and the Transcript tile (`TranscriptTile`); the
+     tab shows one line over the rows, "These are the words of the clip
+     under the selected graphic." (`UNDER_GRAPHIC_NOTE`), and the rows,
+     Graphics and Find graphics' list stay; the selection stays on the
+     graphic, so the Trimmer dock still shows the graphic's settings. A
+     graphic over no footage, and a title or a card, stay themselves. What
+     the session's two-critic review added (its must-fix): with that face
+     on screen, **Find graphics** pressed again (which replaces the clip's
+     graphics, the selected one among them), **Drop** on the selected
+     graphic's row, **Clear graphics**, and **Cut to these words** (a cut
+     that leaves the graphic over nothing) would have left the selection on
+     a clip that is gone or over nothing, and the tab would have dropped to
+     its empty line with the run's list out of sight; the store's
+     `keepWordsOn` (called with `footageShownThroughGraphic`, read before
+     each of the four) then selects the footage clip, so the words and the
+     list stay. Read on the harness page, the Mac, 2026-11-27 (§10a's
+     `8c7aff5` note); not in the development app, not on the Surface; you
+     have not seen it.
 115. **When the panel opens by itself.** As built: (1) Get transcript's
      words arriving, or a language chosen, open the panel on the link's
      words (`fetchWords`, `LinkTranscript.tsx`), even when you have moved it
@@ -31051,6 +31332,33 @@ or on the Surface. Every size and line below is a proposal, unrated.
      `scrollbar-gutter: stable`, left by its fixer for a look on screen.
 
      **Answer (2026-11-27): OPEN.** Yours.
+
+     **Added later on 2026-11-27 (`8c7aff5`): three more, left by the
+     session's two-critic review of that commit, not applied; OPEN.**
+     (10) With a graphic selected, the Transcript tile's line reads the
+     footage clip's language and word count, as for the clip itself, and
+     does not say it means the clip under the graphic (the tab says so,
+     `UNDER_GRAPHIC_NOTE`; the tile does not). The choices: as built; or the
+     tile's line saying so. What saying so costs: a second line or a
+     reworded line in `TranscriptTile` when the words are read through a
+     graphic, a named constant, a census row and a test. (11) The Duration chip is
+     always lit (`LIT`, not `lit(on)`), since a length is always chosen; so
+     a row read like a check list of on / off choices opens with a chip
+     that always looks on. The choices: as built; or, when the later lanes
+     add their on / off toggles to the row, a value chip (Duration, and the
+     count and size of lane 2) drawn apart from an on / off one (the
+     critic's suggestion: a second look beside `LIT` and `UNLIT` in
+     `ui/lit.ts`). What it costs: as built, nothing now and a row that may
+     read "all on" once toggles join it; the second look, a class in
+     `lit.ts`, its use on each value chip, and `ingestPanel.test.tsx`'s lit
+     cases turned for it; the session's reading is that it is cheapest
+     decided with lane 2's first chips. (12) The fold-out's two tabs,
+     Clips and Transcript, keep their older selected look (the Curve
+     tray's), not the lit one. The choices: as built; or lit like the rest. What lighting them
+     costs: one class in `Foldout.tsx`'s tab bar and its tests, and the
+     Curve tray's tabs then differing from the fold-out's unless they are
+     changed too. No recommendation by the session; the critic's
+     suggestion for (11) is given above.
 119. **The lanes after this one, and what is in none.** As agreed on
      2026-11-27 (§10a): lane 2, source and count (Choose for your own
      video, Analyse on the app's own transcription, Best clips 1 to 4 or
@@ -31068,6 +31376,55 @@ or on the Surface. Every size and line below is a proposal, unrated.
      lane moved after the beta frees its days and leaves its part of your
      sketch undrawn at the beta; a thing added to a lane adds to its days.
      No recommendation.
+
+     **Answer (2026-11-27): OPEN.** Yours.
+
+     (Later on 2026-11-27, `8c7aff5`: your rule of that evening, §16.112's
+     second answer, sets WHERE each lane's choices go: into Best clips' one
+     row, before Analyse, each lit when chosen. It changes no lane's
+     content or days. Two items of this entry moved: the 320 / 128 choice
+     is after the beta, your word (§16.113); and you named "graphics toggle
+     on/ off" among the row's later toggles, so it is wanted, but no lane
+     holds it yet: which lane takes it, and its days, are still yours.
+     Lane 2 also takes the transcript button's wording with the speech
+     model, §16.120. Still OPEN.)
+
+**Added later on 2026-11-27 (after `8c7aff5`); OPEN.**
+
+120. **The transcript button with the speech model: what it does and
+     what it says.** Your words of 2026-11-27, in your answer to the
+     session's four points: "and also the analyse buttoon for beside the
+     transcript should work with the wispher  so here we will make it
+     clear as wispher transcribe some thing like that". The session's
+     reading (a reading, not your words): the button beside where Analyse
+     stood, Get transcript, must also work with the app's own speech model
+     ("Whisper" is your word for it; on screen it is "the speech model",
+     faster-whisper in the AI helper), for a link with no captions and for
+     your own video, and its label must say so. The session's proposed
+     wording, the session's and not yours: something like "Transcribe with
+     Whisper". **What exists today** (at `8c7aff5`): Get transcript reads
+     only the video's own captions (its title, `GET_TRANSCRIPT_TITLE`:
+     "Fetch the video’s captions as words to pick a clip from — nothing
+     else is downloaded"); for a video with none the tile says "This video
+     has no captions" and shows **Listen to it** greyed (`NoCaptions` in
+     `tools/LinkTranscript.tsx`; its title, `LISTEN_TITLE`: "Transcribe the
+     sound with the AI helper — downloads the audio and the speech model";
+     beside it "soon" when the helper can transcribe and the speech model
+     is here, "needs the speech model" without the model, the AI helper's
+     pointer without the helper, or "the AI helper is starting"), and Best
+     clips' pointer reads `BEST_CLIPS_CANNOT_LISTEN`, "This video has no
+     captions, and Best clips cannot listen to a video yet."
+     (`src/shared/bestclips/session.ts`). The choices: the wording (the
+     session's proposal; "Whisper" or "the speech model", the name used
+     everywhere else on screen; one button that does both, or Get
+     transcript for captions and a second press for the speech model, as
+     Listen to it is today); and when it runs (only for a link with no
+     captions, or by your choice for any link). What it costs: it is
+     lane 2's first piece ("Analyse on the app's own transcription", about
+     1.5 days with the rest of lane 2 by the session's estimate), with the
+     download of a link's sound, the AI helper's transcription, the
+     pointer's and the tile's lines reworded, their census rows and tests.
+     **Not built and not started: it waits for your go.**
 
      **Answer (2026-11-27): OPEN.** Yours.
 
