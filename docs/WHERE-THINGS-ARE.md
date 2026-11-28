@@ -15,7 +15,10 @@ step.
 
 **Two names.** The user calls the left panel the "sidecar"; the code calls it
 the **Shelf** (`components/shelf/`), because `sidecar` in the code is the Python
-process — which the screen calls **the AI helper**.
+process — which the screen calls **the AI helper**. (2026-11-27: a third,
+the panel beside the picture, is the **Foldout** in the code and has no
+name on screen, only its tabs **Clips** and **Transcript**; "sidecar" is
+neither it nor the AI helper.)
 
 ---
 
@@ -356,11 +359,11 @@ the picture (below). Top to bottom:
   it is typed.
 - **The kinds**, one row: **Video**, **Audio**, **Instrumental**,
   **Vocal**. The chosen one is blue and says its choice — **Video · 1080p**
-  (2160p reads 4K), or **Audio · M4A** — with a small chevron: press it and
+  (2160p reads 4K), or **Audio · m4a** (shown upper case) — with a small chevron: press it and
   its list unfolds on a line under the row (under the row's last line when
   the row wraps), pushing what is below down: the quality for video (**4K**,
-  **1080p**, **720p**, **480p**) or the format for sound (**M4A**, which
-  copies what the site stores, or **MP3**). A choice folds it, and so do
+  **1080p**, **720p**, **480p**) or the format for sound (**m4a**, which
+  copies what the site stores, or **mp3**, shown upper case). A choice folds it, and so do
   Escape and pressing another kind; only one such list is open in the window
   at a time. With Instrumental or Vocal chosen, **split after downloading**
   on a line of its own.
@@ -448,9 +451,10 @@ link's run goes on (one Analyse at a time: Analyse stays greyed until it
 ends, at most three minutes, after which the talk's own signals pick); the
 **Clips** toggle ("Show or hide the clips Analyse found, beside the
 picture"), blue while the Clips tab shows, with the number of clips found
-on it; and, under the toggles, the heading **Best clips**, **Duration**
-(its tooltip "How long each clip should be"), a button saying the chosen
-length that unfolds **1 min · 2 min · 3 min · 4 min** under it (greyed and
+on it; and, under the toggles, the heading **Best clips**, **Duration**,
+one button showing the word and the chosen length (its tooltip "How long
+each clip should be"), which unfolds **1 min · 2 min · 3 min · 4 min**
+under it (greyed and
 folded while Analyse looks), and **Make it vertical** (on by default; its
 tooltip says what it does). Analyse reads the transcript Get transcript
 fetched and downloads nothing; pressed, it folds the Duration list and
@@ -504,7 +508,7 @@ card: a missing one is a line pointing at the Trimmer's **Follow the
 subject**, which fetches it; no choice of how many clips, no size, caption
 set, music or transition option yet (the clip maker's lanes 2 to 5,
 `docs/CLIPS.md` §10a). Picking rows of a clip already on the timeline is
-the Transcript tile's (below). **Read where**: the tile's rows and the
+in the panel's Transcript tab, opened from the Transcript tile (below). **Read where**: the tile's rows and the
 panel were read on the harness page on the Mac on 2026-11-27, not in the
 app or on the Surface.
 

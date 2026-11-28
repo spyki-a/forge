@@ -6,7 +6,8 @@ of everything that already works" — the lyric chain, beat sync and the grid al
 need music *in*, and until this there was no way to get it in.
 
 **Status:** built end to end — pure layer, main process, IPC and the panel.
-Paste a link and press Get: two clicks to a clip on the timeline.
+Paste a link and press Get: two clicks to a clip on the timeline (the
+button reads **Download** since 2026-11-27, `docs/CLIPS.md` §10a).
 
 ---
 

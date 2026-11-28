@@ -12861,7 +12861,8 @@ confidence to nothing (`acAsrConf` is 0 on every word, §7.1; stored as
 become a confident counter. So (§16.30):
 
 - Graphics from Clip it and Direct are placed, and **every one is listed**
-  in the Transcript tile's Graphics list and in the run's notes, each with
+  in the Transcript tile's Graphics list (in the fold-out panel's
+  Transcript tab since 2026-11-27, §10a) and in the run's notes, each with
   **Drop**.
 - **A graphic whose grounded number came from a YouTube transcript, or from
   a Whisper word under 0.5 confidence, is a proposal only**
@@ -27339,8 +27340,9 @@ hours) and one of the session's. From `9c40848` (docs only; the code under
 it `8730ff7` + `1c1dba0`): `f8bd957`, `d14ecdf` (piece 1), `88f63ae`,
 `d1971fd` (piece 2), `0d6b7f9`, `2e8f937` (piece 3), `470039c`, `9a667f7`
 (piece 4), `7e7bfa5` (the whole-lane review), `3d19ea0` (the session's).
-Pushed once, `9c40848..3d19ea0`. Nothing under `docs/` was changed by any
-of the ten. Described from the code at `3d19ea0`. **In code the panel is
+Pushed once, `9c40848..3d19ea0`. `git diff --stat 9c40848..7e7bfa5`: 42
+files, 6387 insertions, 828 deletions (the session's reading). Nothing under
+`docs/` was changed by any of the ten. Described from the code at `3d19ea0`. **In code the panel is
 the FOLDOUT** (`Foldout.tsx`, store `foldout`, `data-foldout`); on screen
 it has no name, only its two tabs, "Clips" and "Transcript". It is not
 "sidecar": that is your word for the left panel (the Shelf in code), and
@@ -27473,7 +27475,9 @@ the code's for the Python process (on screen "the AI helper").
 >   reads the video’s captions: press Get transcript first."; Analyse greyed
 >   by another link's run, "Best clips is still looking at another video."
 >   (`d1971fd`, so a greyed Analyse always says why in the tile); else
->   nothing.
+>   nothing. One line at a time: with no words on this link and another
+>   link's run going, only "press Get transcript first." shows (the old
+>   tile showed both lines).
 > - **The Clips toggle** (`data-best-toggle`), "Clips", titled "Show or
 >   hide the clips Analyse found, beside the picture", on screen whenever
 >   the box holds a link; `aria-pressed` = `foldoutShowing(foldout,
@@ -27483,7 +27487,8 @@ the code's for the Python process (on screen "the AI helper").
 >   none.
 > - **`BestClipsCards`**, the Clips tab's body (`data-best-clips-tab`):
 >   the running line ("Looking for the best stretches…", or "Best clips is
->   still looking at another video.", `data-best-running`, `aria-live`), the
+>   still looking at another video.", `data-best-running`, `aria-live`; the
+>   second shows even with no link in the box), the
 >   cards, the notes under them; or, with nothing running and no result,
 >   one line (`data-best-empty`): no link, "No clips yet. Paste a video
 >   link in the URL tile to find its best clips."; a link with no captions,
@@ -27563,15 +27568,16 @@ the code's for the Python process (on screen "the AI helper").
 >   `STEP_TEXT.graphicsListed`, ": listed in the Transcript tile." became
 >   ": listed under the clip’s words, beside the picture."; the tile's new
 >   lines and both toggles' titles say "beside the picture".
-> - **The harness**: `__forgeClipItCheck` finds the link box, Get and Get
->   transcript in the URL tile and the words in the panel, checks the tile
+> - **The harness**: `__forgeClipItCheck` finds the link box, the link's
+>   button (`data-get`, now "Download") and Get transcript in the URL tile and the words in the panel, checks the tile
 >   holds no row, presses the real Transcript tile in the strip, and
 >   measures Find graphics and its section inside the panel and clear of
 >   the Trimmer dock, with `ran` and `listed` (`2e8f937`: it first waits to
 >   see the run start). `__forgeBestClipsCheck`'s seventh Clip it case opens
 >   the Transcript tab to press Clip download there (`2e8f937`: without it
 >   the check would have stopped at 35 of 36). Census: recipe
->   `foldout-both-words`; 61 rows moved to `foldtranscript`.
+>   `foldout-both-words`; 61 rows moved to `foldtranscript` (the piece 3
+>   builder's figure; the fixture at `3d19ea0` holds 68 there).
 > - **The agents' readings**: suite 6539 → 6564 (builder) → 6567 (fixer);
 >   19 + 3 mutations, each caught (a guard no press could reach was removed
 >   as dead code).
@@ -27596,7 +27602,7 @@ the code's for the Python process (on screen "the AI helper").
 >   (`LinkTranscriptStatus`) and Best clips' pointer; **Just a part of it**
 >   (hidden while the words are shown) with, at the row's right end
 >   (`data-url-toggles`), the **Transcript** and **Clips** toggles; From,
->   To, Fast cut and Exact cut under it when chosen; Best clips' options;
+>   To, "Fast cut" and "Exact cut — slower" under it when chosen; Best clips' options;
 >   the download lines. `LinkTranscript` is split into
 >   `GetTranscriptButton`, `LinkTranscriptStatus`, `LinkTranscriptToggle`
 >   and `LinkWords`; `BestClips` into the four parts above.
@@ -27812,8 +27818,9 @@ first-load moment in the real app. **You have not seen the built layout**:
 every choice beyond your words above is the session's or an agent's.
 Nothing here is marked met.
 
-**Departures from the sketches** (each told to you in the session's report
-of 2026-11-27):
+**Departures from the sketches** (1 to 6 told to you in the session's
+report of 2026-11-27, but 5's second sentence; that sentence and 7 to 9
+read from the code at `3d19ea0`):
 1. The link's button reads "Download", your sketch's word, where it read
    "Get"; "Full download" is unchanged.
 2. The kinds stay "Video" and "Audio", not MP4 and MP3; Audio's formats
@@ -27832,9 +27839,10 @@ of 2026-11-27):
    panel with two tabs, "Clips" and "Transcript" (suggestion 1), opened by
    the toggles in the URL tile and the Transcript tile, as you corrected.
 8. No Play mark on a card, as you said.
-9. The panel's share: it opens at 40 % of the picture's row, from 280 px to
-   60 %, the picture never under 35 % (your "at least 40 or 35 percent");
-   its height is the picture's, over the timeline, which it does not touch.
+9. The panel's share: it opens at 40 % of the picture's row (your "at
+   least 40 or 35 percent of it"); the 280 px floor, the 60 % maximum and
+   the picture's 35 % floor are the build's; its height is the picture's,
+   over the timeline, which it does not touch.
 
 **Left open** (every builder's and fixer's open item and every critic's
 item a fixer declined, unless the code at `3d19ea0` or the session's
@@ -27863,10 +27871,19 @@ readings closed it, then the session's own list):
 - The Transcript tab shows `TranscriptPanel`'s own "Transcript" header
   under the tab of the same name, and the link's rows (`max-h-72`) scroll
   inside a list inside the scrolling tab.
-- The URL tile shows no "Transcribing…" line while the panel is shut
+- The Transcript tile shows no "Transcribing…" line while the panel is shut
   (the tile reads "Transcribe it beside the picture." during a run; only
   the strip tile's busy dot shows it).
 - The divider's 10 px hit region lies over the panel body's scrollbar.
+- The Shelf's Transcript tile hint ("The words spoken in the selected clip
+  — click to jump, cut the clip to a run of them, correct a misheard one")
+  does not say "beside the picture" as the other pointing lines do
+  (declined as optional by piece 3's fixer: one press opens the panel).
+- With the left column at 45 % on the least window, the transport's wrap
+  takes about 30 px from the timeline lanes (the whole-lane fixer's
+  arithmetic); the CanvasBar was not changed and not looked at by eye: the
+  wide-left states read it for overlaps, covered and cut off only, as
+  sideways scroll is read only in the left column and the panel.
 - The Clips and Transcript toggles' `PanelLeftOpen`/`PanelLeftClose` icon:
   left for a look by eye.
 - `TranscriptPanel`'s Edit / Done resets when the selection is cleared and

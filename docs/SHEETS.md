@@ -781,9 +781,9 @@ are not built. Built on the build side only: its exit is open
 eval and the ten-links recorder, outside the panel; the exit stays open:
 `docs/CLIPS.md` §7.7's note "Read on a real model, 2026-11-25".)
 (2026-11-27: the cards are drawn in the panel beside the picture, its Clips
-tab, one to a row in a narrow panel and more in a wide one; the lengths are
-one "Duration" list, and Analyse sits beside Get transcript; sheets 30 and
-31, `docs/CLIPS.md` §10a.)
+tab, one to a row in a narrow panel and more in a wide one (two to a row
+not read); the lengths are one "Duration" list, and Analyse sits beside Get
+transcript; sheets 30 and 31, `docs/CLIPS.md` §10a.)
 
 ---
 
@@ -909,13 +909,15 @@ The left column, top to bottom:
   720P**, and a fourth figure that reads 420P or 480P (written over). Under
   Mp 3: **320**, and a second figure written over, not clearly readable.
   An arrow from the word **"Collbpasable ▽"** points at the two lists.
-- An arrow from the Mp4 list down to **"Just at part"**.
+- From the top of **"Just at part"**, a line rising to an arrowhead under
+  the Mp4 list; the curve from "Collbpasable ▽" meets it there.
 - At the right, a box **"transcript"** with a ‹ and an arrow pointing right.
 - Three dropdowns side by side, each ▽ with its list under it: **"Best
   clips"** (1, 2, 3, 4, and "Custo", the word running off its box), **"Duration"** (1m, 2m, 3m, 4m),
   **"Size"** (a first ratio written 19:6, 9:16, 1:1).
 - Under them: **"Cpations Select ▽"** with "smart - 2", "smat - 3" and
-  "custom", custom pointing to a box "Font, Size, placement"; **"Graphics
+  "custom", custom pointing to a box "Font, Siz…" (its last letter
+  unclear), "placement" (written over); **"Graphics
   ▽"** with "on" and "off"; at the right edge, a box drawn half off the
   page with an arrow curving down to **"BGM ▽"**, whose list is "Upload"
   (the box carries no word).
@@ -975,22 +977,26 @@ The window's top left: the tool tiles, then the canvas bar, **16:9 | 9:16 |
 panel of stacked cards, **"Clip1"** and **"Clip 2"**, each a tall frame with
 a circled Play mark and the word "Play", a scrollbar drawn down the panel's
 right edge and an arrow ↓ at its foot. Out of the left column's edge, a
-vertical tab **"CLIPS"**, joined to the panel by two lines. The picture is
-not drawn. Under it the timeline, its track names **V, V, A**.
+vertical tab **"CLIPS"**, joined to the panel by two lines. Between the
+tool strip and the panel, a narrow band of two vertical lines; under the
+panel's foot, two horizontal bands; at the lower left of the left column,
+small strips; none of the three is labelled. The picture is not drawn.
+Under it the timeline, its track names **V, V, A**.
 
 **Status** (lane 1, built 2026-11-27; `docs/CLIPS.md` §10a; read on the
 harness page only, not yet by you):
 - The canvas bar, the tool strip and the timeline: as they were.
 - The panel of cards beside the picture, with its own scroll: built, the
   fold-out panel's **Clips** tab between the tool strip and the picture.
-  The cards sit one to a row in a narrow panel and more in a wide one; the
-  tab's body scrolls. The picture shrinks beside the panel and is never
+  The cards sit one to a row in a narrow panel and more in a wide one (two
+  to a row not read); the tab's body scrolls. The picture shrinks beside the panel and is never
   covered; the border drags from 280 px to 60 % of the row, the picture
   never under 35 %; it opens at 40 %, and dragged shut it closes.
-- The vertical "CLIPS" tab: built otherwise, by your correction. The
-  **Clips** toggle is in the URL tile (left), and the panel has a
-  horizontal bar at its top with two tabs, **Clips** and **Transcript**,
-  and a close button.
+- The vertical "CLIPS" tab: built otherwise. By your correction the
+  **Clips** toggle is in the left panel, the URL tile; by the session's
+  suggestion 1, which you accepted, the panel has a horizontal bar at its
+  top with two tabs, **Clips** and **Transcript**; the close button is the
+  build's.
 - The transcript the same way (said, not drawn): built, the **Transcript**
   tab, opened by the Transcript toggle in the URL tile (the link's words)
   or in the Transcript tile (the selected clip's, with Find graphics and

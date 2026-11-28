@@ -433,7 +433,9 @@ transcript") and a **Transcript** toggle, pressed while the fold-out
 panel's Transcript tab shows the clip's words (`foldoutShowsWords`), greyed
 with no clip selected unless that tab shows the clip's empty face. Every
 control in the table above, with Graphics and Find graphics, is the whole
-`TranscriptPanel`, unchanged, drawn in the fold-out panel's Transcript tab
+`TranscriptPanel` (its rows, Edit and Graphics unchanged; its select-a-clip
+line is now `SELECT_CLIP_TEXT`, and its file gained `TranscriptTile`), drawn
+in the fold-out panel's Transcript tab
 beside the picture. Pressing the tile opens the panel on the clip's words
 (`Shelf.tsx` `goTo`, never `setShelfTool`). The Shelf registry's
 `transcript` panel is `TranscriptTile`. What the user reported, Find
