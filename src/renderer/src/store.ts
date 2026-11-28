@@ -248,6 +248,7 @@ import {
   type FoldoutTab,
   type FoldoutWords
 } from '@shared/foldout'
+import { wordsClipOf } from '@shared/wordsClip'
 import { DEFAULT_PAPER, type PaperSpec } from '@shared/render/paper'
 import {
   DEFAULT_PIP,
@@ -700,6 +701,40 @@ function rebakeGraphicClips(get: () => EditorState): void {
   void (async () => {
     for (const id of ids) await get().rebakeGraphic(id)
   })()
+}
+
+/**
+ * The footage clip whose words are on screen THROUGH a selected graphic
+ * (shared/wordsClip.ts), or null when the selection is not a graphic over
+ * footage. Read before an action that can take the selected graphic away.
+ */
+function footageShownThroughGraphic(s: Pick<EditorState, 'project' | 'selectedClipId'>): string | null {
+  const shown = wordsClipOf(s.project, s.selectedClipId)
+  return shown !== null && shown.id !== s.selectedClipId ? shown.id : null
+}
+
+/**
+ * Keep the words on screen after an action taken from the Transcript tab
+ * while a graphic was selected.
+ *
+ * With a graphic selected the tab shows the footage clip under it — and so
+ * offers Find graphics, Clear graphics, Drop and Cut to these words, each of
+ * which can take that very graphic away (Find again replaces the clip's
+ * graphics; Clear and Drop remove it) or leave it over no footage (a cut that
+ * ends before it). The selection then names a clip that is gone, or a graphic
+ * with nothing under it, and the tab would drop to "Select a clip…" or "No
+ * transcript yet" with the run's new list out of sight — the jump the footage
+ * rule exists to remove (the whole-change review, 2026-11-27). So: if the
+ * selection no longer shows `footage`'s words and that clip is still there,
+ * the footage clip is selected. A graphic that survives, still over it, stays
+ * selected.
+ */
+function keepWordsOn(get: () => EditorState, footage: string | null): void {
+  if (footage === null) return
+  const s = get()
+  if (!s.project.clips.some((c) => c.id === footage)) return
+  if (wordsClipOf(s.project, s.selectedClipId)?.id === footage) return
+  s.select(footage)
 }
 
 /**
@@ -2454,8 +2489,11 @@ export const useEditor = create<EditorState>((set, get) => ({
     // The run's own span, first word's start to last word's end: no second added, nothing is downloaded.
     const startMs = pick.words.words[run.from].startMs
     const endMs = pick.words.words[run.to].endMs
+    const through = footageShownThroughGraphic(get())
     get().update((p) => clipToRange(p, pick.clipId, startMs, endMs).project)
     set({ clipRun: null })
+    // Cut through a selected graphic that the cut left over nothing: the clip just cut stays on screen.
+    if (through === pick.clipId) keepWordsOn(get, through)
   },
   /*
    * The preview shows the OUTPUT by default.
@@ -6405,11 +6443,14 @@ export const useEditor = create<EditorState>((set, get) => ({
       const { catalog, root } = useCatalog.getState()
       const sounds = soundPackFor(catalog, root)
       let landed: ReturnType<typeof replaceClipGraphics> | null = null
+      const through = footageShownThroughGraphic(get())
       // ONE update: the clip's old Clip-it graphics, their sounds and proposals out, the run's in.
       get().update((p) => {
         landed = replaceClipGraphics(p, clipId, run.pair.kept, { fps: p.settings.fps, sounds })
         return landed.project
       })
+      // Found again through one of this clip's own graphics, which the run replaced: its words and the new list stay on screen.
+      if (through === clipId) keepWordsOn(get, through)
       const done = landed as ReturnType<typeof replaceClipGraphics> | null
       if (!done) return
       const drops = [...run.pair.settled.drops, ...graphicDropsOf(done.cleared, run.pair.kept, [clipId], done.problems)]
@@ -6527,21 +6568,26 @@ export const useEditor = create<EditorState>((set, get) => ({
   dropGraphic: (id) => {
     const { catalog, root } = useCatalog.getState()
     const sounds = soundPackFor(catalog, root)
+    const through = footageShownThroughGraphic(get())
     get().update((p) => withoutGraphic(p, id, sounds).project)
     set((s) => ({
       selectedClipId: s.selectedClipId === id ? null : s.selectedClipId,
       selectedClipIds: s.selectedClipIds.filter((c) => c !== id)
     }))
+    // The selected graphic dropped from its own row in the list: the footage clip it was over is selected, so the list stays.
+    keepWordsOn(get, through)
   },
 
   clearGraphics: () => {
     const { catalog, root } = useCatalog.getState()
     const sounds = soundPackFor(catalog, root)
     // One update: the Clear, then the sounds it leaves out of place put back (resoundAfterClear).
+    const through = footageShownThroughGraphic(get())
     get().update((p) => {
       const after = clearGraphicsOf(p)
       return after === p ? p : resoundAfterClear(p, after, sounds).project
     })
+    keepWordsOn(get, through)
     get().notify(CLEAR_GRAPHICS_NOTE, 'info')
   },
 

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
-import { Loader2, PanelLeftClose, PanelLeftOpen, Scissors, Smartphone, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronUp, Loader2, PanelLeftClose, PanelLeftOpen, Scissors, Smartphone, Sparkles } from 'lucide-react'
 import { foldoutShowing } from '@shared/foldout'
 import { useEditor, urlSourceFor } from '../../store'
-import { FoldDown } from '../ui/FoldDown'
+import { foldDownChoices, foldDownKeyDown } from '../ui/FoldDown'
+import { LIT, lit } from '../ui/lit'
 import { parseLink } from '@shared/ingest/url'
 import { formatMark } from '@shared/ingest/section'
 import type { BestClipCard } from '@shared/bestclips/run'
@@ -219,7 +220,7 @@ export const FOLDOUT_CLIPS_NO_LINK = 'No clips yet. Paste a video link in the UR
 /** The Clips tab with a link that has no words yet (a video with no captions says so instead). */
 export const FOLDOUT_CLIPS_NO_WORDS = 'No clips yet. Press Get transcript in the URL tile, then Analyse.'
 /** The Clips tab with the link's words, nothing analysed yet. */
-export const FOLDOUT_CLIPS_EMPTY = 'No clips yet. Press Analyse in the URL tile, beside Get transcript.'
+export const FOLDOUT_CLIPS_EMPTY = 'No clips yet. Press Analyse in the URL tile, at the end of Best clips’ row.'
 
 /** What the URL tile's Best clips parts read: the link's source, and whether Analyse can run on it. */
 function useBestClipsHere(): {
@@ -245,10 +246,14 @@ function useBestClipsHere(): {
 }
 
 /**
- * Analyse, in the URL tile's row beside Get transcript (the sketch's "Get
- * transcript | Analyse transcript", 2026-11-27). On screen whenever the box
- * holds a link; greyed until there are words, and while one runs. It
- * downloads nothing, folds the length list and opens the panel on Clips.
+ * Analyse, the LAST thing in Best clips' row of choices (`BestClips`), pushed
+ * to the row's end: the choices are made along the row and Analyse acts on
+ * them — the user, 2026-11-27: "put the analyse button after all the toggeles
+ * like a check listing". (It sat beside Get transcript, as the sketch of that
+ * morning drew it, until then.) On screen whenever the box holds a link;
+ * greyed until there are words, and while one runs. It downloads nothing,
+ * folds the length list and opens the panel on Clips. The solid accent fill
+ * is an ACTION's; a chosen choice is lit instead (ui/lit.ts).
  */
 export function AnalyseButton(): ReactNode {
   const analyse = useEditor((s) => s.analyseBestClips)
@@ -270,7 +275,7 @@ export function AnalyseButton(): ReactNode {
       }}
       disabled={refusal !== null}
       title={ANALYSE_TITLE}
-      className="flex items-center gap-1.5 rounded bg-accent-500 px-2.5 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
+      className="ml-auto flex items-center gap-1.5 rounded bg-accent-500 px-2.5 py-1 text-[11px] font-medium text-ink-950 transition-colors hover:bg-accent-400 disabled:opacity-40"
     >
       {here && <Loader2 size={12} className="animate-spin" aria-hidden />}
       Analyse
@@ -279,7 +284,7 @@ export function AnalyseButton(): ReactNode {
 }
 
 /**
- * The pointer under Analyse's row: what to press first, that Best clips
+ * The pointer under Best clips' row of choices: what to press first, that Best clips
  * cannot listen to a video with no captions, or that Analyse waits for
  * another video's run — so a greyed Analyse always says why, whether the
  * panel is open or not.
@@ -312,8 +317,8 @@ export function BestClipsPointer(): ReactNode {
 
 /**
  * The Clips toggle: opens and closes the panel on its Clips tab, pressed while
- * it shows, with the number of clips found. In the URL tile's row of toggles,
- * beside Transcript; on screen whenever the box holds a link.
+ * it shows (lit then, ui/lit.ts), with the number of clips found. At the end
+ * of Best clips' heading row; on screen whenever the box holds a link.
  */
 export function ClipsToggle(): ReactNode {
   const foldout = useEditor((s) => s.foldout)
@@ -329,9 +334,7 @@ export function ClipsToggle(): ReactNode {
       aria-pressed={showing}
       onClick={() => toggleFoldout('clips')}
       title={CLIPS_TOGGLE_TITLE}
-      className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
-        showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
-      }`}
+      className={`ml-auto flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${lit(showing)}`}
     >
       <Panel size={12} aria-hidden />
       {CLIPS_TOGGLE}
@@ -345,10 +348,30 @@ export function ClipsToggle(): ReactNode {
 }
 
 /**
- * Best clips' options in the URL tile, under its row of toggles (the sketch's
- * "Best clips · Duration"): the heading, the length as one fold-down list,
- * and Make it vertical. Analyse, the pointer and the Clips toggle are their
- * own parts, above; the cards are `BestClipsCards`, beside the picture.
+ * Best clips in the URL tile: its heading with the Clips toggle at the row's
+ * end, then ONE row of choices that wraps, read left to right like a check
+ * list and ending in Analyse, then the pointer line. The cards are
+ * `BestClipsCards`, beside the picture.
+ *
+ * The user, 2026-11-27 (after the layout landed with Analyse above these
+ * choices, as that morning's sketch drew it): "it goes like a row of
+ * selection and in the end anallyse … in the same row our next toggles will
+ * add to right ( captions ; smart1,2 , graphics toggle on/ off , bgm,
+ * transcions with sync, broll coming soon... ) so put the analyse button
+ * after all the toggeles like a check listing kind of so every toggele
+ * selected get highlight".
+ *
+ * So the row is: **Duration** (a chip that says the length chosen and is its
+ * fold-down list's button; the list unfolds on a line of its own under the
+ * row, in the flow), **Make it vertical**, — the clip maker's later choices
+ * go HERE, before Analyse — and **Analyse** last, at the row's end. A choice
+ * that is on is lit (ui/lit.ts): Duration always is, a length being always
+ * chosen; Make it vertical while it is on. Analyse is the one solid button.
+ *
+ * The row itself is the `[data-fold-down]` root, with the Duration chip as
+ * its direct-child `button[aria-expanded]`, as the kinds row is
+ * (IngestPanel.tsx `KindsRow`): that is where a choice or Escape puts the
+ * keyboard back.
  */
 export function BestClips(): ReactNode {
   const state = useEditor((s) => s.bestClips)
@@ -362,41 +385,82 @@ export function BestClips(): ReactNode {
   // On screen whenever the box holds a link; its words are the link's own, or none yet.
   if (!link) return null
 
+  const lengths = BEST_CLIPS_LENGTHS.map((length) => ({ value: length.ms, label: length.label }))
+  const chosen = lengths.find((length) => length.value === state.targetMs)
+  // Greyed, and folded, while Analyse runs: a length changed mid-run would drop its answer without a word.
+  const open = foldDownOpen === BEST_CLIPS_LENGTH_LIST && !running
+  const fold = (next: boolean): void => setFoldDownOpen(next ? BEST_CLIPS_LENGTH_LIST : null)
+  const Chevron = open ? ChevronUp : ChevronDown
+
   return (
-    <section data-best-clips="" className="mt-3 space-y-2 border-t border-ink-850 pt-2.5">
-      <h3 className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
-        <Sparkles size={12} className="text-accent-400" aria-hidden />
-        Best clips
-      </h3>
+    <section data-best-clips="" className="mt-3 border-t border-ink-850 pt-2.5">
+      <div className="flex flex-wrap items-center gap-1">
+        <h3 className="flex items-center gap-1.5 text-[11.5px] text-ink-200">
+          <Sparkles size={12} className="text-accent-400" aria-hidden />
+          Best clips
+        </h3>
+        <ClipsToggle />
+      </div>
 
-      <FoldDown
-        id={BEST_CLIPS_LENGTH_LIST}
-        label={BEST_CLIPS_DURATION}
-        title={BEST_CLIPS_DURATION_TITLE}
-        value={state.targetMs}
-        choices={BEST_CLIPS_LENGTHS.map((length) => ({ value: length.ms, label: length.label }))}
-        choiceData="data-best-length"
-        // Greyed, and folded, while Analyse runs: a length changed mid-run would drop its answer without a word.
-        disabled={running}
-        open={foldDownOpen === BEST_CLIPS_LENGTH_LIST && !running}
-        onOpenChange={(open) => setFoldDownOpen(open ? BEST_CLIPS_LENGTH_LIST : null)}
-        onChoose={setLength}
-      />
-
-      {/* §7.5 step 0's switch, chosen before Analyse as well: on, a card's clip is a 9:16 short; it never changes an edit's aspect without asking. */}
-      <button
-        type="button"
-        data-best-vertical=""
-        aria-pressed={vertical}
-        onClick={() => setVertical(!vertical)}
-        title={MAKE_IT_VERTICAL_TITLE}
-        className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
-          vertical ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-        }`}
+      <div
+        data-best-row=""
+        data-fold-down={BEST_CLIPS_LENGTH_LIST}
+        data-open={open}
+        onKeyDown={foldDownKeyDown(open, fold)}
+        className="mt-2 flex flex-wrap items-center gap-1.5"
       >
-        <Smartphone size={12} aria-hidden />
-        {MAKE_IT_VERTICAL}
-      </button>
+        <button
+          type="button"
+          data-best-duration=""
+          aria-expanded={open}
+          // Only while the list is in the page: folded, its id names nothing.
+          aria-controls={open ? `fold-down-${BEST_CLIPS_LENGTH_LIST}` : undefined}
+          title={BEST_CLIPS_DURATION_TITLE}
+          disabled={running}
+          onClick={() => fold(!open)}
+          className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] transition-colors disabled:opacity-40 ${LIT}`}
+        >
+          <span>{BEST_CLIPS_DURATION}</span>
+          {chosen && (
+            <>
+              <span aria-hidden>·</span>
+              <span>{chosen.label}</span>
+            </>
+          )}
+          <Chevron size={11} className="shrink-0" aria-hidden />
+        </button>
+
+        {/* §7.5 step 0's switch, chosen before Analyse as well: on, a card's clip is a 9:16 short; it never changes an edit's aspect without asking. */}
+        <button
+          type="button"
+          data-best-vertical=""
+          aria-pressed={vertical}
+          onClick={() => setVertical(!vertical)}
+          title={MAKE_IT_VERTICAL_TITLE}
+          className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${lit(vertical)}`}
+        >
+          <Smartphone size={12} aria-hidden />
+          {MAKE_IT_VERTICAL}
+        </button>
+
+        {/* The clip maker's later choices (the count, the size, captions, graphics, music, transitions) go here, before Analyse. */}
+
+        <AnalyseButton />
+
+        {open &&
+          foldDownChoices({
+            id: BEST_CLIPS_LENGTH_LIST,
+            label: BEST_CLIPS_DURATION,
+            value: state.targetMs,
+            choices: lengths,
+            onOpenChange: fold,
+            onChoose: setLength,
+            choiceData: 'data-best-length',
+            className: 'basis-full'
+          })}
+      </div>
+
+      <BestClipsPointer />
     </section>
   )
 }

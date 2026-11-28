@@ -9,9 +9,9 @@
  * wants to look at — the left column at its 240 px floor, the panel at its
  * 280 px floor, then wide — and reads this back each time.
  *
- * - LEFT: the whole URL tile (`[data-url-tile]`; since piece 4 Best clips'
- *   parts are spread over its rows: Analyse beside Get transcript, the Clips
- *   toggle beside Transcript, the options under them). Nothing in it reaches
+ * - LEFT: the whole URL tile (`[data-url-tile]`: its rows, and Best clips'
+ *   heading with the Clips toggle and its one row of choices ending in
+ *   Analyse). Nothing in it reaches
  *   past the tile's right edge, and the Shelf's panel does not scroll
  *   sideways. Shown whenever the URL tile is open; the session puts a link in
  *   the box to see Best clips' parts in it.

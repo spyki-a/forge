@@ -637,7 +637,9 @@ describe('the dock’s graphic panel (§6.6)', () => {
     expect(id).not.toBeNull()
     state().select(id!)
     const html = renderToStaticMarkup(createElement(TrimmerDock))
-    const rows = census.filter((r) => r.needs === 'graphic-lower-third')
+    // The DOCK's rows of this state: the same state also has a row beside the picture (the Transcript tab's line for a
+    // selected graphic, 2026-11-27), which is not the dock's and is read by its own tests and by the census on the page.
+    const rows = census.filter((r) => r.needs === 'graphic-lower-third' && r.home === 'dock')
     expect(rows.map((r) => [r.label, r.match, r.home])).toEqual([
       [GP.GRAPHIC_PANEL_HEADING, 'text', 'dock'],
       [GP.ROLE, 'text', 'dock']

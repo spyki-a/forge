@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import ts from 'typescript'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createElement, isValidElement, type ReactNode } from 'react'
+import { Children, createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { linkCacheKey, parseLink } from '@shared/ingest/url'
 import { FOLDOUT_START } from '@shared/foldout'
@@ -69,11 +69,8 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
 
 const { useEditor } = await import('../../src/renderer/src/store')
 const {
-  AnalyseButton,
   BestClips,
   BestClipsCards,
-  BestClipsPointer,
-  ClipsToggle,
   BEST_CLIPS_DURATION,
   BEST_CLIPS_DURATION_TITLE,
   CLIPS_TOGGLE,
@@ -183,12 +180,26 @@ function textOf(node: ReactNode): string {
 }
 
 /**
- * The URL tile's part: since piece 4 of the clip maker's layout, four parts the tile places in the sketch's
- * order — Analyse in a row with Get transcript, the pointer under it, the Clips toggle beside Transcript,
- * then the options (heading, Duration, Make it vertical). Walked together, in that order, so every
- * assertion that read the section still reads all of what the tile shows of Best clips.
+ * The URL tile's part: `BestClips`, which since the user's re-ordering of 2026-11-27 ("a row of selection
+ * and in the end anallyse … like a check listing") draws all of it itself — the heading with the Clips
+ * toggle, the row of choices (Duration, Make it vertical) ending in Analyse, and the pointer under it.
+ * (Piece 4 of the layout had the tile place four separate parts, Analyse beside Get transcript.) Walked
+ * whole, so every assertion that read the section still reads all of what the tile shows of Best clips.
  */
-const TILE_PARTS = [AnalyseButton, BestClipsPointer, ClipsToggle, BestClips]
+const TILE_PARTS = [BestClips]
+/**
+ * The row is still open at `to`: walking the markup from the row's own tag, no `</div>` closes more boxes
+ * than were opened. A later choice with a list of its own brings a box of its own INTO the row, which is
+ * right and must not fail this; Analyse moved out of the row closes the row first, and does.
+ */
+function stillInside(html: string, from: number, to: number): boolean {
+  let depth = 0
+  for (const m of html.slice(from, to).matchAll(/<(\/?)div\b/g)) {
+    depth += m[1] ? -1 : 1
+    if (depth < 0) return false
+  }
+  return true
+}
 const shown = (): Host[] => TILE_PARTS.flatMap((part) => hosts(createElement(part)))
 const markup = (): string => TILE_PARTS.map((part) => renderToStaticMarkup(createElement(part))).join('')
 const buttonNamed = (label: string): Host | undefined => shown().find((h) => h.type === 'button' && textOf(h.props.children as ReactNode).trim() === label)
@@ -228,7 +239,7 @@ describe('the Best clips section', () => {
     const heading = shown().find((h) => h.type === 'h3')
     expect(heading && textOf(heading.props.children as ReactNode).trim()).toBe('Best clips')
     // Folded: one button saying what it chooses and what is chosen, and no choice drawn.
-    expect(textOf(lengthButton().props.children as ReactNode)).toBe(`${BEST_CLIPS_DURATION}1 min`)
+    expect(textOf(lengthButton().props.children as ReactNode)).toBe(`${BEST_CLIPS_DURATION}·1 min`)
     expect(lengthButton().props['aria-expanded']).toBe(false)
     expect(withAttr('data-best-length')).toHaveLength(0)
     openLengths()
@@ -249,7 +260,7 @@ describe('the Best clips section', () => {
     expect(useEditor.getState().bestClips.targetMs).toBe(180_000)
     expect(useEditor.getState().foldDownOpen).toBe(null)
     expect(withAttr('data-best-length')).toHaveLength(0)
-    expect(textOf(lengthButton().props.children as ReactNode)).toBe(`${BEST_CLIPS_DURATION}3 min`)
+    expect(textOf(lengthButton().props.children as ReactNode)).toBe(`${BEST_CLIPS_DURATION}·3 min`)
     openLengths()
     expect(withAttr('data-best-length').map((h) => h.props['aria-pressed'])).toEqual([false, false, true, false])
   })
@@ -396,6 +407,29 @@ describe('the Best clips section', () => {
     expect(inTab('data-best-note')).toHaveLength(1)
   })
 
+  it('the row of choices has exactly one fold-down button of its own: where a choice or Escape puts the keyboard back', () => {
+    onLink(T)
+    openLengths()
+    // FoldDown.tsx `refocus` takes the row's FIRST direct-child button[aria-expanded]. A second one put straight into
+    // the row by a later choice would steal or lose the focus: a choice with a list brings its own [data-fold-down] box.
+    const section = (BestClips as () => ReactNode)()
+    const rows: { props: { children?: ReactNode } }[] = []
+    const find = (node: ReactNode): void => {
+      if (Array.isArray(node)) return node.forEach((n) => find(n as ReactNode))
+      if (!isValidElement(node)) return
+      const props = node.props as Record<string, unknown> & { children?: ReactNode }
+      if (props['data-best-row'] !== undefined) rows.push({ props })
+      find(props.children)
+    }
+    find(section)
+    expect(rows).toHaveLength(1)
+    const direct = Children.toArray(rows[0].props.children).filter(isValidElement)
+    const folding = direct.filter((c) => c.type === 'button' && (c.props as Record<string, unknown>)['aria-expanded'] !== undefined)
+    expect(folding).toHaveLength(1)
+    expect((folding[0].props as Record<string, unknown>)['data-best-duration']).toBeDefined()
+    expect((rows[0].props as Record<string, unknown>)['data-fold-down']).toBe('best-length')
+  })
+
   it('offers Make it vertical before any result, on the same store value Clip it reads', () => {
     for (const status of ['failed', 'ready'] as const) {
       useEditor.setState(useEditor.getInitialState())
@@ -407,14 +441,26 @@ describe('the Best clips section', () => {
       expect(useEditor.getState().bestClipsVertical, status).toBe(false)
       expect(buttonNamed(MAKE_IT_VERTICAL)?.props['aria-pressed'], status).toBe(false)
     }
-    // In the tile's order since piece 4, the user's sketch of 2026-11-27: Analyse in the top row beside Get
-    // transcript, the options (Duration, Make it vertical) under the toggles. "Before Analyse" is in time, as
-    // the loop above holds: the switch is there, and works, before any result.
-    const order = shown().filter((h) => h.props['data-best-vertical'] !== undefined || h.props['data-best-analyse'] !== undefined)
-    expect(order.map((h) => (h.props['data-best-vertical'] !== undefined ? 'vertical' : 'analyse'))).toEqual(['analyse', 'vertical'])
+    // In the row's order since the user's word of 2026-11-27 ("put the analyse button after all the toggeles like
+    // a check listing"): the choices first (Duration, Make it vertical), Analyse LAST — in ONE row, nothing
+    // opening or closing a box between them. (Piece 4 had Analyse above them, beside Get transcript.)
+    const order = shown().filter((h) => ['data-best-duration', 'data-best-vertical', 'data-best-analyse'].some((a) => h.props[a] !== undefined))
+    expect(order.map((h) => ['duration', 'vertical', 'analyse'].find((a) => h.props[`data-best-${a}`] !== undefined))).toEqual(['duration', 'vertical', 'analyse'])
     const tile = renderToStaticMarkup(createElement(IngestPanel))
-    expect(tile.indexOf('data-best-analyse')).toBeGreaterThan(-1)
-    expect(tile.indexOf('data-best-vertical')).toBeGreaterThan(tile.indexOf('data-best-analyse'))
+    for (const mark of ['data-best-row', 'data-best-duration', 'data-best-vertical', 'data-best-analyse']) expect([...tile.matchAll(new RegExp(`${mark}=`, 'g'))], mark).toHaveLength(1)
+    const at = (mark: string): number => tile.indexOf(`${mark}=`)
+    expect(at('data-best-duration')).toBeGreaterThan(at('data-best-row'))
+    expect(at('data-best-vertical')).toBeGreaterThan(at('data-best-duration'))
+    expect(at('data-best-analyse')).toBeGreaterThan(at('data-best-vertical'))
+    // Analyse is IN the row (a later lane's choice may bring a box of its own into it; the row is never closed before Analyse).
+    expect(stillInside(tile, at('data-best-row'), at('data-best-analyse'))).toBe(true)
+    // And the walk can say no: the section's own end is past the row's.
+    expect(stillInside(tile, at('data-best-row'), tile.indexOf('</section>', at('data-best-row')))).toBe(false)
+    // Analyse is pushed to the row's end, and is the row's one solid button: a chosen choice is lit instead.
+    const analyse = shown().find((h) => h.props['data-best-analyse'] !== undefined)!
+    expect(String(analyse.props.className)).toMatch(/(^|\s)ml-auto(\s|$)/)
+    expect(String(analyse.props.className)).toMatch(/(^|\s)bg-accent-500(\s|$)/)
+    for (const choice of order.slice(0, 2)) expect(String(choice.props.className)).not.toMatch(/(^|\s)bg-accent-500(\s|$)/)
     // Clip it plans from that same value: both of the store's plans read it.
     const store = readFileSync(resolve(__dirname, '../../src/renderer/src/store.ts'), 'utf8')
     expect([...store.matchAll(/cardClipPlan\(get\(\)\.project, get\(\)\.bestClipsVertical,/g)]).toHaveLength(2)

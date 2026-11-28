@@ -745,6 +745,20 @@ describe('a video with no captions', () => {
 
 /* ------------------------------------------- the URL tile's rows (the clip maker's layout, piece 4) */
 
+/**
+ * The row is still open at `to`: walking the markup from the row's own tag, no `</div>` closes more boxes
+ * than were opened. A later choice with a list of its own brings a box of its own INTO the row, which is
+ * right and must not fail this; Analyse moved out of the row closes the row first, and does.
+ */
+function stillInside(html: string, from: number, to: number): boolean {
+  let depth = 0
+  for (const m of html.slice(from, to).matchAll(/<(\/?)div\b/g)) {
+    depth += m[1] ? -1 : 1
+    if (depth < 0) return false
+  }
+  return true
+}
+
 describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27)', () => {
   const kinds = (): Host[] => hosts(createElement(KindsRow))
   const chip = (id: string): Host => {
@@ -756,7 +770,13 @@ describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27
   const choices = (attr: 'data-quality' | 'data-format'): Host[] => kinds().filter((h) => h.type === 'button' && h.props[attr] !== undefined)
   const chipText = (id: string): string => textOf(chip(id).props.children as ReactNode)
 
-  it('runs link box, kinds, Get transcript and Analyse (one row), their lines, Just a part with the toggles, Best clips’ options, the download lines', () => {
+  /*
+   * The order since the user's word of 2026-11-27 evening ("a row of selection and in the end anallyse … put
+   * the analyse button after all the toggeles like a check listing"). Piece 4 of the layout had Get transcript
+   * and Analyse on one row, the two toggles in Just a part's row and Best clips' options last, as that
+   * morning's sketch drew it.
+   */
+  it('runs link box, kinds, Just a part, Get transcript with its toggle and lines, then Best clips: heading and Clips toggle, the row of choices ending in Analyse, the pointer', () => {
     // A link whose fetch failed: Just a part of it shows, and so does the pointer.
     useEditor.setState((s) => ({
       ingest: { ...s.ingest, url: URL },
@@ -769,38 +789,52 @@ describe('the URL tile’s rows, in the order of the user’s sketch (2026-11-27
     const marks = [
       'placeholder="Paste a video link"',
       'data-want="video"',
+      'data-just-a-part',
+      // With its `="`: bare, it is a prefix of the rows' own `data-transcript-rows` (tools/TranscriptRows.tsx).
+      'data-transcript-row="',
       '>Get transcript<',
-      'data-best-analyse',
-      'Could not get the transcript.',
-      'data-best-pointer',
-      'Just a part of it',
       'data-url-toggles',
+      'Could not get the transcript.',
       // With its `=`: bare, it also matched the Clips tab's `data-best-clips-tab`, and found the tab by coincidence.
       'data-best-clips="',
-      'data-best-vertical'
+      'data-best-toggle',
+      'data-best-row',
+      'data-best-duration',
+      'data-best-vertical',
+      'data-best-analyse',
+      'data-best-pointer'
     ]
     const at = marks.map((m) => {
       expect([...html.matchAll(new RegExp(m.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'))], m).toHaveLength(1)
       return html.indexOf(m)
     })
     for (let i = 1; i < at.length; i++) expect(at[i], `${marks[i]} after ${marks[i - 1]}`).toBeGreaterThan(at[i - 1])
-    // Get transcript and Analyse share one row: nothing opens or closes a box between them.
-    expect(html.slice(at[2], at[3])).not.toMatch(/<\/?div/)
-    // The toggles sit in Just a part's row.
-    expect(html.slice(at[6], at[7])).not.toMatch(/<div class="mt-/)
+    const between = (from: string, to: string): string => html.slice(at[marks.indexOf(from)], at[marks.indexOf(to)])
+    // The choices and Analyse are ONE row: the row is never closed before Analyse (a later choice may bring a box of its own into it).
+    expect(stillInside(html, at[marks.indexOf('data-best-row')], at[marks.indexOf('data-best-analyse')])).toBe(true)
+    // The pointer is under the row, not in it: by then the row has closed.
+    expect(stillInside(html, at[marks.indexOf('data-best-row')], at[marks.indexOf('data-best-pointer')])).toBe(false)
+    // Get transcript no longer shares a row with Analyse: its row closes, and Best clips' section opens, between them.
+    expect(between('>Get transcript<', 'data-best-analyse')).toContain('<section data-best-clips=""')
+    // The Clips toggle is in the heading's row, before the row of choices.
+    expect(between('data-best-clips="', 'data-best-row')).toContain('>Best clips</h3>')
   })
 
-  it('draws every part of the link’s transcript and of Best clips once, the two toggles side by side in Just a part’s row', async () => {
+  it('draws every part of the link’s transcript and of Best clips once: the Transcript toggle in Get transcript’s row, the Clips toggle in Best clips’ heading row', async () => {
     await getTranscript()
     const html = panel()
-    for (const mark of ['>Get transcript<', 'data-best-analyse', 'data-link-transcript-toggle', 'data-best-toggle', 'data-best-clips=', 'data-best-vertical', 'data-fold-down="best-length"']) {
+    for (const mark of ['>Get transcript<', 'data-best-analyse', 'data-link-transcript-toggle', 'data-best-toggle', 'data-best-clips=', 'data-best-vertical', 'data-fold-down="best-length"', 'data-transcript-row="', 'data-best-row']) {
       expect([...html.matchAll(new RegExp(mark, 'g'))], mark).toHaveLength(1)
     }
-    const toggles = html.slice(html.indexOf('data-url-toggles'), html.indexOf('data-best-clips='))
-    expect(toggles.indexOf('data-link-transcript-toggle')).toBeGreaterThan(-1)
-    expect(toggles.indexOf('data-best-toggle')).toBeGreaterThan(toggles.indexOf('data-link-transcript-toggle'))
+    const transcriptRow = html.slice(html.indexOf('data-transcript-row="'), html.indexOf('data-best-clips='))
+    expect(transcriptRow.indexOf('>Get transcript<')).toBeGreaterThan(-1)
+    expect(transcriptRow.indexOf('data-link-transcript-toggle')).toBeGreaterThan(transcriptRow.indexOf('>Get transcript<'))
+    expect(transcriptRow).not.toContain('data-best-toggle')
+    const heading = html.slice(html.indexOf('data-best-clips='), html.indexOf('data-best-row'))
+    expect(heading.indexOf('data-best-toggle')).toBeGreaterThan(heading.indexOf('>Best clips</h3>'))
+    expect(heading).not.toContain('data-link-transcript-toggle')
     // The Clips tab's empty line names where Analyse is now.
-    expect(FOLDOUT_CLIPS_EMPTY).toBe('No clips yet. Press Analyse in the URL tile, beside Get transcript.')
+    expect(FOLDOUT_CLIPS_EMPTY).toBe('No clips yet. Press Analyse in the URL tile, at the end of Best clips’ row.')
   })
 
   it('the chosen kind’s chip says its choice and is the list’s button; the others are plain chips', () => {
@@ -981,5 +1015,134 @@ describe('what the census counts in the empty project is what a fresh tile draws
       const row = census.find((r) => r.home === 'url' && r.label === label)
       expect(row?.needs, label).toBe('link-qualities')
     }
+  })
+})
+
+/*
+ * What is selected is lit (ui/lit.ts). The user, 2026-11-27: "make each glow
+ * when its selected for easy identification of what has been selected and
+ * which is not … every toggele selected get highlight". One look for every
+ * choice that is on, in the whole tile; the solid accent fill is kept for the
+ * buttons that ACT (Download, Analyse), so a row of lit choices ending in
+ * Analyse does not read as a row of Analyse buttons.
+ */
+describe('what is selected in the URL tile is lit, and what is not is not', async () => {
+  const { LIT, UNLIT, lit } = await import('../../src/renderer/src/components/ui/lit')
+
+  /** Every button the tile draws: its attributes, as written in the markup. */
+  const buttons = (html = panel()): { attrs: string; cls: string }[] =>
+    [...html.matchAll(/<button([^>]*)>/g)].map((m) => ({ attrs: m[1], cls: /class="([^"]*)"/.exec(m[1])?.[1] ?? '' }))
+  const one = (mark: string, html = panel()): { attrs: string; cls: string } => {
+    const found = buttons(html).filter((b) => b.attrs.includes(mark))
+    expect(found, mark).toHaveLength(1)
+    return found[0]
+  }
+  const isLit = (b: { cls: string }): boolean => LIT.split(' ').every((c) => b.cls.split(' ').includes(c))
+  const isUnlit = (b: { cls: string }): boolean => UNLIT.split(' ').every((c) => b.cls.split(' ').includes(c))
+
+  it('the look is a tint, a ring and a glow — never the solid fill of a button that acts — and its shadow is a theme token', () => {
+    expect(lit(true)).toBe(LIT)
+    expect(lit(false)).toBe(UNLIT)
+    expect(LIT.split(' ')).toContain('shadow-lit')
+    expect(LIT.split(' ')).not.toContain('bg-accent-500')
+    expect(UNLIT).not.toMatch(/shadow|accent/)
+    const css = readFileSync(resolve(__dirname, '../../src/renderer/src/styles.css'), 'utf8')
+    expect([...css.matchAll(/^\s*--shadow-lit:\s*[^;]*var\(--color-accent-500\)[^;]*;/gm)]).toHaveLength(1)
+    // Inside the one @theme block: Tailwind makes the `shadow-lit` utility only from a token declared there.
+    expect([...css.matchAll(/@theme \{/g)]).toHaveLength(1)
+    const theme = css.slice(css.indexOf('@theme {'), css.indexOf('\n}', css.indexOf('@theme {')))
+    expect(theme).toMatch(/^\s*--shadow-lit:/m)
+  })
+
+  it('the chosen kind is lit and the other three are not; choosing another moves the light', () => {
+    state().setIngest({ url: URL, kind: 'video' })
+    for (const kind of ['video', 'audio', 'instrumental', 'vocal']) {
+      const chip = one(`data-want="${kind}"`)
+      expect(isLit(chip), kind).toBe(kind === 'video')
+      expect(isUnlit(chip), kind).toBe(kind !== 'video')
+    }
+    state().setIngest({ kind: 'vocal' })
+    expect(isLit(one('data-want="vocal"'))).toBe(true)
+    expect(isLit(one('data-want="video"'))).toBe(false)
+  })
+
+  it('the chosen quality and the chosen format are the lit ones in their unfolded lists', () => {
+    state().setIngest({ url: URL, kind: 'video', quality: '720p' })
+    state().setFoldDownOpen(QUALITY_LIST)
+    for (const quality of QUALITIES) expect(isLit(one(`data-quality="${quality}"`)), quality).toBe(quality === '720p')
+    state().setIngest({ kind: 'audio', audioFormat: 'mp3' })
+    state().setFoldDownOpen(FORMAT_LIST)
+    expect(isLit(one('data-format="mp3"'))).toBe(true)
+    expect(isLit(one('data-format="m4a"'))).toBe(false)
+  })
+
+  it('Just a part of it is lit while it is on, and of its two cuts the chosen one', () => {
+    state().setIngest({ url: URL, useRange: false })
+    expect(isUnlit(one('data-just-a-part'))).toBe(true)
+    state().setIngest({ useRange: true, exact: false })
+    expect(isLit(one('data-just-a-part'))).toBe(true)
+    const cuts = (): { attrs: string; cls: string }[] => buttons().filter((b) => /title="(Re-encodes at the marks|Copies the streams)/.test(b.attrs))
+    expect(cuts()).toHaveLength(2)
+    // Written Fast cut, then Exact cut.
+    expect(cuts().map(isLit)).toEqual([true, false])
+    state().setIngest({ exact: true })
+    expect(cuts().map(isLit)).toEqual([false, true])
+  })
+
+  it('in Best clips’ row Duration is lit (a length is always chosen), Make it vertical while it is on, and Analyse is the solid button', () => {
+    state().setIngest({ url: URL })
+    useEditor.setState({ bestClipsVertical: true })
+    expect(isLit(one('data-best-duration'))).toBe(true)
+    expect(isLit(one('data-best-vertical'))).toBe(true)
+    useEditor.setState({ bestClipsVertical: false })
+    expect(isUnlit(one('data-best-vertical'))).toBe(true)
+    const analyse = one('data-best-analyse')
+    expect(isLit(analyse)).toBe(false)
+    expect(analyse.cls.split(' ')).toContain('bg-accent-500')
+    // The chosen length is the lit one in the unfolded list.
+    state().setFoldDownOpen('best-length')
+    expect(buttons().filter((b) => b.attrs.includes('data-best-length=')).map(isLit)).toEqual([true, false, false, false])
+  })
+
+  it('the Transcript and Clips toggles are lit while the panel shows what they open', async () => {
+    await getTranscript()
+    state().closeFoldout()
+    expect(isUnlit(one('data-link-transcript-toggle'))).toBe(true)
+    expect(isUnlit(one('data-best-toggle'))).toBe(true)
+    state().openFoldout('transcript', 'link')
+    expect(isLit(one('data-link-transcript-toggle'))).toBe(true)
+    expect(isLit(one('data-best-toggle'))).toBe(false)
+    state().openFoldout('clips')
+    expect(isLit(one('data-link-transcript-toggle'))).toBe(false)
+    expect(isLit(one('data-best-toggle'))).toBe(true)
+  })
+
+  it('no choice wears the solid accent, in any of these states — that is for a button that acts, and Analyse is one', async () => {
+    /** A choice says what it is: pressed or not, or the button of a list. A button that acts says neither. */
+    const isChoice = (b: { attrs: string }): boolean => /aria-(pressed|expanded)=/.test(b.attrs)
+    const check = (): void => {
+      const all = buttons()
+      expect(all.filter(isChoice).length).toBeGreaterThan(4)
+      for (const b of all.filter(isChoice)) expect(b.cls.split(' '), b.attrs).not.toContain('bg-accent-500')
+      expect(one('data-best-analyse').cls.split(' ')).toContain('bg-accent-500')
+      expect(isChoice(one('data-best-analyse'))).toBe(false)
+      // Every button that says it is pressed is lit, every one that says it is not is not.
+      for (const b of all) {
+        const pressed = /aria-pressed="(true|false)"/.exec(b.attrs)?.[1]
+        if (pressed === undefined) continue
+        expect(isLit(b), b.attrs).toBe(pressed === 'true')
+      }
+    }
+    state().setIngest({ url: URL, kind: 'video', useRange: true })
+    state().setFoldDownOpen(QUALITY_LIST)
+    check()
+    // With no words the link's own button is the accent one too (Download).
+    expect(one('data-get="plain"').cls.split(' ')).toContain('bg-accent-500')
+    await getTranscript()
+    state().openFoldout('clips')
+    state().setFoldDownOpen('best-length')
+    check()
+    // With the link's words on screen it is "Full download", no longer the accent button.
+    expect(one('data-get="full"').cls.split(' ')).not.toContain('bg-accent-500')
   })
 })

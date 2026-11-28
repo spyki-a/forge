@@ -12,6 +12,7 @@ import { ON_SCREEN_REASON } from '@shared/graphics/budget'
 import { GRAPHICS_BUSY_NOTE, GRAPHICS_CLIP_GONE_NOTE, GRAPHICS_NO_SPEECH_NOTE, useEditor } from '../../src/renderer/src/store'
 import { baselineFailedNote } from '@shared/director/run'
 import { useCatalog } from '../../src/renderer/src/catalog'
+import { wordsClipOf } from '@shared/wordsClip'
 
 /*
  * Lane T2b, piece 3 (docs/CLIPS.md §6.6 "Store actions", "Where it runs",
@@ -362,6 +363,107 @@ describe('dropGraphic and clearGraphics (§6.6, §6.14)', () => {
     expect(clipById('direct-g')).toEqual(directGraphic)
     expect(notices()).toEqual([CLEAR_GRAPHICS_NOTE])
     undoesTo(before)
+  })
+})
+
+/*
+ * With a graphic selected the Transcript tab shows the footage clip under it
+ * (shared/wordsClip.ts, 2026-11-27) — and so offers Find graphics, Drop, Clear
+ * graphics and Cut to these words while that graphic is the selection. Each
+ * can take the selected graphic away or leave it over nothing; the selection
+ * would then name a clip that is gone and the tab would lose the words and
+ * the run's new list, the jump the footage rule exists to remove (found by
+ * the whole-change review). The footage clip is selected instead.
+ */
+describe('an action from the Transcript tab that takes the selected graphic away keeps its footage clip’s words on screen', () => {
+  const shown = (): string | null => wordsClipOf(project(), state().selectedClipId)?.id ?? null
+  /** Find on `shot`, then one of the graphics it placed selected: the tab shows shot's words through it. */
+  async function selectAPlacedGraphic(which = 0): Promise<Clip> {
+    await state().findGraphics('shot')
+    const graphic = graphicsOver('shot')[which]
+    state().select(graphic.id)
+    expect(state().selectedClipId).toBe(graphic.id)
+    expect(shown()).toBe('shot')
+    return graphic
+  }
+
+  it('Find again through one of the clip’s own graphics, which the run replaces: the footage clip is selected, alone', async () => {
+    const graphic = await selectAPlacedGraphic()
+    await state().findGraphics('shot')
+    // The fixture is what it claims: the run replaced the selected graphic.
+    expect(project().clips.some((c) => c.id === graphic.id)).toBe(false)
+    expect(state().selectedClipId).toBe('shot')
+    expect(state().selectedClipIds).toEqual(['shot'])
+    expect(shown()).toBe('shot')
+    expect(state().lastGraphics?.clipId).toBe('shot')
+  })
+
+  it('Drop on the selected graphic’s own row selects the footage clip; Drop on another row leaves the selection where it is', async () => {
+    const graphic = await selectAPlacedGraphic(0)
+    const other = graphicsOver('shot')[1]
+    state().dropGraphic(other.id)
+    expect(state().selectedClipId).toBe(graphic.id)
+    expect(state().selectedClipIds).toEqual([graphic.id])
+    state().dropGraphic(graphic.id)
+    expect(state().selectedClipId).toBe('shot')
+    expect(state().selectedClipIds).toEqual(['shot'])
+  })
+
+  it('Clear graphics selects the footage clip when the selected graphic was a Clip-it one, and leaves Direct’s graphic selected: it stays', async () => {
+    await selectAPlacedGraphic()
+    state().clearGraphics()
+    expect(graphicsOver('shot')).toHaveLength(0)
+    expect(state().selectedClipId).toBe('shot')
+    expect(state().selectedClipIds).toEqual(['shot'])
+    // Direct's graphic over the same clip is not cleared, so it is still the selection.
+    await state().findGraphics('shot')
+    state().select('direct-g')
+    expect(shown()).toBe('shot')
+    state().clearGraphics()
+    expect(project().clips.some((c) => c.id === 'direct-g')).toBe(true)
+    expect(state().selectedClipId).toBe('direct-g')
+  })
+
+  it('with the footage clip itself selected, or nothing, the three leave the selection as they always did', async () => {
+    await state().findGraphics('shot')
+    state().select('shot')
+    await state().findGraphics('shot')
+    expect(state().selectedClipId).toBe('shot')
+    state().dropGraphic(graphicsOver('shot')[0].id)
+    expect(state().selectedClipId).toBe('shot')
+    state().select(null)
+    state().clearGraphics()
+    expect(state().selectedClipId).toBeNull()
+    expect(state().selectedClipIds).toEqual([])
+    // A graphic over ANOTHER clip selected: Find on shot does not touch it.
+    await state().findGraphics('shot2')
+    const elsewhere = graphicsOver('shot2')[0]
+    state().select(elsewhere.id)
+    await state().findGraphics('shot')
+    expect(state().selectedClipId).toBe(elsewhere.id)
+  })
+
+  it('Cut to these words through a selected graphic: a cut that leaves the graphic over nothing selects the clip just cut; one that keeps it over the clip leaves it selected', async () => {
+    const words = project().transcripts.talk
+    // The LAST placed graphic, so a cut to the first word alone ends before it.
+    await state().findGraphics('shot')
+    const placed = graphicsOver('shot')
+    const graphic = placed[placed.length - 1]
+    state().select(graphic.id)
+    expect(shown()).toBe('shot')
+    const before = project()
+    // Kept: the whole transcript is the run, so the clip still spans the graphic.
+    state().setClipRun('shot', words, { from: 0, to: words.words.length - 1 })
+    state().cutToWords()
+    expect(wordsClipOf(project(), graphic.id)?.id, 'the fixture: this cut keeps the graphic over the clip').toBe('shot')
+    expect(state().selectedClipId).toBe(graphic.id)
+    // Left over nothing: the first word alone.
+    useEditor.setState({ project: before, selectedClipId: graphic.id, selectedClipIds: [graphic.id] })
+    state().setClipRun('shot', words, { from: 0, to: 0 })
+    state().cutToWords()
+    expect(wordsClipOf(project(), graphic.id)?.id, 'the fixture: this cut leaves the graphic over no footage').not.toBe('shot')
+    expect(state().selectedClipId).toBe('shot')
+    expect(state().selectedClipIds).toEqual(['shot'])
   })
 })
 

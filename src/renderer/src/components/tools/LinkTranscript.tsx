@@ -10,6 +10,7 @@ import { TranscriptRows } from './TranscriptRows'
 import { NEEDS_SPEECH_MODEL } from '@shared/asr/speechModel'
 import { transcribeGate } from '@shared/sidecar/row'
 import { HelperPointer } from '../SettingsPanel'
+import { lit } from '../ui/lit'
 
 /**
  * A link's transcript (docs/CLIPS.md §3b.1–3b.5, sheets 25 and 26), in two
@@ -17,13 +18,15 @@ import { HelperPointer } from '../SettingsPanel'
  * transcript unfolds beside the picture, "so that when the trim create wont
  * ever collide"):
  *
- * IN THE URL TILE, three parts IngestPanel places in the sketch's order:
- * **Get transcript** (`GetTranscriptButton`), in a row with Analyse; its
- * short status lines under that row (`LinkTranscriptStatus`) — reading,
- * fetching, the failure, the language to choose, and a video with no captions
- * (its chapter chips set the tile's From and To there); and, once the words
- * are ready, the **Transcript** toggle (`LinkTranscriptToggle`), beside Clips,
- * that opens and closes the fold-out panel on them. The panel opens on them
+ * IN THE URL TILE, three parts IngestPanel places: **Get transcript**
+ * (`GetTranscriptButton`), on a row of its own (it shared one with Analyse
+ * until the user moved Analyse to the end of Best clips' row of choices,
+ * 2026-11-27 evening); at that row's end, once the words are ready, the
+ * **Transcript** toggle (`LinkTranscriptToggle`), lit while the fold-out
+ * panel shows them, that opens and closes it on them; and under the row its
+ * short status lines (`LinkTranscriptStatus`) — reading, fetching, the
+ * failure, the language to choose, and a video with no captions (its chapter
+ * chips set the tile's From and To there). The panel opens on them
  * by itself when they arrive, from Get transcript's own handler
  * (`getTranscript` is left as it was). Nothing long is drawn here: the 240 px
  * column also holds the Trimmer.
@@ -265,9 +268,10 @@ async function fetchWords(language?: string): Promise<void> {
 }
 
 /**
- * Get transcript, in the URL tile's row beside Analyse (the sketch's "Get
- * transcript | Analyse transcript", 2026-11-27). Greyed until the box holds a
- * link, and while the link is being read.
+ * Get transcript, on its own row of the URL tile with the Transcript toggle
+ * at the row's end (it shared a row with Analyse until the user moved Analyse
+ * to the end of Best clips' row of choices, 2026-11-27). Greyed until the box
+ * holds a link, and while the link is being read.
  */
 export function GetTranscriptButton(): ReactNode {
   const ingest = useEditor((s) => s.ingest)
@@ -292,8 +296,8 @@ export function GetTranscriptButton(): ReactNode {
 /**
  * The Transcript toggle: opens and closes the panel beside the picture on the
  * link's words. Drawn only while they are ready (before that, the panel would
- * only point back at Get transcript); in the URL tile's row of toggles, beside
- * Clips.
+ * only point back at Get transcript); at the end of Get transcript's row, lit
+ * while the panel shows them (ui/lit.ts).
  */
 export function LinkTranscriptToggle(): ReactNode {
   const toggleTranscript = useEditor((s) => s.toggleTranscript)
@@ -312,9 +316,7 @@ export function LinkTranscriptToggle(): ReactNode {
       aria-pressed={showing}
       onClick={() => toggleTranscript('link')}
       title={LINK_TRANSCRIPT_TOGGLE_TITLE}
-      className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${
-        showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
-      }`}
+      className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${lit(showing)}`}
     >
       <Panel size={12} aria-hidden />
       {TRANSCRIPT_TOGGLE}

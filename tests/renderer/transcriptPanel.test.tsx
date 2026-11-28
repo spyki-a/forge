@@ -38,7 +38,7 @@ vi.mock('../../src/renderer/src/store', async (importOriginal) => {
 })
 
 const { useEditor } = await import('../../src/renderer/src/store')
-const { TranscriptPanel, TranscriptBody, ClipWords, EditClipWords, CUT_TITLE, CLIP_ROWS_HINT, NO_WORDS_TEXT } = await import(
+const { TranscriptPanel, TranscriptTile, TranscriptBody, ClipWords, EditClipWords, CUT_TITLE, CLIP_ROWS_HINT, NO_WORDS_TEXT, UNDER_GRAPHIC_NOTE, TILE_NO_TRANSCRIPT } = await import(
   '../../src/renderer/src/components/TranscriptPanel'
 )
 const { rowStamp } = await import('../../src/renderer/src/components/tools/TranscriptRows')
@@ -200,6 +200,85 @@ function pressRow(row: number, shiftKey = false): void {
 }
 
 /* -------------------------------------------------------------- tests */
+
+/*
+ * A graphic selected: the words are the footage clip's under it
+ * (shared/wordsClip.ts; the user's "yes please" of 2026-11-27). Until then the
+ * panel turned to "No transcript yet" the moment a graphic Find graphics had
+ * just placed was selected to change it, and its rows, Graphics and the list
+ * of what was found went away.
+ */
+describe('a selected graphic shows the words of the clip under it', () => {
+  const graphic = (start: number): Clip =>
+    clip({
+      id: 'g',
+      assetId: '',
+      trackId: 'v2',
+      start,
+      duration: 90,
+      inPoint: 0,
+      speed: 1,
+      graphic: { data: { template: 'lower-third', name: 'A Speaker', role: '' }, seconds: 3, beats: [0.5], place: { auto: true, third: 'bottom' }, seed: 1, version: 1 }
+    })
+  /** The talk on v1 (frames 120 to 1020) and a graphic on v2 starting at `start`, the graphic selected. */
+  function loadWithGraphic(start: number, transcript: Transcript | null = TALK): void {
+    load({}, transcript)
+    useEditor.setState((s) => ({ project: { ...s.project, clips: [...s.project.clips, graphic(start)] }, selectedClipIds: ['g'], selectedClipId: 'g' }))
+  }
+  const tileLine = (): string => {
+    const line = hosts(createElement(TranscriptTile)).find((h) => h.props['data-transcript-tile-line'] !== undefined)!
+    return textOf(line.props.children as ReactNode)
+  }
+
+  it('the rows, Edit, Graphics and Listen for are the footage clip’s, with one line saying whose words these are', () => {
+    loadWithGraphic(300)
+    const html = panel()
+    // The same rows the footage clip shows when it is the one selected.
+    load()
+    const own = panel()
+    expect([...html.matchAll(/data-row-time=/g)].length).toBeGreaterThan(0)
+    expect([...html.matchAll(/data-row-time=/g)]).toHaveLength([...own.matchAll(/data-row-time=/g)].length)
+    expect(html).toContain('alpha')
+    expect(html).toContain(EDIT_TITLE)
+    expect(html).toContain('>Find graphics in this clip<')
+    expect(html).not.toContain('No transcript yet')
+    expect([...html.matchAll(/data-words-under-graphic=""/g)]).toHaveLength(1)
+    expect(html).toContain(UNDER_GRAPHIC_NOTE)
+    // The footage clip itself selected: its own words, and no such line.
+    expect(own).not.toContain('data-words-under-graphic')
+    expect(own).not.toContain(UNDER_GRAPHIC_NOTE)
+  })
+
+  it('the tile’s toggle is lit while the panel shows these words, and not while it does not', async () => {
+    const { LIT, UNLIT } = await import('../../src/renderer/src/components/ui/lit')
+    const toggle = (): string => String(hosts(createElement(TranscriptTile)).find((h) => h.props['data-clip-transcript-toggle'] !== undefined)!.props.className)
+    const has = (cls: string, all: string): boolean => all.split(' ').every((c) => cls.split(' ').includes(c))
+    loadWithGraphic(300)
+    state().closeFoldout()
+    expect(has(toggle(), UNLIT)).toBe(true)
+    expect(has(toggle(), LIT)).toBe(false)
+    state().openFoldout('transcript', 'clip')
+    expect(has(toggle(), LIT)).toBe(true)
+    state().openFoldout('clips')
+    expect(has(toggle(), LIT)).toBe(false)
+  })
+
+  it('the tile’s line counts the footage clip’s transcript', () => {
+    loadWithGraphic(300)
+    expect(tileLine()).toBe(`${TALK.language} · ${TALK.words.length} words`)
+    // Footage with no transcript under the graphic: the tile says that clip has none.
+    loadWithGraphic(300, null)
+    expect(tileLine()).toBe(TILE_NO_TRANSCRIPT)
+  })
+
+  it('a graphic past the end of every footage clip is read as itself, as before: no words, and no line', () => {
+    loadWithGraphic(5000)
+    const html = panel()
+    expect(html).toContain('No transcript yet')
+    expect(html).not.toContain('data-words-under-graphic')
+    expect([...html.matchAll(/data-row-time=/g)]).toHaveLength(0)
+  })
+})
 
 describe('the rows of a selected clip', () => {
   it('are the words the clip plays — not the ones before or after it — each row’s time where it is on the timeline', () => {

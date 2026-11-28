@@ -14,6 +14,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 import { BestClipsCards } from './tools/BestClips'
 import { LinkWords } from './tools/LinkTranscript'
 import { TranscriptPanel } from './TranscriptPanel'
+import { lit } from './ui/lit'
 
 /**
  * The fold-out panel beside the picture: Clips and Transcript (the clip
@@ -171,10 +172,10 @@ const WORDS_SIDES = [
   { id: 'clip', label: FOLDOUT_CLIP_WORDS, title: FOLDOUT_CLIP_WORDS_TITLE }
 ] as const satisfies readonly { id: FoldoutWords; label: string; title: string }[]
 
-/** The two-way switch: the side showing pressed, the other one click away. */
+/** The two-way switch: the side showing pressed and lit (ui/lit.ts, as every chosen choice is), the other one click away. */
 export function WordsSwitch({ shown, onPick }: { shown: FoldoutWords; onPick: (words: FoldoutWords) => void }): ReactNode {
   return (
-    <div role="group" aria-label={FOLDOUT_WORDS_LABEL} data-foldout-switch="" className="mb-2 flex shrink-0 flex-wrap gap-1">
+    <div role="group" aria-label={FOLDOUT_WORDS_LABEL} data-foldout-switch="" className="mb-2 flex shrink-0 flex-wrap gap-1.5 px-0.5 pt-0.5">
       {WORDS_SIDES.map(({ id, label, title }) => (
         <button
           key={id}
@@ -183,9 +184,7 @@ export function WordsSwitch({ shown, onPick }: { shown: FoldoutWords; onPick: (w
           aria-pressed={shown === id}
           onClick={() => onPick(id)}
           title={title}
-          className={`rounded px-2 py-0.5 text-[10.5px] transition-colors ${
-            shown === id ? 'bg-ink-700 text-ink-100' : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-          }`}
+          className={`rounded px-2 py-0.5 text-[10.5px] transition-colors ${lit(shown === id)}`}
         >
           {label}
         </button>

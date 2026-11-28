@@ -17,11 +17,13 @@ import { SIDECAR_METHODS } from '@shared/sidecar/protocol'
 import { helperCan } from '@shared/sidecar/helperCan'
 import { transcribeGate } from '@shared/sidecar/row'
 import { foldoutShowsWords } from '@shared/foldout'
+import { wordsClipOf } from '@shared/wordsClip'
 import { useEditor, wordsShown } from '../store'
 import { rowStamp, TranscriptRows } from './tools/TranscriptRows'
 import { SpeechModelPress, transcribeWhy } from './MediaPool'
 import { HelperPointer } from './SettingsPanel'
 import { TranscriptGraphics } from './TranscriptGraphics'
+import { lit } from './ui/lit'
 
 /**
  * Transcript for the selected clip — the words it plays — with click-to-seek,
@@ -60,6 +62,8 @@ export const CLIP_ROWS_HINT = 'Click a row to jump there and pick its words; shi
 export const NO_WORDS_TEXT = 'No words are spoken in this clip'
 /** With no clip selected: the tile's line, and the panel's own if it is ever drawn without one. */
 export const SELECT_CLIP_TEXT = 'Select a clip to see its transcript'
+/** Over the rows while a graphic is selected: whose words these are (shared/wordsClip.ts). */
+export const UNDER_GRAPHIC_NOTE = 'These are the words of the clip under the selected graphic.'
 /** The tile's line for a selected clip with no transcript: Transcribe is in the panel, under the words' place. */
 export const TILE_NO_TRANSCRIPT = 'This clip has no transcript yet. Transcribe it beside the picture.'
 /** The tile's toggle: the URL tile's word for its own (tools/LinkTranscript.tsx TRANSCRIPT_TOGGLE). */
@@ -83,7 +87,8 @@ export function TranscriptTile(): ReactNode {
   const link = useEditor((s) => wordsShown(s))
   const toggleTranscript = useEditor((s) => s.toggleTranscript)
 
-  const clip = project.clips.find((c) => c.id === selectedClipId) ?? null
+  // A selected graphic is read as the footage clip it shows over (shared/wordsClip.ts).
+  const clip = wordsClipOf(project, selectedClipId)
   const transcript = clip ? project.transcripts[clip.assetId] ?? null : null
   const showing = foldoutShowsWords(foldout, 'clip', { link, clip: clip !== null })
   const Panel = showing ? PanelLeftClose : PanelLeftOpen
@@ -103,9 +108,7 @@ export function TranscriptTile(): ReactNode {
         disabled={!clip && !showing}
         onClick={() => toggleTranscript('clip')}
         title={CLIP_TRANSCRIPT_TOGGLE_TITLE}
-        className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors disabled:opacity-40 ${
-          showing ? 'bg-accent-900 text-accent-400' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
-        }`}
+        className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors disabled:opacity-40 ${lit(showing)}`}
       >
         <Panel size={12} aria-hidden />
         {CLIP_TRANSCRIPT_TOGGLE}
@@ -119,7 +122,9 @@ export function TranscriptPanel(): ReactNode {
   const selectedClipId = useEditor((s) => s.selectedClipId)
   const [editing, setEditing] = useState(false)
 
-  const clip = project.clips.find((c) => c.id === selectedClipId) ?? null
+  // The clip whose words are shown: the selected one, or — for a selected graphic — the footage clip under it.
+  const clip = wordsClipOf(project, selectedClipId)
+  const underGraphic = clip !== null && clip.id !== selectedClipId
   const transcript = clip ? project.transcripts[clip.assetId] ?? null : null
   const fps = project.settings.fps
 
@@ -163,6 +168,12 @@ export function TranscriptPanel(): ReactNode {
           </div>
         )}
       </div>
+
+      {underGraphic && (
+        <p data-words-under-graphic="" className="shrink-0 px-3 pt-1.5 text-[10.5px] leading-snug text-ink-500">
+          {UNDER_GRAPHIC_NOTE}
+        </p>
+      )}
 
       <TranscriptBody clip={clip} transcript={transcript} editing={editing} />
 

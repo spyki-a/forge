@@ -1,13 +1,19 @@
 import { type KeyboardEvent, type ReactNode } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { LIT } from './lit'
 
 /**
  * A fold-down list: one button saying what it chooses and what is chosen,
  * with a chevron, and under it — IN THE FLOW, pushing what is below down —
  * the choices as a row of buttons that wraps.
  *
- * The user's sketch calls it "collapsable" (2026-11-27): the URL tile's
- * quality and format under the chosen kind, and Best clips' "Duration". Never
+ * The user's sketch calls it "collapsable" (2026-11-27). Its two users today
+ * — the URL tile's quality and format under the chosen kind, and Best clips'
+ * "Duration" — are each a CHIP IN A ROW with the choices on a line of their
+ * own under that row, so they are built from this file's parts
+ * (`foldDownChoices`, `foldDownKeyDown`) with the row as the root; the
+ * `FoldDown` component below is the same thing as one full-width button, for
+ * a list that stands alone, and is drawn by nothing at the moment. Never
  * a floating menu: a floating menu is one more thing that can cover another,
  * and covering was the complaint ("its own custom setting is overlapping").
  *
@@ -163,7 +169,7 @@ export function foldDownChoices<T extends string | number>({
             onOpenChange(false)
           }}
           className={`rounded px-2 py-0.5 text-[11px] transition-colors ${choiceClassName && `${choiceClassName} `}${
-            choice.value === value ? 'bg-accent-900 text-accent-400' : 'text-ink-400 hover:bg-ink-850 hover:text-ink-200'
+            choice.value === value ? LIT : 'text-ink-400 hover:bg-ink-850 hover:text-ink-200'
           }`}
         >
           {choice.label}

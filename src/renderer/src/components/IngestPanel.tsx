@@ -6,8 +6,9 @@ import { linkProblem, LINK_PROBLEM_TEXT, parseLink } from '@shared/ingest/url'
 import { formatMark, MIN_RANGE_MS, parseMark } from '@shared/ingest/section'
 import type { IngestWant } from '@shared/ingest/args'
 import { GetTranscriptButton, LinkTranscriptStatus, LinkTranscriptToggle } from './tools/LinkTranscript'
-import { AnalyseButton, BestClips, BestClipsPointer, ClipsToggle } from './tools/BestClips'
+import { BestClips } from './tools/BestClips'
 import { foldDownChoices, foldDownKeyDown, type FoldDownChoice } from './ui/FoldDown'
+import { lit } from './ui/lit'
 
 /**
  * Sheets ⑥ and ⑫: paste a link, choose what to take, get a clip.
@@ -20,13 +21,19 @@ import { foldDownChoices, foldDownKeyDown, type FoldDownChoice } from './ui/Fold
  * two: paste, Download. Everything else on this panel is optional and stays out of
  * the way until it is wanted.
  *
- * The rows, in the order of the user's sketch of 2026-11-27 (the clip
- * maker's layout): the link box and **Download**; the kinds as one row, the
- * chosen kind's quality (Video) or format (Audio, Instrumental, Vocal) a
- * fold-down list under it, in the flow (`KindsRow`); Get transcript and
- * Analyse; their status lines; Just a part of it, with the Transcript and
- * Clips toggles; Best clips' options; the download lines. Nothing in it
- * floats: a floating menu is one more thing that can cover another.
+ * The rows, from the user's sketch of 2026-11-27 (the clip maker's layout)
+ * as they re-ordered it that evening ("a row of selection and in the end
+ * anallyse … like a check listing"): the link box and **Download**; the
+ * kinds as one row, the chosen kind's quality (Video) or format (Audio,
+ * Instrumental, Vocal) a fold-down list under it, in the flow (`KindsRow`);
+ * Just a part of it, with its range; Get transcript, with the Transcript
+ * toggle at the row's end, and its status lines; then Best clips
+ * (tools/BestClips.tsx): its heading with the Clips toggle, and one row of
+ * choices ending in Analyse; the download lines. Nothing in it floats: a
+ * floating menu is one more thing that can cover another. Every choice that
+ * is ON is lit the same way (ui/lit.ts), so what is selected is told from
+ * what is not at a glance; only a button that acts (Download, Analyse) is the
+ * solid accent.
  *
  * Get transcript (sheets 25–26, docs/CLIPS.md §3b) was `LinkTranscript`'s: rows
  * of the link's words, a run picked from them, and Clip it — its button
@@ -110,7 +117,7 @@ export function KindsRow(): ReactNode {
   const Chevron = open ? ChevronUp : ChevronDown
 
   return (
-    <div data-fold-down={list} data-open={open} onKeyDown={foldDownKeyDown(open, fold)} className="mt-2.5 flex flex-wrap items-center gap-1">
+    <div data-fold-down={list} data-open={open} onKeyDown={foldDownKeyDown(open, fold)} className="mt-2.5 flex flex-wrap items-center gap-1.5">
       {WANTS.map((want) => {
         const on = ingest.kind === want.id
         return (
@@ -126,9 +133,7 @@ export function KindsRow(): ReactNode {
               setIngest({ kind: want.id })
             }}
             title={want.hint}
-            className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] transition-colors ${
-              on ? 'bg-accent-500 text-ink-950' : 'bg-ink-850 text-ink-400 hover:text-ink-200'
-            }`}
+            className={`flex items-center gap-1 rounded px-2 py-1 text-[11px] transition-colors ${lit(on)}`}
           >
             <span>{want.label}</span>
             {on && (
@@ -333,34 +338,21 @@ export function IngestPanel(): ReactNode {
       {/* ------------------------------------------------------------ what */}
       <KindsRow />
 
-      {/* ---------------------------------- Get transcript and Analyse (the sketch's row) */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-1">
-        <GetTranscriptButton />
-        <AnalyseButton />
-      </div>
-      <LinkTranscriptStatus />
-      <BestClipsPointer />
-
-      {/* ----------------------------------- Just a part of it, and the two toggles */}
-      <div className="mt-2.5 flex flex-wrap items-center gap-1">
-        {!words && (
+      {/* ------------------------------------------------- Just a part of it */}
+      {!words && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
           <button
             type="button"
+            data-just-a-part=""
             onClick={() => setIngest({ useRange: !ingest.useRange })}
             aria-pressed={ingest.useRange}
-            className={`flex items-center gap-1.5 text-[11px] transition-colors ${
-              ingest.useRange ? 'text-ink-200' : 'text-ink-500 hover:text-ink-300'
-            }`}
+            className={`flex items-center gap-1.5 rounded px-2 py-1 text-[11px] transition-colors ${lit(ingest.useRange)}`}
           >
             <Scissors size={11} strokeWidth={1.8} />
             Just a part of it
           </button>
-        )}
-        <div data-url-toggles="" className="ml-auto flex flex-wrap items-center justify-end gap-1">
-          <LinkTranscriptToggle />
-          <ClipsToggle />
         </div>
-      </div>
+      )}
 
       {/* ----------------------------------------------------------- range */}
       {!words && ingest.useRange && (
@@ -392,10 +384,11 @@ export function IngestPanel(): ReactNode {
             </span>
           </div>
 
-          <div className="mt-2 flex gap-1">
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {([false, true] as const).map((exact) => (
               <button
                 key={String(exact)}
+                type="button"
                 onClick={() => setIngest({ exact })}
                 aria-pressed={ingest.exact === exact}
                 title={
@@ -403,11 +396,7 @@ export function IngestPanel(): ReactNode {
                     ? 'Re-encodes at the marks. Slow on a 4K video.'
                     : 'Copies the streams and fetches a little either side; the clip is trimmed to your marks on the timeline.'
                 }
-                className={`rounded px-2 py-1 text-[10.5px] transition-colors ${
-                  ingest.exact === exact
-                    ? 'bg-ink-700 text-ink-100'
-                    : 'bg-ink-850 text-ink-500 hover:text-ink-200'
-                }`}
+                className={`rounded px-2 py-1 text-[10.5px] transition-colors ${lit(ingest.exact === exact)}`}
               >
                 {exact ? 'Exact cut — slower' : 'Fast cut'}
               </button>
@@ -416,7 +405,16 @@ export function IngestPanel(): ReactNode {
         </div>
       )}
 
-      {/* ------------------------------------------------ best clips' options */}
+      {/* -------------------------------- Get transcript, and the Transcript toggle */}
+      <div data-transcript-row="" className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <GetTranscriptButton />
+        <div data-url-toggles="" className="ml-auto flex items-center">
+          <LinkTranscriptToggle />
+        </div>
+      </div>
+      <LinkTranscriptStatus />
+
+      {/* ------------------- Best clips: its row of choices, ending in Analyse */}
       <BestClips />
 
       {/* ---------------------------------------------------------- status */}

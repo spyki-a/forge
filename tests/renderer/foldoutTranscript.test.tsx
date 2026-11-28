@@ -362,6 +362,8 @@ describe('the two-way switch', () => {
     selectClip(true)
     state().openFoldout('transcript', 'link')
     expect(sides().map((h) => [h.props['data-foldout-side'], h.props['aria-pressed']])).toEqual([['link', true], ['clip', false]])
+    // The side showing is lit as every chosen choice is (ui/lit.ts), the other is not.
+    expect(sides().map((h) => String(h.props.className).split(' ').includes('shadow-lit'))).toEqual([true, false])
     expect(tab()).toContain('data-foldout-words="link"')
     press(sides()[1])
     expect(state().foldout).toEqual({ open: true, tab: 'transcript', words: 'clip' })
